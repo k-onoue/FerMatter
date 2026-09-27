@@ -70,13 +70,18 @@ app and save work before installing. Installation may require administrator
 authorization.
 
 There are no preinstall/postinstall scripts, background services, automatic app
-launches, security-setting changes, runtime installers, or updater setup. The
+launches, security-setting changes, or runtime installers. The
 script only creates and inspects the packages; it does not install them.
+The app supports in-app version checks and release DMG downloads after user
+approval. Applying an update requires manual app replacement; no background
+helper is installed.
 
 The existing bundle identifier is preserved so preferences remain compatible.
-User projects, templates, and settings under
-`~/Library/Application Support/Slide Math` are not part of the installer.
-Removing the app in Finder preserves those files and the installer receipt.
+New project source folders default to `~/Documents/Mathlidelux`; projects opened
+from an existing folder stay in that location. Project metadata and caches live
+under `~/Library/Application Support/Slide Math`. User sources and internal data
+are not part of the installer. Removing the app in Finder preserves those files,
+templates, settings, and the installer receipt.
 
 ## External dependencies and release status
 

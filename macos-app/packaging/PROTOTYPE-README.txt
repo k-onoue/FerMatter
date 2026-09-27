@@ -38,19 +38,26 @@ It does not install runtimes, run installation scripts, or launch the app.
 It replaces an existing app of the same identity; newer versions are preserved.
 
 The app retains the prototype bundle identifier local.slidemath.prototype so
-existing preferences remain available. Project data remains in your user
-Library/Application Support/Slide Math folder. Source mode directly edits
-opened project files; open only projects you trust.
+existing preferences remain available. New project source folders default to
+~/Documents/Mathlidelux. Projects opened from an existing folder stay in that
+location. Project metadata and caches live in
+~/Library/Application Support/Slide Math. Source mode directly edits opened
+project files; open only projects you trust.
 
 If macOS blocks this unnotarized prototype, consult Apple's security guidance:
 https://support.apple.com/102445
 No security settings are changed by the packaging script or installer.
 
+UPDATES
+
+The app can check for new versions and download a release DMG after you accept
+the update. Applying it requires you to replace the app manually. The app does
+not replace itself automatically or install a background helper.
+
 REMOVAL
 
 Quit the app and move /Applications/Mathlidelux.app to the Trash. Your projects,
-templates, settings, and package receipt are retained. No background service
-or automatic updater is installed.
+templates, settings, and package receipt are retained.
 
 LICENSE
 
