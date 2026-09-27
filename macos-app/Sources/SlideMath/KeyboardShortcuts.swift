@@ -112,15 +112,13 @@ struct ShortcutBinding: Codable, Equatable, Hashable {
     }
 }
 
-@MainActor
-final class ShortcutPreferences: ObservableObject {
-    @Published private var overrides: [String: ShortcutBinding]
-    private let defaults: UserDefaults
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-        overrides = defaults.data(forKey: "keyboardShortcuts").flatMap { try? JSONDecoder().decode([String: ShortcutBinding].self, from: $0) } ?? [:]
-    }
-    func binding(_ command: AppCommand) -> ShortcutBinding { overrides[command.rawValue] ?? command.defaultShortcut }
+struct ShortcutDocument: SettingsDocument, Equatable {
+    var schemaVersion = 1
+    var kind = "mathlidelux.keybindings"
+    var bindings: [String: ShortcutBinding] = [:]
+    var extensions: [String: SettingsValue]? = nil
+
+    func binding(_ command: AppCommand) -> ShortcutBinding { bindings[command.rawValue] ?? command.defaultShortcut }
     func validation(_ binding: ShortcutBinding, for command: AppCommand) -> String? {
         guard !binding.key.isEmpty else { return nil }
         let allowed = "abcdefghijklmnopqrstuvwxyz0123456789`-=[]\\;',./\t\u{F700}\u{F701}\u{F702}\u{F703}"
@@ -131,13 +129,60 @@ final class ShortcutPreferences: ObservableObject {
         if let other = AppCommand.allCases.first(where: { $0 != command && self.binding($0) == binding }) { return "Already used by \(other.title)." }
         return nil
     }
+    func validate() throws {
+        guard schemaVersion == 1, kind == "mathlidelux.keybindings" else {
+            throw SettingsFileError.invalid("Unsupported keyboard shortcuts format or version.")
+        }
+        for id in bindings.keys where AppCommand(rawValue: id) == nil {
+            throw SettingsFileError.invalid("Unknown command: \(id).")
+        }
+        for command in AppCommand.allCases {
+            if let error = validation(binding(command), for: command) {
+                throw SettingsFileError.invalid("\(command.title): \(error)")
+            }
+        }
+    }
+}
+
+@MainActor
+final class ShortcutPreferences: FileSettings {
+    @Published private var document: ShortcutDocument
+    @Published private(set) var fileError: String?
+    private let file: SettingsFile<ShortcutDocument>
+    var fileURL: URL { file.url }
+    init(defaults: UserDefaults = .standard, directory: URL = AppIdentity.settingsDirectory) {
+        file = SettingsFile(directory: directory, name: "keybindings.json")
+        let legacy = defaults.data(forKey: "keyboardShortcuts").flatMap { try? JSONDecoder().decode([String: ShortcutBinding].self, from: $0) } ?? [:]
+        let migrated = ShortcutDocument(bindings: legacy)
+        let fallback = (try? migrated.validate()) != nil ? migrated : ShortcutDocument()
+        (document, fileError) = file.initial(fallback)
+        // Keep the legacy value as a migration backup; the JSON file is authoritative.
+    }
+    func binding(_ command: AppCommand) -> ShortcutBinding { document.binding(command) }
+    func validation(_ binding: ShortcutBinding, for command: AppCommand) -> String? { document.validation(binding, for: command) }
     @discardableResult func set(_ binding: ShortcutBinding, for command: AppCommand) -> String? {
         if let error = validation(binding, for: command) { return error }
-        overrides[command.rawValue] = binding
-        defaults.set(try? JSONEncoder().encode(overrides), forKey: "keyboardShortcuts")
-        return nil
+        var updated = document; updated.bindings[command.rawValue] = binding
+        do { try file.save(updated); document = updated; fileError = nil; return nil }
+        catch { fileError = error.localizedDescription; return fileError }
     }
-    func reset() { overrides = [:]; defaults.removeObject(forKey: "keyboardShortcuts") }
+    func reset() { replace(ShortcutDocument()) }
+    func reload() {
+        do { document = try file.load(); fileError = nil }
+        catch { fileError = error.localizedDescription }
+    }
+    func importFile(_ url: URL) {
+        do { replace(try file.read(url)) }
+        catch { fileError = error.localizedDescription }
+    }
+    func exportFile(_ url: URL) {
+        do { try file.export(document, to: url); fileError = nil }
+        catch { fileError = error.localizedDescription }
+    }
+    private func replace(_ value: ShortcutDocument) {
+        do { try file.save(value, replacing: true); document = value; fileError = nil }
+        catch { fileError = error.localizedDescription }
+    }
 }
 
 extension Notification.Name {
@@ -157,6 +202,8 @@ struct ShortcutSettingsView: View {
                 Spacer()
                 Button("Restore Defaults") { recording = nil; shortcuts.reset(); error = nil }
             }.padding(24)
+            SettingsFileControls(preferences: shortcuts, beforeAction: { recording = nil; error = nil })
+                .padding(.horizontal, 24).padding(.bottom, 16)
             Divider()
             ScrollView {
                 VStack(spacing: 0) {
@@ -170,7 +217,7 @@ struct ShortcutSettingsView: View {
                                 error = shortcuts.set(binding, for: command)
                                 if error == nil { recording = nil }
                             }).frame(width: 126, height: 28)
-                            Button { recording = nil; _ = shortcuts.set(.unassigned, for: command); error = nil } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary) }
+                            Button { recording = nil; error = shortcuts.set(.unassigned, for: command) } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary) }
                                 .buttonStyle(.plain).help("Clear shortcut").accessibilityLabel("Clear \(command.title) shortcut")
                         }.padding(.horizontal, 24).padding(.vertical, 7)
                     }
@@ -178,10 +225,10 @@ struct ShortcutSettingsView: View {
             }
             Divider()
             HStack {
-                Text(error ?? (recording == nil ? "Click a shortcut to change it." : "Press a shortcut. Esc to cancel."))
-                    .font(.caption).foregroundStyle(error == nil ? Color.secondary : Color.orange)
+                Text(error ?? shortcuts.fileError ?? (recording == nil ? "Click a shortcut to change it." : "Press a shortcut. Esc to cancel."))
+                    .font(.caption).foregroundStyle(error == nil && shortcuts.fileError == nil ? Color.secondary : Color.orange)
                 Spacer()
-            }.frame(height: 20).padding(18)
+            }.frame(minHeight: 20).padding(18)
         }.frame(width: 540, height: 640)
             .onDisappear { recording = nil }
     }

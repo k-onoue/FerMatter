@@ -3,6 +3,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct NewProjectView: View {
+    @Environment(\.appTheme) private var theme
     @EnvironmentObject private var store: LibraryStore
     @EnvironmentObject private var templates: TemplateStore
     @Environment(\.dismiss) private var dismiss
@@ -59,7 +60,7 @@ struct NewProjectView: View {
                     Spacer()
                     Text(template.format.displayName).font(.caption.weight(.medium)).foregroundStyle(.secondary)
                 }.padding(.horizontal, 12).frame(height: 30)
-            }.background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+            }.background(Color(nsColor: theme.color(.surfaceBackground)), in: RoundedRectangle(cornerRadius: 12))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.primary.opacity(0.1)))
             HStack {

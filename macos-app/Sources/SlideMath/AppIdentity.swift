@@ -2,6 +2,7 @@ import Foundation
 
 enum AppIdentity {
     static let name = "Mathlidelux"
+    static var settingsDirectory: URL { applicationSupport.appendingPathComponent("Settings", isDirectory: true) }
 
     // Keep the original location: saved projects contain absolute paths into it.
     // The public app name can change without moving sources, drafts or templates.
