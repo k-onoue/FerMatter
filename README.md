@@ -82,23 +82,18 @@ python3 -m http.server 4174 --bind 127.0.0.1 --directory docs
 Open [localhost:4174](http://localhost:4174). No npm install or site build is needed.
 The page works at a GitHub Pages project subpath and uses no CDN fonts or analytics.
 
-## Prepare to publish
+## Documentation
 
-[**PUBLISHING.md**](PUBLISHING.md) covers the GitHub Pages settings, release link
-configuration, and remaining work for a distributable Mac build.
+| Audience | Guide |
+| --- | --- |
+| App users | [Usage and requirements](macos-app/README.md#start-a-project) |
+| Contributors | [Local development, branches, and PRs](CONTRIBUTING.md) |
+| Code maintainers | [Architecture](macos-app/ARCHITECTURE.md) and [validation notes](macos-app/VALIDATION.md) |
+| Release maintainers | [Packaging, signing, GitHub Releases, and Pages](PUBLISHING.md) |
 
-Before staging files:
-
-```sh
-python3 scripts/prepare-demo.py
-python3 scripts/check-publication.py
-git add .
-git diff --cached --stat
-```
-
-A local `paper/` directory is reserved for private manuscripts and ignored by Git.
-Build products, caches, credentials, and old development screenshots are excluded.
-Never force-add these files. Review staged changes before committing.
+The product page in `docs/` presents features, samples, and download links.
+Published version notes and installers belong in
+[GitHub Releases](https://github.com/k-onoue/mathlidelux/releases).
 
 ## License
 

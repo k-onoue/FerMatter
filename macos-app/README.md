@@ -49,6 +49,9 @@ See [the icon notes](Resources/AppIcon.md) for the artwork and generation prompt
 
 ## Development checks
 
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for branch names, PR review, and the
+development workflow. Distribution instructions are in [PUBLISHING.md](../PUBLISHING.md).
+
 Run `./macos-app/scripts/check.sh` from the repository root for Swift tests,
 real compiler integration, Python tests, and publication checks. The script
 does not modify the sample ZIPs; after intentionally changing sample sources,
