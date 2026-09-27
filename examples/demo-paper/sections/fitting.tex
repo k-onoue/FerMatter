@@ -1,0 +1,32 @@
+\section{Fitting the trajectory}
+\subsection{Objective}
+We choose the coefficients by minimizing the average squared residual.
+\begin{equation}
+  \mathcal{L}(\vect{w}) = \frac{1}{2n}\sum_{i=1}^{n}
+    \left(y_i-\vect{\phi}(t_i)^\top\vect{w}\right)^2
+  \label{eq:squared_loss}
+\end{equation}
+The gradient points toward the steepest local increase in this objective.
+\begin{equation}
+  \nabla\mathcal{L}(\vect{w}) = \frac{1}{n}\Phi^\top(\Phi\vect{w}-\vect{y})
+  \label{eq:loss_gradient}
+\end{equation}
+\subsection{Estimation}
+Starting from $\vect{w}_0=\vect{0}$, we take steps of size $\eta > 0$.
+\begin{equation}
+  \vect{w}_{k+1} = \vect{w}_k - \eta\nabla\mathcal{L}(\vect{w}_k)
+  \label{eq:gradient_descent}
+\end{equation}
+For a full-rank design matrix, the least-squares solution also has a closed form.
+\begin{equation}
+  \widehat{\vect{w}} = (\Phi^\top\Phi)^{-1}\Phi^\top\vect{y}
+  \label{eq:least_squares}
+\end{equation}
+Ridge regularization with $\lambda > 0$ gives a second useful example.
+\begin{align}
+  \mathcal{L}_{\lambda}(\vect{w})
+    &= \mathcal{L}(\vect{w}) + \frac{\lambda}{2}\|\vect{w}\|_2^2, \\
+  \widehat{\vect{w}}_{\lambda}
+    &= (\Phi^\top\Phi+n\lambda I)^{-1}\Phi^\top\vect{y}.
+  \label{eq:ridge_solution}
+\end{align}

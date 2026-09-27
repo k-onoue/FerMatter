@@ -1,0 +1,31 @@
+# Private manuscripts stay on this machine.
+/paper/
+/.private/
+
+# Local builds, caches, and development captures.
+**/.build/
+**/build/
+**/node_modules/
+**/dist/
+**/__pycache__/
+**/test-results/
+*.py[cod]
+.DS_Store
+.env
+.env.*
+!.env.example
+*.p12
+*.p8
+*.mobileprovision
+/ui-prototype/preview.png
+/ui-prototype/liquid-glass-preview.png
+
+# TeX build products. The demo source is committed, generated PDFs are not.
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+/examples/**/*.pdf

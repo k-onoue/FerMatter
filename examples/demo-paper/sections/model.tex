@@ -1,0 +1,33 @@
+\section{A simple model}
+\subsection{Trajectory}
+We describe a moving point at time $t \in \R$ using a quadratic trajectory.
+The coefficients collect its initial position, velocity, and acceleration.
+\begin{equation}
+  s(t) = s_0 + v_0 t + \frac{1}{2} a t^2
+  \label{eq:trajectory}
+\end{equation}
+Differentiating gives the instantaneous velocity.
+\begin{equation}
+  v(t) = \frac{d s(t)}{d t} = v_0 + a t
+  \label{eq:velocity}
+\end{equation}
+We express the same trajectory as a linear combination of three features.
+\begin{equation}
+  \vect{\phi}(t) = \begin{pmatrix}1 & t & t^2\end{pmatrix}^{\!\top},
+  \qquad s(t) = \vect{\phi}(t)^\top \vect{w}
+  \label{eq:feature_map}
+\end{equation}
+\subsection{Observations}
+Each observation includes an independent noise term with scale $\sigma > 0$.
+\begin{equation}
+  y_i = s(t_i) + \varepsilon_i,
+  \qquad \varepsilon_i \sim \mathcal{N}(0,\sigma^2)
+  \label{eq:observations}
+\end{equation}
+The observation vector is $\vect{y}=(y_1,\ldots,y_n)^\top$.
+Stacking the feature vectors produces a compact matrix model.
+\begin{equation}
+  \vect{y} = \Phi\vect{w} + \vect{\varepsilon},
+  \qquad \Phi_{ij} = \phi_j(t_i)
+  \label{eq:matrix_model}
+\end{equation}

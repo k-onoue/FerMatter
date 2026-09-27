@@ -1,0 +1,2 @@
+# Use pdfLaTeX for this self-contained demonstration project.
+$pdf_mode = 1;

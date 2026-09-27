@@ -1,0 +1,33 @@
+\section{Geometry and uncertainty}
+A two-dimensional trajectory can be rotated through an angle $\theta$.
+\begin{equation}
+  R(\theta) =
+  \begin{pmatrix}
+    \cos\theta & -\sin\theta \\
+    \sin\theta & \cos\theta
+  \end{pmatrix}
+  \label{eq:rotation_matrix}
+\end{equation}
+The squared length of a vector is preserved by this rotation.
+\begin{equation}
+  \|R(\theta)\vect{x}\|_2^2 = \vect{x}^\top\vect{x}
+  \label{eq:length_preservation}
+\end{equation}
+For a random two-dimensional position, we use a covariance matrix with $|\rho|<1$.
+\begin{equation}
+  \Sigma = \begin{pmatrix}
+    \sigma_x^2 & \rho\sigma_x\sigma_y \\
+    \rho\sigma_x\sigma_y & \sigma_y^2
+  \end{pmatrix}
+  \label{eq:position_covariance}
+\end{equation}
+A standard normal density provides a compact inline-to-display example.
+\begin{equation}
+  p(z) = \frac{1}{\sqrt{2\pi}}\exp\!\left(-\frac{z^2}{2}\right)
+  \label{eq:normal_density}
+\end{equation}
+Its probability mass over an interval is the corresponding definite integral.
+\begin{equation}
+  \Pr(a\leq Z\leq b) = \int_a^b p(z)\,dz
+  \label{eq:interval_probability}
+\end{equation}

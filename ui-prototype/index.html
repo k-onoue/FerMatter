@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f3">
+  <title>Mathlidelux — Equation library</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%23335445'/%3E%3Ctext x='10' y='29' fill='%23fff' font-family='serif' font-size='31' font-style='italic'%3Ef%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="liquid-glass.css">
+  <script>
+    window.MathJax = {
+      startup: { typeset: false },
+      tex: { tags: 'none', macros: { bm: ['\\boldsymbol{#1}', 1], textnormal: ['\\text{#1}', 1], RR: '\\mathbb{R}', Cov: '\\operatorname{Cov}', KL: 'D_{\\mathrm{KL}}', R: '\\mathbb{R}', vect: ['\\mathbf{#1}', 1], argmin: '\\mathop{\\mathrm{arg\\,min}}' } },
+      svg: { fontCache: 'none' },
+      options: { enableMenu: false, enableAssistiveMml: false }
+    };
+  </script>
+  <script defer src="node_modules/mathjax/es5/tex-svg.js"></script>
+  <script defer src="sample-data.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="app-shell" id="app-shell">
+    <aside class="sidebar" id="sidebar" data-review="sidebar" aria-label="ナビゲーション">
+      <a class="brand" href="./" aria-label="Mathlidelux ホーム"><span class="brand-symbol">ƒ</span><span>Mathlidelux<span class="brand-subtitle">A little less typesetting.</span></span></a>
+      <div class="project-tile">
+        <span class="project-icon" data-icon="folder"></span>
+        <span><strong>demo-paper</strong><small>TeX project</small></span>
+        <span class="local-dot" title="ローカルのサンプル"></span>
+      </div>
+      <div class="sidebar-label">LIBRARY</div>
+      <nav class="collection-nav" aria-label="カードの種類">
+        <button class="nav-item active" data-scope="all"><span data-icon="layers"></span><span>All equations</span><span class="count" id="count-all">—</span></button>
+        <button class="nav-item" data-scope="source"><span data-icon="file"></span><span>From source</span><span class="count" id="count-source">—</span></button>
+        <button class="nav-item" data-scope="custom"><span data-icon="sparkles"></span><span>Custom equations</span><span class="count" id="count-custom">—</span></button>
+      </nav>
+      <div class="sidebar-label files-label">PROJECT FILES <span class="tiny-label">sample</span></div>
+      <div class="file-tree">
+        <div><span data-icon="chevron-down"></span><span data-icon="folder"></span>demo-paper</div>
+        <div class="tree-child"><span data-icon="file"></span>main.tex<span class="main-tag">main</span></div>
+        <div class="tree-child current-file"><span data-icon="file"></span>sections/model.tex</div>
+        <div class="tree-child"><span data-icon="file"></span>sections/fitting.tex</div>
+      </div>
+      <div class="sidebar-bottom">
+        <div class="slide-tip"><span class="tip-icon" data-icon="presentation"></span><strong>Made for your next talk.</strong><p>数式を選んで、スライドへ。<br>SVGで、どこまでも鮮明に。</p><button class="text-link" id="show-help">使い方を見る <span data-icon="arrow-up-right"></span></button></div>
+        <button class="prototype-info" id="prototype-info"><span class="status-dot"></span>UI prototype <span>v0.1</span><span data-icon="info"></span></button>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar" id="project-header" data-review="project-header">
+        <div class="breadcrumb"><span data-icon="folder"></span><span>demo-paper</span><span class="slash">/</span><strong>Equation library</strong></div>
+        <div class="header-actions"><button class="button quiet review-button" id="review-toggle" aria-pressed="false"><span data-icon="message"></span>Review <span class="keycap">R</span></button><span class="header-divider"></span><button class="button primary" id="new-equation"><span data-icon="plus"></span>New equation</button></div>
+      </header>
+      <div class="work-area">
+        <main class="library" id="library">
+          <div class="library-heading"><div><div class="eyebrow">YOUR MATH, WITHIN REACH</div><h1 id="library-title">Equation library<span class="heading-dot">.</span></h1><p id="library-description">論文の数式を、次のスライドへ。</p></div><div class="heading-mark" aria-hidden="true">∑</div></div>
+          <div class="library-toolbar" id="gallery-toolbar" data-review="gallery-toolbar">
+            <div class="segmented format-filter" aria-label="数式の形式"><button class="active" data-format="all" aria-pressed="true">All <span id="format-count">30</span></button><button data-format="inline" aria-pressed="false">Inline</button><button data-format="block" aria-pressed="false">Block</button></div>
+            <div class="toolbar-right"><label class="search-field"><span data-icon="search"></span><input type="search" id="search" placeholder="数式を検索…" aria-label="数式を検索"><kbd>⌘ K</kbd></label><button class="icon-button inspector-toggle" id="inspector-toggle" aria-label="詳細パネルを開閉" aria-pressed="true" title="詳細パネルを開閉"><span data-icon="panel-right"></span></button></div>
+          </div>
+          <div class="gallery-meta" id="gallery-options" data-review="gallery-options"><div class="result-count" id="result-count" aria-live="polite">数式を読み込み中…</div><div class="gallery-controls"><label class="sort-control"><span data-icon="sort"></span><select id="sort-order" aria-label="並び順"><option value="source">Source order</option><option value="custom">Custom order</option></select></label><span class="control-divider"></span><div class="view-switch" aria-label="表示密度"><button class="icon-button active" data-view="cards" title="カード表示" aria-label="カード表示" aria-pressed="true"><span data-icon="grid"></span></button><button class="icon-button" data-view="compact" title="高密度表示" aria-label="高密度表示" aria-pressed="false"><span data-icon="dense"></span></button></div></div></div>
+          <div class="reorder-hint" id="reorder-hint" hidden><span data-icon="grip"></span>カードをドラッグして並べ替え。詳細パネルの矢印でも移動できます。</div>
+          <div class="gallery-scroll" id="gallery-scroll"><div class="equation-gallery" id="equation-gallery" data-review="equation-gallery" role="list" aria-label="数式カード"><div class="loading-state">数式プレビューを準備しています…</div></div><div class="gallery-end" id="gallery-end"><span></span><span>Every equation has a place.</span><span></span></div></div>
+          <footer class="workspace-footer"><span><span class="status-dot"></span><span id="save-status">このブラウザに保存</span></span><span>ダブルクリックで編集 <span class="footer-separator">·</span> SVGで書き出し</span></footer>
+        </main>
+        <aside class="detail-panel" id="detail-panel" data-review="detail-panel" aria-label="選択した数式の詳細"></aside>
+      </div>
+    </div>
+  </div>
+
+  <aside class="review-panel" id="review-panel" hidden aria-label="UIレビュー">
+    <div class="panel-heading"><span><span data-icon="message"></span>UI review</span><button class="icon-button" id="close-review" aria-label="レビューを閉じる"><span data-icon="x"></span></button></div>
+    <p class="review-intro">変更したい場所を指定して、メモを残せます。メモはこのブラウザに保存されます。</p>
+    <label class="field-label" for="review-target">対象のUI</label><select id="review-target"><option>sidebar</option><option>project-header</option><option>gallery-toolbar</option><option>gallery-options</option><option>equation-gallery</option><option>equation-card</option><option>detail-panel</option><option>equation-editor</option></select>
+    <label class="field-label" for="review-note">変更したいこと</label><textarea id="review-note" rows="3" placeholder="例：カードの余白をもう少し減らしたい"></textarea><button class="button primary full-width" id="add-review"><span data-icon="plus"></span>メモを追加</button>
+    <div class="review-notes" id="review-notes"></div><button class="button secondary full-width" id="export-feedback"><span data-icon="download"></span>FEEDBACK.md を保存</button><p class="review-footnote">保存したメモをこのチャットに渡すか、気になる箇所を直接伝えてください。</p>
+  </aside>
+
+  <dialog id="equation-editor" data-review="equation-editor">
+    <form id="editor-form">
+      <div class="editor-header"><div><div class="eyebrow">MAKE IT YOURS</div><h2 id="editor-title">New equation</h2></div><button type="button" class="icon-button" id="close-editor" aria-label="編集を閉じる"><span data-icon="x"></span></button></div>
+      <p class="editor-description" id="editor-description">発表に合わせた数式を、カスタムカードに。</p>
+      <div class="editor-fields"><label class="field-label">カード名<input type="text" id="equation-name" placeholder="例：Covariance for slide 8" maxlength="100" autocomplete="off"></label><label class="field-label">形式<select id="equation-format"><option value="block">Block</option><option value="inline">Inline</option></select></label></div>
+      <div class="editor-columns"><div class="editor-source"><label class="field-label" for="equation-tex">LATEX SOURCE <span>数式部分を入力</span></label><textarea id="equation-tex" spellcheck="false" placeholder="X \sim \mathcal{N}(0, I_d)" required></textarea></div><div class="editor-output"><div class="field-label">LIVE PREVIEW <span class="preview-status" id="editor-preview-status">準備完了</span></div><div class="editor-preview" id="editor-preview"></div></div></div>
+      <p class="editor-error" id="editor-error" role="alert" hidden></p>
+      <div class="editor-footer"><span>ブラウザ上の数式プレビュー</span><div><button type="button" class="button secondary" id="cancel-editor">Cancel</button><button type="submit" class="button primary" id="save-equation">Save equation <kbd>⌘ ↵</kbd></button></div></div>
+    </form>
+  </dialog>
+  <dialog id="info-dialog" class="info-dialog"><div class="panel-heading"><span>About this prototype</span><button class="icon-button" id="close-info" aria-label="説明を閉じる"><span data-icon="x"></span></button></div><div class="info-symbol">ƒ</div><h2>From paper to presentation.</h2><p>論文の数式を探す、編集する、スライドへ持っていく。その使い心地を確かめるUIプロトタイプです。</p><ul><li>カードをクリックすると、元TeXと前後の文脈を表示。</li><li>ダブルクリックで編集。元のカードからカスタムカードを作ります。</li><li>Custom orderで並べ替え。変更はこのブラウザに保存。</li><li>ReviewでUIの改善メモを作成・書き出し。</li></ul><div class="prototype-note"><strong>今回動く範囲</strong><p>examples/demo-paper/ の架空の教材サンプルを使い、MathJaxでプレビューとSVGを生成します。TeXプロジェクトの読み込み・ローカルTeXでのコンパイルは未実装です。PowerPointへの直接ドラッグは環境依存のため、SVG保存からも試せます。</p></div><button class="button primary full-width" id="dismiss-info">Got it</button></dialog>
+  <dialog id="confirm-dialog" class="confirm-dialog"><h2 id="confirm-title"></h2><p id="confirm-message"></p><div class="confirm-actions"><button class="button secondary" id="confirm-cancel">Cancel</button><button class="button primary" id="confirm-accept">続ける</button></div></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

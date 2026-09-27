@@ -1,0 +1,21 @@
+\section{A few useful building blocks}
+These unrelated textbook identities complete the demonstration library.
+They exercise piecewise definitions, sums, and multiline equations.
+\begin{equation}
+  h(x)=\begin{cases}
+    0, & x<0,\\
+    x, & x\geq 0
+  \end{cases}
+  \label{eq:positive_part}
+\end{equation}
+For nonnegative integer $m$, the finite geometric sum is
+\begin{equation}
+  \sum_{j=0}^{m} r^j = \frac{1-r^{m+1}}{1-r}, \qquad r\neq 1.
+  \label{eq:geometric_sum}
+\end{equation}
+Finally, the fundamental theorem of calculus relates position and velocity.
+\begin{align}
+  s(t_1)-s(t_0) &= \int_{t_0}^{t_1}v(t)\,dt \\
+    &= v_0(t_1-t_0)+\frac{a}{2}(t_1^2-t_0^2).
+  \label{eq:displacement}
+\end{align}
