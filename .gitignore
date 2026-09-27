@@ -17,8 +17,6 @@
 *.p12
 *.p8
 *.mobileprovision
-/ui-prototype/preview.png
-/ui-prototype/liquid-glass-preview.png
 
 # TeX build products. The demo source is committed, generated PDFs are not.
 *.aux

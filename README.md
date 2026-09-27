@@ -68,7 +68,6 @@ All public fixtures and screenshots use synthetic sample material.
 | `docs/` | Static product page, ready for GitHub Pages |
 | `examples/demo-paper/` | Public demonstration LaTeX project |
 | `examples/demo-typst/` | Public demonstration Typst project |
-| `ui-prototype/` | Earlier browser UI experiment, using synthetic fixtures |
 | `scripts/` | Sample packaging and local publication checks |
 
 ## Preview the product page
