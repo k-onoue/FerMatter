@@ -136,10 +136,9 @@ release. Keep `releaseAvailable` false if there is no matching asset.
 
 1. Edit only `examples/demo-paper/`, `examples/demo-typst/`, `examples/demo-tikz/`,
    or `examples/demo-cetz/` with synthetic content.
-2. Run `python3 ui-prototype/scripts/build-samples.py` to refresh the browser fixture.
-3. Run `python3 scripts/prepare-demo.py` to rebuild the four downloadable ZIPs.
-4. If the content or counts changed, refresh page copy and native screenshots.
-5. Run `python3 scripts/check-publication.py` and review staged changes.
+2. Run `python3 scripts/prepare-demo.py` to rebuild the four downloadable ZIPs.
+3. If the content or counts changed, refresh page copy and native screenshots.
+4. Run `python3 scripts/check-publication.py` and review staged changes.
 
 Each demo ZIP uses its own explicit source allowlist. Local TeX outputs, extra
 files, private manuscripts, caches, and symlinks cannot be silently added to it.

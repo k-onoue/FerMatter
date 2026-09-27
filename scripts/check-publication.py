@@ -24,7 +24,6 @@ for name in files:
     forbidden = path.parts[0] in {'paper', '.private'} or any(part in {'build', '.build', 'node_modules', '__pycache__', 'dist'} for part in path.parts)
     forbidden |= path.name.startswith('.env') and path.name != '.env.example'
     forbidden |= path.suffix.lower() in {'.p12', '.p8', '.mobileprovision', '.dmg'}
-    forbidden |= name in {'ui-prototype/preview.png', 'ui-prototype/liquid-glass-preview.png'}
     if forbidden:
         errors.append(f'Private or generated file is a publication candidate: {name}')
     local = ROOT / name
@@ -97,5 +96,5 @@ if errors:
     print('\n'.join('ERROR: ' + error for error in errors), file=sys.stderr)
     sys.exit(1)
 print(f'Checked {len(files)} publication candidates, local page links, and {len(demo.DEMOS)} demo ZIPs.')
-print('Private manuscript, local builds, old screenshots, and dependency folders are excluded.')
+print('Private manuscript, local builds, and dependency folders are excluded.')
 print('This targeted check is not a substitute for reviewing `git diff --cached` before publishing.')
