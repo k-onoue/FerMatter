@@ -1,23 +1,35 @@
-# Publication handoff
+# Publishing Mathlidelux
+
+This guide is for release maintainers. For local development, branch names, and
+PR review, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Repository: [k-onoue/mathlidelux](https://github.com/k-onoue/mathlidelux).
-The product page lives in `docs/`. Pushing source code does not enable GitHub
-Pages or create a downloadable Mac release; those are separate steps below.
+The user-facing product page lives in `docs/`. Version notes and installers belong
+in [GitHub Releases](https://github.com/k-onoue/mathlidelux/releases).
+Publishing source code does not enable GitHub Pages or create a downloadable Mac
+release; those are separate steps below.
 
-## 1. Review and commit
+## 1. Prepare a release branch
 
-The branch is `main`, and `origin` is `git@github.com:k-onoue/mathlidelux.git`.
+Start a `release/vX.Y.Z` branch from an up-to-date `main` using the
+[contribution workflow](CONTRIBUTING.md#branches). Use separate branches and PRs
+for later page-only updates as well; do not push changes directly to `main`.
+
+For a new app version, update `CFBundleShortVersionString` and increment
+`CFBundleVersion` in [`macos-app/scripts/build.sh`](macos-app/scripts/build.sh).
+Keep the site's advertised `version` aligned with the downloadable release when
+activating downloads in step 5.
+
+After preparing the changes, validate them:
 
 ```sh
-python3 scripts/prepare-demo.py
 ./macos-app/scripts/check.sh
 ./macos-app/scripts/build.sh
-git add .
-git diff --cached --stat
-git diff --cached
-# After reviewing the staged files:
-git commit -m "Describe the changes"
 ```
+
+Rebuild sample ZIPs only if their sources changed, using the instructions below.
+Review and commit the intended files on the working branch, then open a PR to
+`main`. Complete the distribution preparation below before merging an app release.
 
 Keep the private `paper/` directory and ignored development captures out of Git.
 The site assets were captured with `examples/demo-paper/`, not a private project.
@@ -50,25 +62,7 @@ Local preview (serve **docs only**, not the repository or private manuscripts):
 python3 -m http.server 4174 --bind 127.0.0.1 --directory docs
 ```
 
-## 3. Push and enable GitHub Pages
-
-Push committed changes with `git push origin main`. Then, in the repository's
-**Settings → Pages → Build and deployment**:
-
-- Source: **Deploy from a branch**
-- Branch: **main**
-- Folder: **/docs**
-
-Save those settings. This is a static HTML/CSS/JS site with `.nojekyll`, relative
-asset paths, and no build dependencies. No custom workflow is needed.
-GitHub's [publishing-source instructions](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
-describe this configuration. The usual project URL is
-`https://k-onoue.github.io/mathlidelux/`.
-
-Only `docs/` should be selected as the site source. The repository's code is
-separately visible if the repository itself is public.
-
-## 4. Prepare the Mac distribution (still to do)
+## 3. Prepare the Mac distribution (still to do)
 
 The current build script creates an **ad hoc signed development app**, not a
 public distribution build. Do not upload it as the finished installer.
@@ -96,12 +90,37 @@ Before releasing:
 [Apple's Developer ID distribution guide](https://developer.apple.com/developer-id/)
 covers signing and notarization. This repository contains no signing credentials.
 
+## 4. Merge the PR and enable GitHub Pages
+
+Merge the reviewed PR into `main` after the relevant checks pass. For the initial
+site deployment, in the repository's **Settings → Pages → Build and deployment**:
+
+- Source: **Deploy from a branch**
+- Branch: **main**
+- Folder: **/docs**
+
+Save those settings. This is a static HTML/CSS/JS site with `.nojekyll`, relative
+asset paths, and no build dependencies. No custom workflow is needed.
+GitHub's [publishing-source instructions](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+describe this configuration. The usual project URL is
+`https://k-onoue.github.io/mathlidelux/`.
+
+Only `docs/` should be selected as the site source. Subsequent page changes deploy
+after their PRs merge into `main`; check the Pages deployment result in Actions.
+The product page can be published before an installer is ready by keeping
+`releaseAvailable: false`.
+
 ## 5. Attach the DMG and activate downloads
 
-Create a published, non-prerelease GitHub Release for the tested version, then
-attach the notarized disk image as **Mathlidelux.dmg**. Use that asset name for each
-release. Update `version`, set `releaseAvailable: true`, and commit/push the page
-configuration.
+Create a version tag such as `v0.10.0` on the exact tested commit in `main` after
+the release PR has merged. Build and validate the distribution from that commit;
+do not tag an unrelated, newer commit merely because it is now the branch tip.
+
+Prepare a GitHub Release for that tag, with user-facing notes covering features,
+fixes, requirements, and known limitations. Attach the notarized disk image as
+**Mathlidelux.dmg**, then publish the release as a non-prerelease. Use that asset
+name for each release. Update the site's `version` and set `releaseAvailable: true`
+through a separate reviewed PR after the download is available.
 
 The button then resolves to:
 
