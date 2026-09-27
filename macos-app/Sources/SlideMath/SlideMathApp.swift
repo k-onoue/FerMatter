@@ -155,10 +155,9 @@ struct ProjectTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack {
-                RoundedRectangle(cornerRadius: 14).fill(.blue.opacity(0.045))
                 if let equation = project.preview { EquationImage(card: equation).padding(22) }
                 else { Image(systemName: "folder").font(.system(size: 32, weight: .light)).foregroundStyle(.secondary) }
-            }.frame(height: 130)
+            }.frame(maxWidth: .infinity).frame(height: 130)
             HStack {
                 Text(project.name).font(.system(size: 16, weight: .semibold)).lineLimit(1)
                 Spacer()

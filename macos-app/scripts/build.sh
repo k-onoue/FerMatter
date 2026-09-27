@@ -24,6 +24,8 @@ cp "$project_dir/Resources/typst_worker.py" "$app_dir/Contents/Resources/typst_w
 cp "$project_dir/Resources/project_outline.py" "$app_dir/Contents/Resources/project_outline.py"
 cp "$project_dir/Resources/source_preview.py" "$app_dir/Contents/Resources/source_preview.py"
 cp "$project_dir/Resources/document_worker.py" "$app_dir/Contents/Resources/document_worker.py"
+# Keep the paired themes and their upstream licenses in the distributable app.
+ditto "$binary_dir/Mathlidelux_SlideMath.bundle" "$app_dir/Contents/Resources/Mathlidelux_SlideMath.bundle"
 # Apache-2.0 §4 requires the license and NOTICE to travel with every distributed copy.
 cp "$project_dir/../LICENSE" "$app_dir/Contents/Resources/LICENSE"
 cp "$project_dir/../NOTICE" "$app_dir/Contents/Resources/NOTICE"

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "mathlidelux.theme",
+  "id": "org.mathlidelux.vitesse",
+  "name": "Vitesse",
+  "light": {
+    "accent": "#1C6B48",
+    "windowBackground": "#FFFFFF",
+    "surfaceBackground": "#FFFFFF",
+    "text": "#393A34",
+    "command": "#1E754F",
+    "delimiter": "#999999",
+    "number": "#2F798A",
+    "comment": "#A0ADA0"
+  },
+  "dark": {
+    "accent": "#4D9375",
+    "windowBackground": "#121212",
+    "surfaceBackground": "#121212",
+    "text": "#DBD7CA",
+    "command": "#4D9375",
+    "delimiter": "#666666",
+    "number": "#4C9A91",
+    "comment": "#758575"
+  },
+  "extensions": {
+    "org.mathlidelux.theme-source": {
+      "variants": {
+        "light": "Vitesse Light",
+        "dark": "Vitesse Dark"
+      },
+      "sources": [
+        {
+          "repository": "https://github.com/antfu/vscode-theme-vitesse",
+          "revision": "2862595c3d5d05fabfd5aeb50bcbb79ea2f8d85f",
+          "files": [
+            "themes/vitesse-light.json",
+            "themes/vitesse-dark.json"
+          ],
+          "license": "MIT",
+          "licenseFile": "Licenses/antfu-vscode-theme-vitesse.txt"
+        }
+      ],
+      "adaptation": "Editor/sidebar backgrounds, keyword commands, punctuation/operator delimiters, numeric constants, and comments; missing punctuation uses text. Accent uses links (Night Owl uses keyword). All RGB colors are opaque; upstream alpha is removed, not applied to text. Native glass and artwork rendering are unchanged."
+    }
+  }
+}
