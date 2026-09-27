@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check publication candidates, local site links, and the sample ZIP. No uploads."""
+"""Check publication candidates, local documentation/site links, and sample ZIPs. No uploads."""
 from html.parser import HTMLParser
 import importlib.util
 from pathlib import Path, PurePosixPath
@@ -21,7 +21,7 @@ def git(*args):
 files = sorted(set(git('ls-files', '-z', '--cached', '--others', '--exclude-standard').decode().strip('\0').split('\0')) - {''})
 for name in files:
     path = PurePosixPath(name)
-    forbidden = path.parts[0] in {'paper', '.private'} or any(part in {'build', '.build', 'node_modules', '__pycache__', 'dist'} for part in path.parts)
+    forbidden = path.parts[0] in {'paper', '.private'} or any(part in {'build', '.build', 'node_modules', '__pycache__', 'dist', '.venv-docs'} for part in path.parts)
     forbidden |= path.name.startswith('.env') and path.name != '.env.example'
     forbidden |= path.suffix.lower() in {'.p12', '.p8', '.mobileprovision', '.dmg'}
     forbidden |= name in {'ui-prototype/preview.png', 'ui-prototype/liquid-glass-preview.png'}
@@ -54,7 +54,7 @@ class Links(HTMLParser):
         attrs = dict(attrs)
         if attrs.get('id'):
             self.ids.add(attrs['id'])
-        for key in ('href', 'src'):
+        for key in ('href', 'src', 'poster'):
             if attrs.get(key):
                 self.references.append(attrs[key])
 
@@ -77,6 +77,28 @@ for html in site.rglob('*.html'):
         target = (html.parent / unquote(url.path)).resolve()
         if not target.is_relative_to(site.resolve()) or not target.exists():
             errors.append(f'Missing or out-of-site asset in {html.name}: {reference}')
+        elif target.suffix == '.html' and url.fragment:
+            linked = Links()
+            linked.feed(target.read_text())
+            if unquote(url.fragment) not in linked.ids:
+                errors.append(f'Broken page anchor in {html.name}: {reference}')
+
+# Repository Markdown uses inline links and reference-style link definitions.
+# Ignore fenced examples; validate local targets without requiring site-build dependencies.
+for name in files:
+    source = ROOT / name
+    if source.suffix != '.md' or not source.is_file():
+        continue
+    content = re.sub(r'(?ms)^```[^\n]*\n.*?^```[^\n]*$', '', source.read_text())
+    references = re.findall(r'\]\(([^\s)]+)(?:\s+"[^"]*")?\)', content)
+    references += re.findall(r'(?m)^\[[^\]]+\]:\s*(\S+)', content)
+    for reference in references:
+        url = urlsplit(reference.strip('<>'))
+        if url.scheme or url.netloc or not url.path:
+            continue
+        target = (source.parent / unquote(url.path)).resolve()
+        if not target.is_relative_to(ROOT) or not target.exists():
+            errors.append(f'Broken local Markdown link in {name}: {reference}')
 
 spec = importlib.util.spec_from_file_location('demo', ROOT / 'scripts/prepare-demo.py')
 demo = importlib.util.module_from_spec(spec)
@@ -96,6 +118,6 @@ for demo_name, sources in demo.DEMOS.items():
 if errors:
     print('\n'.join('ERROR: ' + error for error in errors), file=sys.stderr)
     sys.exit(1)
-print(f'Checked {len(files)} publication candidates, local page links, and {len(demo.DEMOS)} demo ZIPs.')
+print(f'Checked {len(files)} publication candidates, local Markdown/page links, and {len(demo.DEMOS)} demo ZIPs.')
 print('Private manuscript, local builds, old screenshots, and dependency folders are excluded.')
 print('This targeted check is not a substitute for reviewing `git diff --cached` before publishing.')

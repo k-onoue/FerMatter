@@ -1,0 +1,14 @@
+[
+  {"source": "README.md", "slug": "index", "title": "Use Mathlidelux", "summary": "Short guides for bringing equations from your paper into your slides."},
+  {"source": "paper-to-slides.md", "slug": "paper-to-slides", "title": "From your paper to a slide", "summary": "Open a project, choose an equation, and paste it into PowerPoint.", "video": "paper-to-slides"},
+  {"source": "edit-equation.md", "slug": "edit-equation", "title": "Make a version for your talk", "summary": "Edit a presentation variant while keeping the manuscript unchanged."},
+  {"source": "export.md", "slug": "export", "title": "Choose size and format", "summary": "Copy, drag, or export SVG, PDF, PNG, and JPEG."},
+  {"source": "new-project.md", "slug": "new-project", "title": "Start from pasted equations", "summary": "Create a LaTeX or Typst project from text and a template."},
+  {"source": "navigate-paper.md", "slug": "navigate-paper", "title": "Find an equation in the paper", "summary": "Navigate between the paper PDF, outline, and equation library."},
+  {"source": "source-editor.md", "slug": "source-editor", "title": "Edit the project source", "summary": "Edit files, manage panes, and save or recover drafts."},
+  {"source": "figures.md", "slug": "figures", "title": "Use TikZ or CeTZ drawings", "summary": "Bring source drawings into your presentation."},
+  {"source": "preferences.md", "slug": "preferences", "title": "Shortcuts and appearance", "summary": "Change editing shortcuts and keep the app beside your slides."},
+  {"source": "requirements.md", "slug": "requirements", "title": "Requirements", "summary": "Supported Macs and external tools for LaTeX and Typst."},
+  {"source": "limits.md", "slug": "limits", "title": "Limits and troubleshooting", "summary": "Check missing equations, compiler errors, and current limitations."},
+  {"source": "why.md", "slug": "why", "title": "Make the talk your own", "summary": "More time for deciding what to explain and practising the talk."}
+]

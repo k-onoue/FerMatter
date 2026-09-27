@@ -3,112 +3,69 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Bring your LaTeX or Typst equations into your next presentation. Mathlidelux is a native Mac app for browsing, refining, and exporting equations as crisp SVGs.">
-  <meta name="theme-color" content="#f6f7fb">
+  <meta name="description" content="Choose equations from your LaTeX or Typst paper, edit a version for your talk, and paste them into your slides.">
+  <meta name="theme-color" content="#f7f8fa">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Mathlidelux — From paper to presentation">
-  <meta property="og:description" content="Your LaTeX or Typst equations, ready for their next presentation. A native macOS app.">
-  <title>Mathlidelux — From paper to presentation</title>
-  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
-  <link rel="stylesheet" href="styles.css">
+  <meta property="og:title" content="Mathlidelux — Your paper's equations, on your slides">
+  <meta property="og:description" content="Reuse your equations. Make the talk your own.">
+  <title>Mathlidelux — Your paper's equations, on your slides</title>
+  <link rel="icon" type="image/png" href="assets/icon.png">
+  <link rel="stylesheet" href="styles.css?v=2">
   <script src="theme.js"></script>
   <script defer src="site-config.js"></script>
-  <script defer src="site.js"></script>
+  <script defer src="site.js?v=2"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
-    <a class="brand" href="#" aria-label="Mathlidelux home"><img src="assets/icon.svg" width="34" height="34" alt=""><span>Mathlidelux</span></a>
-    <nav aria-label="Main navigation">
-      <a href="#workflow" class="nav-detail">How it works</a>
-      <a href="#sample" class="nav-detail">Sample project</a>
-      <button id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode" aria-pressed="false" hidden>
-        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13A8.7 8.7 0 0 1 11 3.4 8.7 8.7 0 1 0 20.6 13Z"/></svg>
-        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>
-      </button>
-      <a class="nav-cta" href="#download">Get the app <span aria-hidden="true">↗</span></a>
-    </nav>
+    <a class="brand" href="index.html"><img src="assets/icon.png" width="32" height="32" alt="">Mathlidelux</a>
+    <nav aria-label="Main navigation"><a href="guide/index.html">Guide</a><a href="#download">Get the app</a><button id="theme-toggle" type="button" hidden>Dark mode</button></nav>
   </header>
-
   <main id="main">
     <section class="hero" aria-labelledby="hero-heading">
-      <div class="hero-glow" aria-hidden="true"></div>
-      <p class="eyebrow"><span class="small-dot"></span> A little less typesetting.</p>
-      <h1 id="hero-heading">From your paper.<br><em>Into your next talk.</em></h1>
-      <p class="hero-copy">Find the equation. Make it yours.<br>Bring it to your slides as a beautifully crisp SVG.</p>
-      <div class="hero-actions">
-        <a class="button primary" href="#preview">Explore Mathlidelux <span aria-hidden="true">↓</span></a>
-        <a class="text-link" href="#sample">Try the sample <span aria-hidden="true">↗</span></a>
-      </div>
-      <p class="platform-note">Built for Mac <span>·</span> macOS 26+ <span>·</span> Apple Silicon</p>
-      <figure id="preview" class="app-preview">
-        <div class="preview-halo" aria-hidden="true"></div>
-        <div class="screenshot-frame">
-          <img id="app-screenshot" src="assets/app-dark.jpg" width="2760" height="1760" alt="Mathlidelux showing the synthetic demo project with an equation library and section navigation." fetchpriority="high">
-        </div>
-        <figcaption><span class="caption-dot"></span> The native app, with our sample project.</figcaption>
+      <p class="eyebrow">For LaTeX &amp; Typst · Built for Mac</p>
+      <h1 id="hero-heading">Your paper’s equations.<br>On your slides.</h1>
+      <p class="lead">Choose an equation, adjust it for your talk,<br class="wide-only"> and paste it into your presentation.</p>
+      <figure class="tutorial" id="workflow">
+        <video controls playsinline preload="none" width="1440" height="920" poster="assets/tutorials/paper-to-slides.jpg" aria-label="How to copy an equation from Mathlidelux into PowerPoint">
+          <source src="assets/tutorials/paper-to-slides.mp4" type="video/mp4">
+          <track kind="captions" src="assets/tutorials/paper-to-slides.vtt" srclang="en" label="English">
+          <a href="assets/tutorials/paper-to-slides.mp4">Download the demonstration video</a>.
+        </video>
+        <figcaption>Watch the steps · 18 seconds · actual app screens</figcaption>
       </figure>
+      <ol class="workflow-steps">
+        <li><span>1</span><div><strong>Open your paper</strong><p>Choose a folder, ZIP, or main file.</p></div></li>
+        <li><span>2</span><div><strong>Choose an equation</strong><p>Copy it as SVG, or edit a variant.</p></div></li>
+        <li><span>3</span><div><strong>Make your slide</strong><p>Paste, position, and explain.</p></div></li>
+      </ol>
+      <a class="text-link" href="guide/paper-to-slides.html">Follow the short guide <span aria-hidden="true">→</span></a>
     </section>
-
-    <section id="workflow" class="workflow section-wrap" aria-labelledby="workflow-heading">
-      <div class="section-intro">
-        <p class="eyebrow">LESS FRICTION. MORE IDEAS.</p>
-        <h2 id="workflow-heading">Your math already exists.<br>Put it to work.</h2>
-      </div>
-      <div class="steps">
-        <article class="step"><span class="step-number">01</span><h3>Start with your math.</h3><p>Open a LaTeX or Typst project, or paste equations into a template of your own. TikZ and CeTZ drawings belong here, too.</p><span class="step-detail"><span aria-hidden="true">⇧⌘</span> N <span class="detail-rule"></span> Paste. Create. Browse.</span></article>
-        <article class="step"><span class="step-number">02</span><h3>Find your focus.</h3><p>Navigate from the PDF or your paper’s outline, and add your own labels. Double-click to make a version for your talk, keeping the source intact.</p><span class="step-detail">Source <span aria-hidden="true">→</span> Custom equation</span></article>
-        <article class="step"><span class="step-number">03</span><h3>Take it to the slide.</h3><p>Set a font size, copy the SVG, and paste it into PowerPoint. Vector paths stay sharp at every size.</p><span class="step-detail">SVG <span class="detail-rule"></span> 10–96 pt</span></article>
-      </div>
-      <details class="requirements"><summary>Open Project or New Project?</summary><div>
-        <p><strong>Open Project (⌘O)</strong> opens a folder, ZIP, or main .tex / .typ file, including a project you have never opened in Mathlidelux before. Use it to keep companion files, imports, images, and project settings together.</p>
-        <p><strong>New Project (⇧⌘N)</strong> creates a project from a template and pasted equations. Choose a template, add your text, then click <strong>Create Project</strong> to save and render it.</p>
-        <p><strong>Load File…</strong>, inside New Project, loads a UTF-8 .tex, .typ, or .txt file into the text area instead of copying and pasting. It leaves the original file unchanged. Only its text is loaded; companion files are not copied.</p>
-        <p>Use <strong>Source</strong> to edit project files, packages, and commands with a file tree and syntax completion. Changes save automatically and refresh the library and PDF; manual saving is available in Settings. In the library, select multiple cards with Command-click, Shift-click, or a selection rectangle, then export them together.</p>
-      </div></details>
-      <details class="requirements"><summary>Which template should I choose?</summary><div>
-        <p><strong>LaTeX</strong> includes common math packages. <strong>Typst</strong> uses Typst’s own math syntax. <strong>LaTeX + TikZ</strong> and <strong>Typst + CeTZ</strong> also load drawing tools for their respective formats.</p>
-        <p>In <strong>Settings → Templates</strong>, customize a built-in template to save your own packages, macros, or fonts, and choose a default. Custom templates appear alongside the four built-ins.</p>
-        <p><strong>Auto</strong> recognizes common source markup, or treats each line as an equation. Choose <strong>One per line</strong> for bare formulas or <strong>Source</strong> to preserve math delimiters, headings, and multiline drawing code.</p>
-      </div></details>
+    <section class="section-wrap learn" aria-labelledby="learn-heading">
+      <h2 id="learn-heading">Just what you need next.</h2>
+      <ul class="guide-links">
+        <li><a href="guide/edit-equation.html"><span>Edit a version for your talk</span><span aria-hidden="true">→</span></a></li>
+        <li><a href="guide/new-project.html"><span>Start from pasted equations</span><span aria-hidden="true">→</span></a></li>
+        <li><a href="guide/navigate-paper.html"><span>Find an equation in the paper</span><span aria-hidden="true">→</span></a></li>
+        <li><a href="guide/export.html"><span>Choose size and format</span><span aria-hidden="true">→</span></a></li>
+      </ul>
     </section>
-
-    <section class="features section-wrap" aria-label="Designed for presentation work">
-      <article class="feature-math">
-        <div class="feature-text"><p class="eyebrow">ROOM TO THINK BIG</p><h2>Small detail.<br>Big-screen clarity.</h2><p>Transparent backgrounds. Clean vector paths.<br>Your equations are ready for the front row.</p></div>
-        <div class="equation-stage" aria-label="A vector equation exported from the demo paper">
-          <div class="equation-sheet"><span class="sheet-label">TRAJECTORY <span>SVG</span></span><img src="assets/trajectory.svg" alt="s of t equals s zero plus v zero t plus one half a t squared" width="300" height="70" loading="lazy"><span class="sheet-bottom"><span class="caption-dot"></span> Ready for your next talk</span></div>
-          <span class="scale-corner corner-a" aria-hidden="true"></span><span class="scale-corner corner-b" aria-hidden="true"></span><span class="scale-corner corner-c" aria-hidden="true"></span><span class="scale-corner corner-d" aria-hidden="true"></span>
-        </div>
-      </article>
-      <div class="feature-notes">
-        <article><span class="feature-glyph" aria-hidden="true">◈</span><h3>A little Liquid Glass.</h3><p>Native Mac controls, with light and dark appearances that feel at home.</p></article>
-        <article><svg class="feature-glyph line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 3 8 0-1 7 4 4v2H5v-2l4-4-1-7ZM12 16v6"/></svg><h3>Keep it close.</h3><p>Pin the window above your slides. Adjust the background while your text stays clear.</p></article>
-        <article><svg class="feature-glyph line-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4m-4-11 3 3 5-5"/></svg><h3>On your Mac.</h3><p>Extraction and rendering run locally, using your own LaTeX or Typst tools and project settings.</p></article>
-      </div>
+    <section class="section-wrap sample" id="sample" aria-labelledby="sample-heading">
+      <div><h2 id="sample-heading">Try a small paper.</h2><p>Synthetic examples you can open and explore.</p></div>
+      <div class="sample-links"><a class="button secondary" href="downloads/demo-paper.zip" download>LaTeX sample ↓</a><a class="button secondary" href="downloads/demo-typst.zip" download>Typst sample ↓</a></div>
+      <p class="small">Drawings: <a href="downloads/demo-tikz.zip" download>TikZ</a> · <a href="downloads/demo-cetz.zip" download>CeTZ</a></p>
     </section>
-
-    <section id="sample" class="sample section-wrap" aria-labelledby="sample-heading">
-      <div class="sample-art" aria-hidden="true">
-        <div class="paper-page back-page"></div>
-        <div class="paper-page front-page"><span class="paper-kicker">MATHLIDELUX / DEMO NOTE</span><span class="paper-title">A Small Study<br>in Motion</span><span class="paper-byline">A synthetic equation library</span><div class="paper-rule"></div><span class="paper-section">1. A simple model</span><div class="paper-lines"></div><img src="assets/trajectory.svg" alt="" width="230" height="55" loading="lazy"><div class="paper-lines shorter"></div><span class="paper-number">01</span></div>
-      </div>
-      <div class="sample-copy"><p class="eyebrow">A GOOD PLACE TO START</p><h2 id="sample-heading">A small paper.<br>A world of equations.</h2><p>Explore a fictional teaching note filled with trajectories, matrices, and a little calculus. Download a ZIP below and choose <strong>Open Project</strong> in Mathlidelux.</p><p class="sample-facts">LaTeX: 27 equations <span>·</span> Typst: 20 equations</p><a class="button secondary" href="downloads/demo-paper.zip" download>LaTeX sample <span aria-hidden="true">↓</span></a> <a class="button secondary" href="downloads/demo-typst.zip" download>Typst sample <span aria-hidden="true">↓</span></a><p class="fine-print">Drawing samples: <a href="downloads/demo-tikz.zip" download>TikZ ↓</a> · <a href="downloads/demo-cetz.zip" download>CeTZ ↓</a><br>Synthetic demos, made just for Mathlidelux.</p></div>
+    <section class="section-wrap download" id="download" aria-labelledby="download-heading">
+      <h2 id="download-heading">Get Mathlidelux</h2>
+      <p id="release-status">Development prototype. A public Mac download is being prepared.</p>
+      <p class="small">macOS 26+ · Apple Silicon · External Python and compiler tools required</p>
+      <span class="availability" id="download-pending">Public download not yet available</span>
+      <a class="button primary" id="download-link" hidden>Download for Mac</a>
+      <p><a href="guide/requirements.html">Requirements</a> · <a href="guide/index.html">All guides</a></p>
+      <noscript><p class="small">The guides, video, and samples work without JavaScript. Release-button updates require JavaScript.</p></noscript>
     </section>
-
-    <section id="download" class="download section-wrap" aria-labelledby="download-heading">
-      <img class="download-icon" src="assets/icon.svg" alt="" width="64" height="64" loading="lazy">
-      <p class="eyebrow">READY FOR YOUR NEXT TALK</p>
-      <h2 id="download-heading">Give your equations<br>their moment.</h2>
-      <p id="release-status" class="download-description">The first downloadable Mac build is on its way.</p>
-      <button id="download-pending" class="button pending" disabled>Mac download coming soon</button>
-      <a id="download-link" class="button primary" hidden>Download for Mac <span aria-hidden="true">↓</span></a>
-      <p class="platform-note">macOS 26+ <span>·</span> Apple Silicon</p>
-      <a class="text-link repository-link" hidden>View on GitHub <span aria-hidden="true">↗</span></a>
-      <details class="requirements"><summary>What will I need?</summary><div><p>All projects need Python 3. Typst projects need the Typst CLI (0.14+). LaTeX projects need a TeX installation such as MacTeX, latexmk, preview.sty, pdfcrop, pdf2svg, and Poppler; DVI projects also need dvips and Ghostscript.</p><p>Xcode is needed to build from source. It will not be required to use a packaged app. Open projects you trust.</p><a class="text-link setup-link" hidden>Build and setup instructions <span aria-hidden="true">↗</span></a></div></details>
-      <noscript><p class="fine-print">Enable JavaScript to see configured release links. The sample download above works without it.</p></noscript>
-    </section>
+    <aside class="purpose section-wrap"><p>Less time retyping equations.<br>More time thinking through your talk.</p><a href="guide/why.html">Why Mathlidelux <span aria-hidden="true">→</span></a></aside>
   </main>
-  <footer class="site-footer"><a class="brand" href="#"><img src="assets/icon.svg" width="25" height="25" alt=""><span>Mathlidelux</span></a><p>Good ideas deserve clear equations.</p><a class="repository-link" hidden>GitHub <span aria-hidden="true">↗</span></a><a href="#sample">Sample project</a></footer>
+  <footer class="site-footer"><a class="brand" href="index.html"><img src="assets/icon.png" width="26" height="26" alt="">Mathlidelux</a><a href="guide/index.html">Guide</a><a href="guide/requirements.html">Requirements</a></footer>
 </body>
 </html>
