@@ -9,9 +9,12 @@ struct SlideMathApp: App {
     @StateObject private var shortcuts = ShortcutPreferences()
     @StateObject private var templates = TemplateStore()
     @StateObject private var themes = ThemePreferences()
+    @StateObject private var updates = AppUpdates()
     var body: some Scene {
         WindowGroup(AppIdentity.name) {
             AppRootView()
+                .safeAreaInset(edge: .top, spacing: 0) { UpdateBanner(updates: updates) }
+                .task { await updates.check(manually: false) }
                 .environmentObject(store).environmentObject(preferences).environmentObject(templates).environmentObject(shortcuts)
                 .tint(Color(nsColor: themes.document.color(.accent)))
                 .accentColor(Color(nsColor: themes.document.color(.accent)))
@@ -21,19 +24,23 @@ struct SlideMathApp: App {
                 .background(WindowConfiguration(preferences: preferences, shortcuts: shortcuts).ignoresSafeArea())
                 .frame(minWidth: 1040, minHeight: 680)
                 .onAppear { NSApp.setActivationPolicy(.regular); NSApp.activate(ignoringOtherApps: true) }
-                .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in store.refreshCompletions(); if store.editingProject { store.files.refresh() } }
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in Task { await updates.check(manually: false) }; store.refreshCompletions(); if store.editingProject { store.files.refresh() } }
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in store.files.flushAutoSaves() }
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in store.files.flushAutoSaves(); store.files.persistDrafts(); store.saveNow(); store.stop(); store.cancelPreview() }
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1380, height: 880)
-        .commands { LibraryCommands(store: store, preferences: preferences, shortcuts: shortcuts, pdf: store.pdf, files: store.files) }
+        .commands {
+            LibraryCommands(store: store, preferences: preferences, shortcuts: shortcuts, pdf: store.pdf, files: store.files)
+            UpdateCommands(updates: updates)
+        }
         Settings {
             TabView {
                 EditorSettingsView(preferences: store.files.editorPreferences).tabItem { Label("Editor", systemImage: "text.alignleft") }
                 TemplateSettingsView(templates: templates).tabItem { Label("Templates", systemImage: "doc.on.doc") }
                 ShortcutSettingsView(shortcuts: shortcuts).tabItem { Label("Shortcuts", systemImage: "keyboard") }
                 ThemeSettingsView(themes: themes, window: preferences).tabItem { Label("Appearance", systemImage: "paintpalette") }
+                UpdateSettingsView(updates: updates).tabItem { Label("Updates", systemImage: "arrow.down.circle") }
             }.frame(width: 780, height: 700)
                 .tint(Color(nsColor: themes.document.color(.accent)))
                 .accentColor(Color(nsColor: themes.document.color(.accent)))
