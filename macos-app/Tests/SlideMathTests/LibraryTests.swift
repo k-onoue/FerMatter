@@ -4,6 +4,43 @@ import AppKit
 @testable import SlideMath
 
 final class LibraryTests: XCTestCase {
+    @MainActor func testShowInFinderOpensSelectedProjectInsideApplicationSupport() async throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("FinderTests-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: base) }
+        let support = base.appendingPathComponent("Application Support/Slide Math")
+        let project = support.appendingPathComponent("Sources/Quick Typst", isDirectory: true)
+        try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        let store = LibraryStore(support: support)
+        store.root = base.appendingPathComponent("Another Project").path
+        var opened: [URL] = []
+        store.showProjectInFinder(project.path) { opened.append($0); return true }
+        XCTAssertEqual(opened, [project])
+        XCTAssertNil(store.alert)
+    }
+
+    @MainActor func testShowInFinderRejectsMissingOrInvalidProjectWithoutOpeningParent() async throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("FinderTests-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: base) }
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        let file = base.appendingPathComponent("main.typ")
+        try Data("$x$".utf8).write(to: file)
+        let store = LibraryStore(support: base)
+        for path in ["", "relative/project", file.path, base.appendingPathComponent("Missing Project").path] {
+            store.alert = nil
+            store.showProjectInFinder(path) { _ in XCTFail("Must not open Finder for \(path)"); return true }
+            XCTAssertNotNil(store.alert)
+        }
+    }
+
+    @MainActor func testShowInFinderReportsOpenFailure() async throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("FinderTests-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: base) }
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        let store = LibraryStore(support: base)
+        store.showProjectInFinder(base.path) { _ in false }
+        XCTAssertEqual(store.alert, "Could not open the project folder in Finder: \(base.path)")
+    }
+
     @MainActor func testPerItemOutputSizeOverridesDefaultAndSurvivesSavingPreview() async throws {
         let (base, root, original) = try fixture()
         defer { try? FileManager.default.removeItem(at: base) }

@@ -110,7 +110,7 @@ struct ProjectsView: View {
                             Button { store.load(URL(fileURLWithPath: project.root), rescan: false) } label: {
                                 ProjectTile(project: project)
                             }.buttonStyle(.plain).help(project.root)
-                                .contextMenu { Button("Show in Finder") { NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: project.root) } }
+                                .contextMenu { Button("Show in Finder") { store.showProjectInFinder(project.root) } }
                         }
                         if query.isEmpty {
                             Button { store.showingNewProject = true } label: {
@@ -411,7 +411,7 @@ struct ProjectSettingsView: View {
                 Button("Rescan", systemImage: "arrow.clockwise", action: store.scan)
                 Button("Render All", systemImage: "play", action: store.renderAll).disabled(!store.canRender)
             }.disabled(store.busy)
-            Button("Show in Finder") { NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: store.root) }.buttonStyle(.link)
+            Button("Show in Finder") { store.showProjectInFinder(store.root) }.buttonStyle(.link)
             if !store.warnings.isEmpty {
                 DisclosureGroup("\(store.warnings.count) warnings") {
                     ScrollView { Text(store.warnings.joined(separator: "\n")).font(.caption).textSelection(.enabled) }.frame(maxHeight: 160)

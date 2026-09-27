@@ -163,10 +163,13 @@ Editing or deleting a template leaves already-created project sources unchanged.
 
 ### Where new projects are saved
 
-New projects are stored under `~/Library/Application Support/Slide Math/Sources`
-unless you choose another location. Each is a normal folder with a `main.tex` or
-`main.typ` (and a compiler `latexmkrc` for LaTeX). Reusing a name adds a numeric
-suffix without overwriting the previous project. Templates are saved locally in
+New projects default to `~/Documents/Mathlidelux/`. The New Project window shows
+the destination; use **Change…** to choose another location. Each project is a
+normal folder with a `main.tex` or `main.typ` (and a compiler `latexmkrc` for LaTeX).
+Reusing a name adds a numeric suffix without overwriting the previous project.
+Existing projects, including those created under
+`~/Library/Application Support/Slide Math/Sources/`, stay in their original locations.
+**Show in Finder** opens that project's folder. Templates are saved locally in
 `~/Library/Application Support/Slide Math/templates.json`.
 These are source-text templates: relative imports, images, and helper files need
 to be copied into the created project folder separately. Use **Open Project**
