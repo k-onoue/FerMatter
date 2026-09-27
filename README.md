@@ -102,5 +102,11 @@ Never force-add these files. Review staged changes before committing.
 
 ## License
 
-An open-source license has not yet been selected. Choose a license before
-presenting this project as open source.
+Mathlidelux is licensed under the [Apache License 2.0](LICENSE).
+Copyright 2026 k-onoue and Mathlidelux contributors; see [NOTICE](NOTICE).
+
+The license does not grant permission to use the Mathlidelux name or icon
+(section 6). Do not distribute modified builds under the Mathlidelux name or icon.
+
+External tools the app runs, such as TeX Live, Typst, pdf2svg, and Poppler,
+are not part of this repository and keep their own licenses.

@@ -22,6 +22,9 @@ cp "$project_dir/Resources/tex_worker.py" "$app_dir/Contents/Resources/tex_worke
 cp "$project_dir/Resources/typst_worker.py" "$app_dir/Contents/Resources/typst_worker.py"
 cp "$project_dir/Resources/project_outline.py" "$app_dir/Contents/Resources/project_outline.py"
 cp "$project_dir/Resources/document_worker.py" "$app_dir/Contents/Resources/document_worker.py"
+# Apache-2.0 §4 requires the license and NOTICE to travel with every distributed copy.
+cp "$project_dir/../LICENSE" "$app_dir/Contents/Resources/LICENSE"
+cp "$project_dir/../NOTICE" "$app_dir/Contents/Resources/NOTICE"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

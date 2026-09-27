@@ -21,7 +21,6 @@ git commit -m "Describe the changes"
 
 Keep the private `paper/` directory and ignored development captures out of Git.
 The site assets were captured with `examples/demo-paper/`, not a private project.
-Select an application license before describing the project as open source.
 
 ## 2. Configure the page
 
@@ -91,6 +90,8 @@ Before releasing:
   runtime as appropriate, notarize it, and attach the notarization ticket.
 - Package and test `Mathlidelux.dmg` on a Mac without this development environment.
 - Check notices and licenses for any tools or fonts included in the distribution.
+- Place `LICENSE` and `NOTICE` at the DMG root. `build.sh` already copies them
+  into `Contents/Resources/`. Add third-party notices for any bundled tools.
 
 [Apple's Developer ID distribution guide](https://developer.apple.com/developer-id/)
 covers signing and notarization. This repository contains no signing credentials.
