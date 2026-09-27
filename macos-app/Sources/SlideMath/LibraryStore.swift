@@ -204,6 +204,17 @@ final class LibraryStore: ObservableObject {
 
     func refreshProjects() { projects = storage.summaries() }
 
+    func showProjectInFinder(_ projectRoot: String, openFolder: (URL) -> Bool = { NSWorkspace.shared.open($0) }) {
+        var isDirectory: ObjCBool = false
+        guard projectRoot.hasPrefix("/"),
+              FileManager.default.fileExists(atPath: projectRoot, isDirectory: &isDirectory), isDirectory.boolValue else {
+            alert = "Project folder not found: \(projectRoot)"
+            return
+        }
+        let folder = URL(fileURLWithPath: projectRoot, isDirectory: true)
+        if !openFolder(folder) { alert = "Could not open the project folder in Finder: \(projectRoot)" }
+    }
+
     func showProjects() {
         files.flushAutoSaves(); files.persistDrafts()
         saveNow(); refreshProjects(); showingProjects = true

@@ -12,6 +12,10 @@ into `Assets.car` plus an `AppIcon.icns` fallback. Both `CFBundleIconName` and
 `CFBundleIconFile` point to `AppIcon`. Generated files remain in the ignored
 build folder; no image generation service is needed to build the app.
 
+The build also copies the approved artwork as `AppMark.png` for in-app branding
+and empty previews. The product page uses an identical copy at
+`docs/assets/icon.png` for its logo and favicon.
+
 The native icon stack avoids the extra white plate observed when macOS 26
 renders the legacy ICNS alone. The artwork stays in one layer to preserve the
 approved design; the system supplies the native outer enclosure.

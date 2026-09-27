@@ -43,6 +43,7 @@ struct AssistedSourceEditor: View {
 
 /// A source editor keeps smart quotes and substitutions out of compiler input.
 struct SourceTextEditor: NSViewRepresentable {
+    @Environment(\.appTheme) private var theme
     @Binding var text: String
     var label: String
     var format: ProjectFormat = .latex
@@ -73,6 +74,7 @@ struct SourceTextEditor: NSViewRepresentable {
         scroll.isHidden = !isVisible
         if !isVisible { view.dismissSuggestions() }
         if view.string != text { view.string = text; view.undoManager?.removeAllActions() }
+        view.theme = theme
         view.sourceFormat = format; view.sourceContext = self.context; controller?.view = view
         view.setAccessibilityLabel(label)
         view.projectCompletions = projectCompletions

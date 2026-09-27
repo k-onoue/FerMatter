@@ -176,10 +176,13 @@ Editing or deleting a template leaves already-created project sources unchanged.
 
 ### Where new projects are saved
 
-New projects are stored under `~/Library/Application Support/Slide Math/Sources`
-unless you choose another location. Each is a normal folder with a `main.tex` or
-`main.typ` (and a compiler `latexmkrc` for LaTeX). Reusing a name adds a numeric
-suffix without overwriting the previous project. Templates are saved locally in
+New projects default to `~/Documents/Mathlidelux/`. The New Project window shows
+the destination; use **Change…** to choose another location. Each project is a
+normal folder with a `main.tex` or `main.typ` (and a compiler `latexmkrc` for LaTeX).
+Reusing a name adds a numeric suffix without overwriting the previous project.
+Existing projects, including those created under
+`~/Library/Application Support/Slide Math/Sources/`, stay in their original locations.
+**Show in Finder** opens that project's folder. Templates are saved locally in
 `~/Library/Application Support/Slide Math/templates.json`.
 These are source-text templates: relative imports, images, and helper files need
 to be copied into the created project folder separately. Use **Open Project**
@@ -453,9 +456,15 @@ Open the warning icon for compiler details. Rendering does not rewrite the
 original project; automatic and manual saves in Source mode do.
 
 **Settings → Shortcuts** lets you record or clear each app shortcut and
-restore defaults. Assignments persist across launches and update the menus.
+restore defaults. Assignments persist in `Settings/keybindings.json` and update the menus.
 Duplicates and standard macOS/text-editing combinations are rejected. Escape and
 the editor's Command-Return remain standard dialog controls.
+
+**Settings → Appearance** manages the active `Settings/theme.json`, with light and
+dark colors for the window, surfaces, accents, and source syntax. Both settings
+panes can open, reveal, reload, import, and export their JSON file. Invalid edits
+keep the last valid settings. See [Settings files](../docs/settings-files.md) for
+the versioned formats, an importable theme, and the declarative extension boundary.
 
 ## Storage and rendering
 

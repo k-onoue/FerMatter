@@ -18,6 +18,7 @@ xcrun actool "$project_dir/Resources/AppIcon.icon" \
 # Remove bytecode left by older development builds before sealing Resources.
 rm -rf -- "$app_dir/Contents/Resources/__pycache__"
 cp "$binary_dir/Mathlidelux" "$app_dir/Contents/MacOS/Mathlidelux"
+cp "$project_dir/Resources/AppIcon.icon/Assets/AppIcon.png" "$app_dir/Contents/Resources/AppMark.png"
 cp "$project_dir/Resources/tex_worker.py" "$app_dir/Contents/Resources/tex_worker.py"
 cp "$project_dir/Resources/typst_worker.py" "$app_dir/Contents/Resources/typst_worker.py"
 cp "$project_dir/Resources/project_outline.py" "$app_dir/Contents/Resources/project_outline.py"

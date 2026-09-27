@@ -26,6 +26,8 @@ the existing prototype.
 - `AppIdentity` supplies the Mathlidelux display name and the unchanged legacy
   support directory. The bundle identifier, persisted keys and source paths
   remain stable across the rename; the Swift target remains `SlideMath`.
+  New source projects default to `Documents/Mathlidelux`; library metadata and
+  templates remain in Application Support. Existing projects use their saved roots.
 - `Worker` emits ordered JSON events on the main queue. Each `WorkerSession`
   owns one request; replacing, cancelling or finishing it invalidates callbacks
   from that request. Library rendering, preview, font measurement, PDF building

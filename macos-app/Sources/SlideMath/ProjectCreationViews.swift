@@ -3,6 +3,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct NewProjectView: View {
+    @Environment(\.appTheme) private var theme
     @EnvironmentObject private var store: LibraryStore
     @EnvironmentObject private var templates: TemplateStore
     @Environment(\.dismiss) private var dismiss
@@ -15,7 +16,7 @@ struct NewProjectView: View {
     @State private var managingTemplates = false
     @StateObject private var sourceController = SourceEditorController()
     private var template: ProjectTemplate { templates.templates.first { $0.id == templateID } ?? templates.defaultTemplate }
-    private var location: URL { directory ?? store.support.appendingPathComponent("Sources", isDirectory: true) }
+    private var location: URL { directory ?? AppIdentity.newProjectDirectory }
     private var interpretation: String {
         (try? ProjectComposer.prepare(text, template: template, mode: mode).interpretation) ?? ""
     }
@@ -59,12 +60,12 @@ struct NewProjectView: View {
                     Spacer()
                     Text(template.format.displayName).font(.caption.weight(.medium)).foregroundStyle(.secondary)
                 }.padding(.horizontal, 12).frame(height: 30)
-            }.background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+            }.background(Color(nsColor: theme.color(.surfaceBackground)), in: RoundedRectangle(cornerRadius: 12))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.primary.opacity(0.1)))
             HStack {
                 Image(systemName: "folder").foregroundStyle(.secondary)
-                Text(directory == nil ? "In \(AppIdentity.name)" : location.path).lineLimit(1).truncationMode(.middle)
+                Text((location.path as NSString).abbreviatingWithTildeInPath).lineLimit(1).truncationMode(.middle)
                     .font(.caption).foregroundStyle(.secondary).help(location.path)
                 Button("Change…") { chooseDirectory() }.controlSize(.small)
                 Spacer()
@@ -109,7 +110,7 @@ struct NewProjectView: View {
         let panel = NSOpenPanel()
         panel.title = "Project Location"; panel.prompt = "Choose"
         panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.canCreateDirectories = true
-        panel.directoryURL = location
+        panel.directoryURL = FileManager.default.fileExists(atPath: location.path) ? location : location.deletingLastPathComponent()
         if panel.runModal() == .OK { directory = panel.url }
     }
 
@@ -143,7 +144,7 @@ struct TemplateSettingsView: View {
                 VStack(spacing: 0) {
                     ForEach(templates.templates) { template in
                         HStack(spacing: 16) {
-                            Image(systemName: template.format == .latex ? "function" : "textformat")
+                            Image(systemName: "doc.text")
                                 .font(.title3).foregroundStyle(.blue).frame(width: 30)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(template.name).font(.headline)

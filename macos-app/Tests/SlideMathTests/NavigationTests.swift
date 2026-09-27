@@ -35,8 +35,9 @@ final class NavigationTests: XCTestCase {
 
     @MainActor func testDefaultShortcutsAreUniqueAndCanBeReassignedClearedAndRestored() throws {
         let suite = "ShortcutTests-\(UUID())", defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-        let prefs = ShortcutPreferences(defaults: defaults)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
+        let prefs = ShortcutPreferences(defaults: defaults, directory: directory)
         XCTAssertEqual(Set(AppCommand.allCases.map { prefs.binding($0) }).count, AppCommand.allCases.count)
         for command in AppCommand.allCases { XCTAssertNil(prefs.validation(prefs.binding(command), for: command), command.title) }
         XCTAssertNotNil(prefs.set(ShortcutBinding("o"), for: .edit))
@@ -46,12 +47,12 @@ final class NavigationTests: XCTestCase {
         XCTAssertNotNil(prefs.set(ShortcutBinding("x", command: false), for: .edit))
         let newBinding = ShortcutBinding("k", shift: true)
         XCTAssertNil(prefs.set(newBinding, for: .togglePDF))
-        XCTAssertEqual(ShortcutPreferences(defaults: defaults).binding(.togglePDF), newBinding)
+        XCTAssertEqual(ShortcutPreferences(defaults: defaults, directory: directory).binding(.togglePDF), newBinding)
         XCTAssertNil(prefs.set(.unassigned, for: .togglePDF))
-        XCTAssertNil(ShortcutPreferences(defaults: defaults).binding(.togglePDF).shortcut)
+        XCTAssertNil(ShortcutPreferences(defaults: defaults, directory: directory).binding(.togglePDF).shortcut)
         prefs.reset()
         XCTAssertEqual(prefs.binding(.togglePDF), AppCommand.togglePDF.defaultShortcut)
-        XCTAssertEqual(ShortcutPreferences(defaults: defaults).binding(.togglePDF), AppCommand.togglePDF.defaultShortcut)
+        XCTAssertEqual(ShortcutPreferences(defaults: defaults, directory: directory).binding(.togglePDF), AppCommand.togglePDF.defaultShortcut)
     }
 
     @MainActor func testFiguresKeepOriginalSVGSizeAndHaveTheirOwnCreationMode() throws {
