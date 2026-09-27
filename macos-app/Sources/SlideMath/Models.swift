@@ -124,6 +124,8 @@ struct WorkerEvent: Decodable {
     var file: String?
     var line: Int?
     var column: Int?
+    var previewStart: Int?
+    var previewEnd: Int?
 }
 
 struct PDFAnchor: Codable, Equatable {

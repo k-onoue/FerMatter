@@ -180,6 +180,7 @@ private struct SourceFileTab: View {
 }
 
 private struct ProjectFileEditor: View {
+    @EnvironmentObject private var store: LibraryStore
     @ObservedObject var files: ProjectFiles
     let path: String
     let pane: Int
@@ -190,6 +191,7 @@ private struct ProjectFileEditor: View {
         SourceTextEditor(text: Binding(get: { [weak files, path] in files?.buffers.first { $0.path == path }?.text ?? "" }, set: { [weak files, path] in files?.update(path, text: $0) }),
                 label: "Source: " + path + (files.splitSource ? " (Pane \(pane + 1))" : ""), format: format, context: .document,
                 controller: files.controller(path, pane: pane), projectCompletions: files.completions, isVisible: visible,
+                mathPreview: focused ? previewConfiguration : nil,
                 onFocus: { [weak files, pane] in
                     guard let files else { return }
                     if files.activeSourcePane != pane { files.activeSourcePane = pane }
@@ -199,6 +201,17 @@ private struct ProjectFileEditor: View {
                 .modifier(GlassSurface(radius: 8))
             .onChange(of: focused) { _, focused in if focused { focus() } }
             .onAppear { if focused { focus() } }
+    }
+    private var previewConfiguration: SourcePreviewConfiguration? {
+        guard let root = files.root, !store.main.isEmpty,
+              path.hasSuffix(store.format == .typst ? ".typ" : ".tex") else { return nil }
+        let input = SourcePreviewInput(root: root.path, main: store.main, engine: store.engine,
+            format: store.format, file: path, cache: store.projectDirectory.appendingPathComponent("Cache").path,
+            sources: Dictionary(uniqueKeysWithValues: files.buffers.filter(\.dirty).map { ($0.path, $0.text) }), diskRevision: files.treeVersion)
+        return SourcePreviewConfiguration(input: input, format: store.exportFormat,
+            changeFormat: { [weak store] in store?.exportFormat = $0; store?.saveNow() },
+            drag: { [weak store] in store?.dragProvider($0) ?? NSItemProvider() },
+            copy: { [weak store] in store?.copyImage($0) })
     }
     private func focus() {
         DispatchQueue.main.async {

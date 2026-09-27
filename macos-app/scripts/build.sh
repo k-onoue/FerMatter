@@ -21,6 +21,7 @@ cp "$binary_dir/Mathlidelux" "$app_dir/Contents/MacOS/Mathlidelux"
 cp "$project_dir/Resources/tex_worker.py" "$app_dir/Contents/Resources/tex_worker.py"
 cp "$project_dir/Resources/typst_worker.py" "$app_dir/Contents/Resources/typst_worker.py"
 cp "$project_dir/Resources/project_outline.py" "$app_dir/Contents/Resources/project_outline.py"
+cp "$project_dir/Resources/source_preview.py" "$app_dir/Contents/Resources/source_preview.py"
 cp "$project_dir/Resources/document_worker.py" "$app_dir/Contents/Resources/document_worker.py"
 # Apache-2.0 §4 requires the license and NOTICE to travel with every distributed copy.
 cp "$project_dir/../LICENSE" "$app_dir/Contents/Resources/LICENSE"
