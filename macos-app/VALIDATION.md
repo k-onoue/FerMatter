@@ -1,5 +1,13 @@
 # Validation
 
+## Project folder locations, 2026-09-27
+
+- New Project defaults to `~/Documents/Mathlidelux` and displays the destination path.
+- Show in Finder opens the selected project folder from both Projects and Project Settings.
+- Missing, invalid, and failed-to-open paths produce an alert without opening a parent folder.
+- Regression checks: 85 Swift tests and 28 Python tests passed, including three Finder-action tests.
+- Rebuilt the app and verified the new destination display and both Finder entry points in the UI.
+
 ## Mathlidelux naming, 2026-09-27
 
 - The app's window, menu and project-home title, local `.app` bundle and
