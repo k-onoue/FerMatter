@@ -47,6 +47,19 @@ The build script uses Xcode's `actool` to compile the native macOS 26 icon stack
 into `Assets.car` and generate an `AppIcon.icns` fallback in the signed bundle.
 See [the icon notes](Resources/AppIcon.md) for the artwork and generation prompt.
 
+## App updates
+
+The app checks for a stable GitHub release at most once a day while in use.
+A new version appears in an in-app banner with **Download Update**. After the
+download finishes, choose **Open Disk Image**, quit Mathlidelux, and copy the
+new app to Applications. Downloads can be cancelled; the running app and your
+projects stay open throughout the download.
+
+Use **Mathlidelux → Check for Updates…** to check immediately, or
+**Settings → Updates** to turn off automatic checks. If a release has no compatible
+disk image, **View Release** opens its GitHub page. No public release may be
+available yet. See [update behavior and release requirements](UPDATES.md).
+
 ## Development checks
 
 Run `./macos-app/scripts/check.sh` from the repository root for Swift tests,

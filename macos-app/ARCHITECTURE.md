@@ -18,6 +18,7 @@ the existing prototype.
 | Syntax completion | `SourceCompletion.swift`, `ProjectCompletions.swift`, `SourceCompletionViews.swift` | Built-in and project-defined candidates, argument fields and completion popup. |
 | Editor actions | `SourceEditingCommands.swift`, `SourceLineRuler.swift`, `SourceOutline.swift` | Line editing, logical line numbers and source heading navigation. |
 | PDF and export | `PDFNavigation.swift`, `SVGExporter.swift`, `ImageExporter.swift` | PDF/source mapping and vector/raster representations. |
+| App updates | `AppUpdates.swift`, `AppUpdateViews.swift`, `UpdateDownloader.swift` | SemVer and release validation, throttled in-app notifications, explicit download acceptance and disk-image handoff. |
 | Window state | `WindowPreferences.swift`, `DesktopWallpaper.swift`, `RememberedSplitView.swift` | Appearance, opacity, wallpaper resolution and remembered pane widths. |
 
 ## Lifecycle rules
