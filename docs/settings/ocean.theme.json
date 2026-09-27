@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "kind": "mathlidelux.theme",
+  "id": "community.example.ocean",
+  "name": "Ocean",
+  "light": {
+    "accent": "#006F77",
+    "windowBackground": "#EDF6F6",
+    "surfaceBackground": "#F7FCFC",
+    "text": "#18383B",
+    "command": "#6842A6",
+    "delimiter": "#006F77",
+    "number": "#9A4900",
+    "comment": "#557174"
+  },
+  "dark": {
+    "accent": "#63D5D9",
+    "windowBackground": "#17282B",
+    "surfaceBackground": "#203337",
+    "text": "#E0F0F1",
+    "command": "#C8A6FF",
+    "delimiter": "#63D5D9",
+    "number": "#FFC085",
+    "comment": "#95B1B4"
+  },
+  "extensions": {
+    "community.example": { "license": "Apache-2.0" }
+  }
+}

@@ -8,10 +8,14 @@ struct SlideMathApp: App {
     @StateObject private var preferences = WindowPreferences()
     @StateObject private var shortcuts = ShortcutPreferences()
     @StateObject private var templates = TemplateStore()
+    @StateObject private var themes = ThemePreferences()
     var body: some Scene {
         WindowGroup(AppIdentity.name) {
             AppRootView()
                 .environmentObject(store).environmentObject(preferences).environmentObject(templates).environmentObject(shortcuts)
+                .tint(Color(nsColor: themes.document.color(.accent)))
+                .accentColor(Color(nsColor: themes.document.color(.accent)))
+                .environment(\.appTheme, themes.document)
                 .environment(\.locale, Locale(identifier: "en"))
                 .preferredColorScheme(preferences.colorScheme)
                 .background(WindowConfiguration(preferences: preferences, shortcuts: shortcuts).ignoresSafeArea())
@@ -29,7 +33,11 @@ struct SlideMathApp: App {
                 EditorSettingsView(preferences: store.files.editorPreferences).tabItem { Label("Editor", systemImage: "text.alignleft") }
                 TemplateSettingsView(templates: templates).tabItem { Label("Templates", systemImage: "doc.on.doc") }
                 ShortcutSettingsView(shortcuts: shortcuts).tabItem { Label("Shortcuts", systemImage: "keyboard") }
+                ThemeSettingsView(themes: themes, window: preferences).tabItem { Label("Appearance", systemImage: "paintpalette") }
             }.frame(width: 780, height: 700)
+                .tint(Color(nsColor: themes.document.color(.accent)))
+                .accentColor(Color(nsColor: themes.document.color(.accent)))
+                .environment(\.appTheme, themes.document)
                 .environment(\.locale, Locale(identifier: "en"))
                 .preferredColorScheme(preferences.colorScheme)
         }
@@ -54,6 +62,7 @@ struct AppRootView: View {
     @EnvironmentObject private var store: LibraryStore
     @EnvironmentObject private var preferences: WindowPreferences
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.appTheme) private var theme
     var body: some View {
         Group {
             if store.showingProjects { ProjectsView() }
@@ -61,12 +70,11 @@ struct AppRootView: View {
         }
         .background {
             ZStack {
-                Color(nsColor: .windowBackgroundColor).opacity(preferences.opacity)
-                LinearGradient(colors: [.blue.opacity(scheme == .dark ? 0.055 : 0.025), .clear], startPoint: .topLeading, endPoint: .bottomTrailing)
+                Color(nsColor: theme.color(.windowBackground)).opacity(preferences.opacity)
+                LinearGradient(colors: [Color(nsColor: theme.color(.accent)).opacity(scheme == .dark ? 0.055 : 0.025), .clear], startPoint: .topLeading, endPoint: .bottomTrailing)
                     .opacity(preferences.opacity)
             }.ignoresSafeArea()
         }
-        .tint(.blue)
         .modifier(TransparentWindowSurface())
         .sheet(item: $store.editor) { EditorView(initial: $0).environmentObject(store) }
         .sheet(isPresented: $store.showingNewProject) { NewProjectView() }
@@ -133,6 +141,7 @@ struct ProjectsView: View {
 }
 
 struct ProjectTile: View {
+    @Environment(\.appTheme) private var theme
     @EnvironmentObject private var preferences: WindowPreferences
     let project: ProjectSummary
     @State private var hovered = false
@@ -154,7 +163,7 @@ struct ProjectTile: View {
                 Text(project.updatedLabel)
             }.font(.system(size: 11)).foregroundStyle(.secondary).padding(.top, 7)
         }.padding(20).frame(height: 230)
-            .background(Color(nsColor: .textBackgroundColor).opacity(preferences.opacity), in: RoundedRectangle(cornerRadius: 20))
+            .background(Color(nsColor: theme.color(.surfaceBackground)).opacity(preferences.opacity), in: RoundedRectangle(cornerRadius: 20))
             .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(hovered ? Color.accentColor.opacity(0.5) : Color.primary.opacity(0.07)))
             .onHover { hovered = $0 }
     }

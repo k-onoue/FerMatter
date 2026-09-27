@@ -132,15 +132,16 @@ extension SourcePaneTests {
 
     @MainActor func testSourceTabAndBothSplitShortcutsAreCustomizable() {
         let suite = "SourceShortcuts-\(UUID())", defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
-        let shortcuts = ShortcutPreferences(defaults: defaults)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
+        let shortcuts = ShortcutPreferences(defaults: defaults, directory: directory)
         XCTAssertEqual(shortcuts.binding(.nextSourceTab), ShortcutBinding("\t", command: false, control: true))
         XCTAssertEqual(shortcuts.binding(.previousSourceTab), ShortcutBinding("\t", command: false, shift: true, control: true))
         XCTAssertNil(shortcuts.validation(shortcuts.binding(.nextSourceTab), for: .nextSourceTab))
         XCTAssertNil(shortcuts.validation(shortcuts.binding(.previousSourceTab), for: .previousSourceTab))
         XCTAssertNil(shortcuts.validation(shortcuts.binding(.splitSourceDown), for: .splitSourceDown))
         XCTAssertNil(shortcuts.set(ShortcutBinding("j", option: true), for: .splitSourceDown))
-        XCTAssertEqual(ShortcutPreferences(defaults: defaults).binding(.splitSourceDown), ShortcutBinding("j", option: true))
+        XCTAssertEqual(ShortcutPreferences(defaults: defaults, directory: directory).binding(.splitSourceDown), ShortcutBinding("j", option: true))
     }
 }
 
