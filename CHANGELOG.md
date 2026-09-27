@@ -10,6 +10,8 @@
 
 ### Added
 
+- Parallel macOS port in Rust and TypeScript, with a Python-free backend, shared Monaco editors, equation/figure exports and PDF navigation; kept separate from the Swift app while replacement verification continues.
+
 - Task-based user guides, maintained in Markdown and available on the product site.
 - Shared contributor and agent documentation with review and release checklists.
 - File-managed shortcuts and declarative color themes, with import/export and recovery.

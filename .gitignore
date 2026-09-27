@@ -7,6 +7,7 @@
 **/build/
 **/node_modules/
 **/dist/
+**/target/
 **/__pycache__/
 **/test-results/
 .venv-docs/
@@ -28,3 +29,7 @@
 *.fdb_latexmk
 *.synctex.gz
 /examples/**/*.pdf
+
+# Generated assets for the Rust desktop bundle.
+desktop-app/public/vendor/
+desktop-app/src-tauri/gen/

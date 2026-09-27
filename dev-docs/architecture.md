@@ -1,5 +1,7 @@
 # Architecture
 
+- The parallel [Rust macOS port](../desktop-app/README.md) lives in `desktop-app/`; the architecture below describes the existing Swift app.
+
 - Native SwiftUI/AppKit app; Swift package has no third-party dependencies.
 - Python workers extract/compile LaTeX, Typst, TikZ, and CeTZ in temporary project copies.
 - Sources: [Swift](../macos-app/Sources/SlideMath/), [workers](../macos-app/Resources/), [tests](../macos-app/Tests/).
