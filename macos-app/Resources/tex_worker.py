@@ -58,7 +58,7 @@ def resolve_tex(root, current, name):
             return path
     raise ValueError('Referenced file not found: ' + name)
 
-def extract(root, main, outline=None):
+def extract(root, main, outline=None, focus_file=None):
     root = Path(root).resolve()
     cards, warnings, files = [], [], set()
     occurrences = collections.Counter()
@@ -173,6 +173,7 @@ def extract(root, main, outline=None):
                 name = label[1].split(':', 1)[-1].replace('_', ' ').replace('-', ' ').capitalize() if label else ('TikZ · ' + str(line) if kind == 'figure' else 'Inline · ' + tex[:45] if kind == 'inline' else 'Equation · ' + str(line))
                 cards.append(dict(id='source-' + digest(key + str(occurrences[key])), name=name, tex=tex,
                                   kind=kind, origin='source', file=file, line=line, endLine=end_line,
+                                  sourceOffset=i, sourceEnd=end,
                                   column=i - raw.rfind('\n', 0, i), endColumn=end - raw.rfind('\n', 0, end),
                                   sourceOrder=float(len(cards)), contextStart=max(1, line - 5),
                                   context=lines[max(0, line - 6):end_line + 5], outlinePath=document.path, status='pending'))
@@ -190,7 +191,13 @@ def extract(root, main, outline=None):
     begin = re.search(r'\\begin\s*\{document\}', content)
     if not begin:
         raise ValueError('Main file has no begin{document}.')
-    walk(main_path, start_at=begin.end())
+    if focus_file:
+        target = (root / focus_file).resolve()
+        if root not in target.parents:
+            raise ValueError('Preview file must be inside the project folder.')
+        walk(target)
+    else:
+        walk(main_path, start_at=begin.end())
     return cards, warnings, sorted(files)
 
 def project_fingerprint(root):
@@ -390,6 +397,9 @@ def main(request):
         cards, warnings, files = (typst_worker.extract if project_format == 'typst' else extract)(root, selected, outline=outline)
         emit(event='scanned', cards=cards, candidates=candidates, main=selected, warnings=warnings,
              files=files, outline=outline, format=project_format, hasRC=any((root / name).exists() for name in ('latexmkrc', '.latexmkrc')))
+    elif request['action'] == 'source_preview':
+        import source_preview
+        source_preview.preview(request, emit, lambda snapshot: main(dict(snapshot, action='render')))
     elif request['action'] == 'render':
         if request.get('format') == 'typst' or request.get('main', '').endswith('.typ'):
             import typst_worker
@@ -410,7 +420,23 @@ def main(request):
 
 if __name__ == '__main__':
     try:
-        main(json.loads(Path(sys.argv[1]).read_text()))
+        request = json.loads(Path(sys.argv[1]).read_text())
+        if request.get('action') == 'source_preview':
+            import signal
+            # Caret changes cancel previews frequently. Isolate this worker and
+            # its compiler descendants before creating any source snapshots.
+            if os.getpgrp() != os.getpid():
+                os.setpgid(0, 0)
+
+            def cancel_source_preview(signum, _frame):
+                # Do not signal the app or recurse when signalling our own group.
+                signal.signal(signum, signal.SIG_IGN)
+                os.killpg(os.getpgrp(), signum)
+                # Unwind subprocess.run and TemporaryDirectory context managers.
+                raise SystemExit(128 + signum)
+
+            signal.signal(signal.SIGTERM, cancel_source_preview)
+        main(request)
     except Exception as error:
         emit(event='error', message=str(error))
         sys.exit(1)

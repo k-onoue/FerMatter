@@ -6,6 +6,21 @@
 - **Editor**: choose auto save or Manual; set the auto-save delay.
 - **Templates**: customize the setup for [new projects](new-project.md).
 
+## Manage shortcuts and themes as files
+
+- **Shortcuts** and **Appearance** provide **Open File**, **Show in Finder**, **Reload**, **Import…**, and **Export…**.
+- Edit `keybindings.json` or `theme.json`, save, then choose **Reload** to apply external changes.
+- Import replaces the active settings after validation; export saves a reusable copy.
+- Invalid files keep the last valid settings; **Restore Defaults** replaces custom settings.
+- Theme files customize light/dark interface and editor colors; exported artwork keeps its original colors.
+
+## Updates
+
+- **Settings → Updates** controls automatic checks; **Check for Updates…** checks immediately.
+- **Download Update** accepts a release download. **Open Disk Image** opens it for manual installation.
+- Quit Mathlidelux and copy the new app into Applications; the updater does not replace the running app.
+- A private repository or unavailable release cannot provide a public update download.
+
 ## Keep equations beside your slides
 
 - **Always on Top** (`⇧⌘P`) pins the window.

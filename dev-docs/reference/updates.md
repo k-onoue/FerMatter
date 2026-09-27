@@ -1,7 +1,7 @@
 # Updates — integration reference
 
-- Status: proposed in [PR #9](https://github.com/k-onoue/mathlidelux/pull/9), open when inspected on 2026-09-28.
-- Detailed behavior/tests: [PR update specification](https://github.com/k-onoue/mathlidelux/blob/feat/update-checks/macos-app/UPDATES.md).
+- Available in the packaged app through Settings → Updates.
+- Detailed behavior/tests: [update specification](../../macos-app/UPDATES.md).
 - Repository was private at inspection; unauthenticated public release access must be verified before release activation.
 
 ## User behavior

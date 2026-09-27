@@ -19,7 +19,7 @@
 - Preserve bundle ID/support paths unless a tested migration accompanies the change.
 - Prerelease example: `0.11.0-rc.1`; do not offer it through stable update/download links.
 - Update `CFBundleShortVersionString` and increment `CFBundleVersion` in `macos-app/scripts/build.sh`.
-- Keep site version and release notes consistent; incrementing only build metadata does not trigger the proposed updater.
+- Keep site version and release notes consistent; incrementing only build metadata does not trigger the updater.
 - Reference: [SemVer](https://semver.org/lang/ja/); its 0.x rules allow instability, while the stricter rules above are this project's policy.
 
 ## Changelog
@@ -46,7 +46,7 @@
 - Sign app/bundled executables with Developer ID; use appropriate hardened runtime; notarize and staple.
 - Include LICENSE, NOTICE, and notices for bundled third-party components.
 - Verify installation, launch, compilers, exports, and upgrading from an older build on a clean Mac.
-- Verify update download/cancel/retry/manual installation once [PR #9](reference/updates.md) lands.
+- Verify update download/cancel/retry/manual installation using the [update contract](reference/updates.md).
 - Prepare `Mathlidelux.dmg`; do not reuse the [unnotarized prototype artifacts](reference/packaging.md).
 - Verify anonymous access to the release asset; never embed a repository credential in the app/site.
 - Reference: [Apple Developer ID distribution](https://developer.apple.com/developer-id/).

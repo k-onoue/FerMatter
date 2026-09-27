@@ -24,7 +24,7 @@
 | Validation and review | [Testing](dev-docs/testing.md), [reviewing](dev-docs/reviewing.md) |
 | Versions, tags, releases | [Releasing](dev-docs/releasing.md) |
 | Site, guides, tutorial media | [Documentation](dev-docs/documentation.md) |
-| Settings, updates, packaging proposals | [Reference index](dev-docs/README.md#reference) |
+| Settings, updates, packaging | [Reference index](dev-docs/README.md#reference) |
 
 ## Checks from the repository root
 

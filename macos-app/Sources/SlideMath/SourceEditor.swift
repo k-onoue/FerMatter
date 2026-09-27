@@ -43,6 +43,7 @@ struct AssistedSourceEditor: View {
 
 /// A source editor keeps smart quotes and substitutions out of compiler input.
 struct SourceTextEditor: NSViewRepresentable {
+    @Environment(\.appTheme) private var theme
     @Binding var text: String
     var label: String
     var format: ProjectFormat = .latex
@@ -50,6 +51,7 @@ struct SourceTextEditor: NSViewRepresentable {
     var controller: SourceEditorController? = nil
     var projectCompletions: [SourceCompletion] = []
     var isVisible = true
+    var mathPreview: SourcePreviewConfiguration? = nil
     var onFocus: (() -> Void)?
     func makeNSView(context: Context) -> SourceEditorContainer {
         let container = SourceEditorContainer(scroll: controller?.retainedScroll)
@@ -73,6 +75,7 @@ struct SourceTextEditor: NSViewRepresentable {
         scroll.isHidden = !isVisible
         if !isVisible { view.dismissSuggestions() }
         if view.string != text { view.string = text; view.undoManager?.removeAllActions() }
+        view.theme = theme
         view.sourceFormat = format; view.sourceContext = self.context; controller?.view = view
         view.setAccessibilityLabel(label)
         view.projectCompletions = projectCompletions
@@ -84,6 +87,7 @@ struct SourceTextEditor: NSViewRepresentable {
         scroll.drawsBackground = false; scroll.contentView.drawsBackground = false
         view.highlight()
         (scroll.verticalRulerView as? SourceLineRuler)?.refresh()
+        view.sourcePreview.configure(view: view, configuration: isVisible ? mathPreview : nil)
     }
 
 }

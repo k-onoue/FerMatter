@@ -16,9 +16,9 @@
 ## Reference
 
 - [Storage and compatibility](reference/storage.md).
-- [Settings-file proposal — PR #8](reference/settings-files.md).
-- [Update contract — PR #9](reference/updates.md).
-- [Prototype packaging — PR #10](reference/packaging.md).
+- [Settings-file schemas](reference/settings-files.md).
+- [Update contract](reference/updates.md).
+- [Prototype packaging](reference/packaging.md).
 - [Documentation structure decision](decisions/0001-documentation.md).
 - [Open PR snapshot, 2026-09-28](history/pr-snapshot-2026-09-28.md): scope, overlap, and integration follow-up.
 - [Earlier validation](history/validation-2026-09.md): historical evidence, not a current release pass.

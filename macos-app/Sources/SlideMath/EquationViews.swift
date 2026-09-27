@@ -13,9 +13,9 @@ struct EquationImage: View {
                     .padding(card.kind == "figure" ? 8 : 0)
                     .background(card.kind == "figure" ? Color.white : .clear, in: RoundedRectangle(cornerRadius: 8))
             } else {
-                Image(systemName: card.status == "failed" ? "exclamationmark.triangle" : "function")
-                    .foregroundStyle(card.status == "failed" ? Color.orange : Color.secondary.opacity(0.4))
-                    .help(card.status == "failed" ? "Render error" : "Pending")
+                if card.status == "failed" {
+                    Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange).help("Render error")
+                } else { AppBrandIcon().help("Pending") }
             }
         }.task(id: card.pngPath) { image = card.pngPath.flatMap { NSImage(contentsOfFile: $0) } }
     }
@@ -83,6 +83,7 @@ struct EquationTile: View {
 }
 
 struct InspectorView: View {
+    @Environment(\.appTheme) private var theme
     @EnvironmentObject private var store: LibraryStore
     @EnvironmentObject private var preferences: WindowPreferences
     var body: some View {
@@ -96,7 +97,7 @@ struct InspectorView: View {
                     }
                     Text(card.name).font(.system(size: 20, weight: .semibold)).textSelection(.enabled)
                     EquationImage(card: card).frame(maxWidth: .infinity).frame(height: 135).padding(14)
-                        .background(Color(nsColor: .textBackgroundColor).opacity(preferences.opacity), in: RoundedRectangle(cornerRadius: 14))
+                        .background(Color(nsColor: theme.color(.surfaceBackground)).opacity(preferences.opacity), in: RoundedRectangle(cornerRadius: 14))
                         .onDrag { store.dragProvider(card) }
                     HStack(spacing: 10) {
                         Button { store.beginEdit(card) } label: { Image(systemName: "pencil") }.help(card.kind == "figure" ? "Edit Figure" : "Edit Equation").accessibilityLabel(card.kind == "figure" ? "Edit Figure" : "Edit Equation")
@@ -154,6 +155,7 @@ struct InspectorView: View {
 }
 
 struct EditorView: View {
+    @Environment(\.appTheme) private var theme
     @EnvironmentObject private var store: LibraryStore
     @Environment(\.dismiss) private var dismiss
     @State var draft: Equation
@@ -191,9 +193,9 @@ struct EditorView: View {
                                 .help("Drag \(store.exportFormat.title)")
                             if let error = card.error { ScrollView { Text(error).font(.system(size: 10, design: .monospaced)).textSelection(.enabled) }.frame(maxHeight: 105) }
                         } else {
-                            Spacer(); Image(systemName: "function").font(.system(size: 30, weight: .light)).foregroundStyle(.tertiary); Spacer()
+                            Spacer(); AppBrandIcon(size: 48); Spacer()
                         }
-                    }.padding(18).frame(maxWidth: .infinity).background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+                    }.padding(18).frame(maxWidth: .infinity).background(Color(nsColor: theme.color(.surfaceBackground)), in: RoundedRectangle(cornerRadius: 12))
                 }.frame(minWidth: 280).padding(.leading, 10)
             }
             HStack {

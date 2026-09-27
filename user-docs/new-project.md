@@ -11,6 +11,12 @@
 | One per line | One complete equation per line, without outer math delimiters |
 | Source | Full source markup, headings, multiline environments, or drawings |
 
+## Project location
+
+- New projects default to `~/Documents/Mathlidelux`; **Change…** selects another parent folder.
+- Existing projects retain their saved locations; opening a folder uses it in place.
+- **Show in Finder** on a project opens its source folder.
+
 ## Try two equations
 
 - LaTeX, **One per line**:

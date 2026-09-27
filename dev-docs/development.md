@@ -21,7 +21,7 @@ open macos-app/build/Mathlidelux.app
 2. Keep one purpose per PR, including its relevant tests and documentation.
 3. Run the [affected checks](testing.md); inspect `git diff` and the staged diff.
 4. Push the task branch; open a PR into `main`.
-5. Obtain another collaborator's approval and satisfy repository rules.
+5. Obtain another collaborator's approval and satisfy repository rules. The repository owner may explicitly bypass the approval requirement through a PR; direct pushes remain restricted.
 6. Resolve feedback/conflicts; rerun affected checks; merge through the PR.
 7. Delete the merged task branch when no work still depends on it.
 

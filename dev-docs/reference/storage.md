@@ -16,14 +16,15 @@
 | `Projects/<project-id>/Exports/` | Images at selected export sizes |
 | `Projects/<project-id>/Documents/` | Compiled PDFs and navigation snapshots; older snapshots can accumulate |
 | `Imports/` | Extracted ZIP projects |
-| `Sources/` | Default new-project location in the current `main` baseline |
+| `Sources/` | Legacy app-created source projects; existing roots remain valid |
+| `Settings/` | Shortcut and theme JSON with last-valid recovery files |
 | `SourceDrafts/` | Recoverable unsaved source buffers |
 | `templates.json` | User templates |
 
 - Library project ID: first 24 hex characters of the root-path SHA-256; draft storage uses the full root hash.
 - Opened folders stay in place; opening a main file uses its containing folder.
-- [PR #5](https://github.com/k-onoue/mathlidelux/pull/5) changes the **new-project default only** to `~/Documents/Mathlidelux`; existing roots are not migrated.
-- [PR #8](settings-files.md) adds `Settings/`; do not assume those files exist before integration.
+- New projects default to `~/Documents/Mathlidelux`; existing roots are not automatically migrated.
+- [Settings files](settings-files.md) documents the schemas and legacy shortcut migration.
 
 ## Boundaries
 

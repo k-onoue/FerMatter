@@ -21,10 +21,9 @@ def git(*args):
 files = sorted(set(git('ls-files', '-z', '--cached', '--others', '--exclude-standard').decode().strip('\0').split('\0')) - {''})
 for name in files:
     path = PurePosixPath(name)
-    forbidden = path.parts[0] in {'paper', '.private'} or any(part in {'build', '.build', 'node_modules', '__pycache__', 'dist', '.venv-docs'} for part in path.parts)
+    forbidden = path.parts[0] in {'paper', '.private', 'ui-prototype'} or any(part in {'build', '.build', 'node_modules', '__pycache__', 'dist', '.venv-docs'} for part in path.parts)
     forbidden |= path.name.startswith('.env') and path.name != '.env.example'
     forbidden |= path.suffix.lower() in {'.p12', '.p8', '.mobileprovision', '.dmg'}
-    forbidden |= name in {'ui-prototype/preview.png', 'ui-prototype/liquid-glass-preview.png'}
     if forbidden:
         errors.append(f'Private or generated file is a publication candidate: {name}')
     local = ROOT / name

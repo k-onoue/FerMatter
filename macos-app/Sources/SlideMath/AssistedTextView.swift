@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 final class AssistedTextView: NSTextView {
+    let sourcePreview = SourceMathPreviewController()
     // Each source tab/pane owns its edit history. Synchronizing another pane must
     // not clear the window-wide undo stack for the editor the user is typing in.
     private let sourceUndoManager = UndoManager()
@@ -90,7 +91,7 @@ final class AssistedTextView: NSTextView {
     var onSourceFocus: (() -> Void)?
     override func becomeFirstResponder() -> Bool {
         let accepted = super.becomeFirstResponder()
-        if accepted { onSourceFocus?() }
+        if accepted { onSourceFocus?(); sourcePreview.caretChanged() }
         return accepted
     }
     var sourceFormat: ProjectFormat = .latex
@@ -166,6 +167,7 @@ final class AssistedTextView: NSTextView {
     }
 
     override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53, suggestions.isEmpty, sourcePreview.isEnabled { sourcePreview.dismiss(); return }
         if !suggestions.isEmpty {
             switch event.keyCode {
             case 53: dismissSuggestions(); return
@@ -186,11 +188,12 @@ final class AssistedTextView: NSTextView {
     }
     override func cancelOperation(_ sender: Any?) {
         if !suggestions.isEmpty { dismissSuggestions() }
+        else if sourcePreview.isEnabled { sourcePreview.dismiss() }
         else { showSuggestions(manual: true) }
     }
     override func mouseDown(with event: NSEvent) { dismissSuggestions(); super.mouseDown(with: event) }
-    override func resignFirstResponder() -> Bool { dismissSuggestions(); return super.resignFirstResponder() }
-    override func viewWillMove(toWindow newWindow: NSWindow?) { dismissSuggestions(); super.viewWillMove(toWindow: newWindow) }
+    override func resignFirstResponder() -> Bool { dismissSuggestions(); sourcePreview.hide(); return super.resignFirstResponder() }
+    override func viewWillMove(toWindow newWindow: NSWindow?) { dismissSuggestions(); sourcePreview.hide(); super.viewWillMove(toWindow: newWindow) }
 
     override var rangeForUserCompletion: NSRange {
         SourceCompletion.completionRange(in: string, caret: selectedRange().location, format: sourceFormat)
@@ -259,23 +262,24 @@ final class AssistedTextView: NSTextView {
         scrollRangeToVisible(selectedRange()); return true
     }
 
+    var theme = ThemeDocument.standard
     func highlight() {
         guard !hasMarkedText(), let storage = textStorage else { return }
         let full = NSRange(location: 0, length: storage.length)
         storage.beginEditing()
-        storage.addAttributes([.foregroundColor: NSColor.textColor, .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)], range: full)
+        storage.addAttributes([.foregroundColor: theme.color(.text), .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)], range: full)
         let rules: [(String, NSColor)] = [
-            (sourceFormat == .latex ? #"\\[a-zA-Z]+\*?"# : #"#?[a-zA-Z][a-zA-Z.]*\b(?=\s*\()|#[a-zA-Z]+"#, .systemPurple),
-            (#"[{}\[\]$&]"#, .systemTeal),
-            (#"\b[0-9]+(?:\.[0-9]+)?\b"#, .systemOrange),
-            (sourceFormat == .latex ? #"(?<!\\)%[^\n]*"# : #"//[^\n]*|/\*[\s\S]*?\*/"#, .secondaryLabelColor)
+            (sourceFormat == .latex ? #"\\[a-zA-Z]+\*?"# : #"#?[a-zA-Z][a-zA-Z.]*\b(?=\s*\()|#[a-zA-Z]+"#, theme.color(.command)),
+            (#"[{}\[\]$&]"#, theme.color(.delimiter)),
+            (#"\b[0-9]+(?:\.[0-9]+)?\b"#, theme.color(.number)),
+            (sourceFormat == .latex ? #"(?<!\\)%[^\n]*"# : #"//[^\n]*|/\*[\s\S]*?\*/"#, theme.color(.comment))
         ]
         for (pattern, color) in rules {
             guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
             for match in regex.matches(in: string, range: full) { storage.addAttribute(.foregroundColor, value: color, range: match.range) }
         }
         storage.endEditing()
-        typingAttributes = [.foregroundColor: NSColor.textColor, .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)]
+        typingAttributes = [.foregroundColor: theme.color(.text), .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)]
     }
     override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); highlight() }
 }

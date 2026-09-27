@@ -28,6 +28,14 @@
 - Closing the last unsaved tab offers Save / Don't Save / Cancel.
 - Current File outline follows unsaved headings; Document outline uses the last scan.
 
+## Preview at the caret
+
+- Place the caret inside an equation, TikZ picture, or CeTZ canvas; pause briefly for its preview.
+- Drag the preview to your slide or Finder, or use **Copy**. Its menu selects SVG, PNG, JPEG, or PDF.
+- Preview includes open unsaved drafts and project imports; it compiles a temporary copy without saving source files.
+- Move outside the item or press Escape to dismiss; moving away cancels obsolete compilation.
+- The same [source-extraction limits](limits.md) apply; generated math may need the full document preview.
+
 ## Editing shortcuts
 
 | Action | Keys |

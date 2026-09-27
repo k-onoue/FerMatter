@@ -17,6 +17,9 @@
 | Completion and argument fields | `SourceCompletion.swift`, `ProjectCompletions.swift`, `SourceCompletionViews.swift` |
 | Line actions and outline | `SourceEditingCommands.swift`, `SourceLineRuler.swift`, `SourceOutline.swift` |
 | PDF mapping and image representations | `PDFNavigation.swift`, `SVGExporter.swift`, `ImageExporter.swift` |
+| Settings persistence and themes | `SettingsFiles.swift`, `KeyboardShortcuts.swift`, `ThemePreferences.swift` |
+| Release checks and accepted downloads | `AppUpdates.swift`, `AppUpdateViews.swift`, `UpdateDownloader.swift` |
+| Caret previews and draft snapshots | `SourceMathPreview.swift`, `source_preview.py` |
 | Window preferences and wallpaper | `WindowPreferences.swift`, `DesktopWallpaper.swift`, `RememberedSplitView.swift` |
 
 ## Request lifecycle
@@ -38,10 +41,13 @@
 - Library variants and Source edits have different persistence targets; preserve that boundary.
 - One native editor supports library, source, templates, and new-project input.
 
-## In-flight additions
+## Caret previews
 
-- [PR snapshot](history/pr-snapshot-2026-09-28.md): settings files, update transport, prototype packaging, and caret previews.
-- Add merged modules to the table when their implementation lands; do not infer availability from these proposals.
+- Each editor uses an independent debounced worker; caret or draft changes invalidate stale results.
+- UTF-16 ranges match AppKit caret positions, including CRLF and non-BMP characters.
+- Overlay open drafts in a temporary project copy without saving the manuscript.
+- Cancellation terminates the preview compiler process group and removes the snapshot.
+- [PR snapshot](history/pr-snapshot-2026-09-28.md) records the earlier integration plan.
 
 ## Limits and validation
 

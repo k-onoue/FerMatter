@@ -1,8 +1,7 @@
 # Prototype packaging — integration reference
 
-- Status: proposed in [PR #10](https://github.com/k-onoue/mathlidelux/pull/10), open when inspected on 2026-09-28.
-- Commands below require that PR's branch or its merged implementation.
-- Details: [distribution specification](https://github.com/k-onoue/mathlidelux/blob/build/prototype-distribution/macos-app/DISTRIBUTION.md), [recipient notes](https://github.com/k-onoue/mathlidelux/blob/build/prototype-distribution/macos-app/packaging/PROTOTYPE-README.txt).
+- Available in the current source tree; public distribution remains a separate release step.
+- Details: [distribution specification](../../macos-app/DISTRIBUTION.md), [recipient notes](../../macos-app/packaging/PROTOTYPE-README.txt).
 
 ## Build and inspect
 

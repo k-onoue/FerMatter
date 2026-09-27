@@ -64,7 +64,8 @@ extension SourcePaneTests {
         autoreleasepool {
             let files = ProjectFiles(support: root.appendingPathComponent("support"), editorPreferences: manualEditorPreferences())
             files.configure(root: root, main: "main.typ", format: .typst)
-            let hosting = NSHostingView(rootView: ProjectSourcePane(files: files, active: true))
+            let hosting = NSHostingView(rootView: ProjectSourcePane(files: files, active: true)
+                .environmentObject(LibraryStore(support: root.appendingPathComponent("support"))))
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 600), styleMask: .borderless, backing: .buffered, defer: true)
             window.contentView = hosting
             hosting.layoutSubtreeIfNeeded()
@@ -86,7 +87,8 @@ extension SourcePaneTests {
         try Data("= Intro\n$ x^2 $\n".utf8).write(to: root.appendingPathComponent("main.typ"))
         let files = ProjectFiles(support: root.appendingPathComponent("support"), editorPreferences: manualEditorPreferences())
         files.configure(root: root, main: "main.typ", format: .typst)
-        let hosting = NSHostingView(rootView: ProjectSourcePane(files: files, active: true))
+        let hosting = NSHostingView(rootView: ProjectSourcePane(files: files, active: true)
+            .environmentObject(LibraryStore(support: root.appendingPathComponent("support"))))
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1200, height: 850), styleMask: .borderless, backing: .buffered, defer: true)
         window.contentView = hosting
         defer { window.contentView = nil }
@@ -132,15 +134,16 @@ extension SourcePaneTests {
 
     @MainActor func testSourceTabAndBothSplitShortcutsAreCustomizable() {
         let suite = "SourceShortcuts-\(UUID())", defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
-        let shortcuts = ShortcutPreferences(defaults: defaults)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
+        let shortcuts = ShortcutPreferences(defaults: defaults, directory: directory)
         XCTAssertEqual(shortcuts.binding(.nextSourceTab), ShortcutBinding("\t", command: false, control: true))
         XCTAssertEqual(shortcuts.binding(.previousSourceTab), ShortcutBinding("\t", command: false, shift: true, control: true))
         XCTAssertNil(shortcuts.validation(shortcuts.binding(.nextSourceTab), for: .nextSourceTab))
         XCTAssertNil(shortcuts.validation(shortcuts.binding(.previousSourceTab), for: .previousSourceTab))
         XCTAssertNil(shortcuts.validation(shortcuts.binding(.splitSourceDown), for: .splitSourceDown))
         XCTAssertNil(shortcuts.set(ShortcutBinding("j", option: true), for: .splitSourceDown))
-        XCTAssertEqual(ShortcutPreferences(defaults: defaults).binding(.splitSourceDown), ShortcutBinding("j", option: true))
+        XCTAssertEqual(ShortcutPreferences(defaults: defaults, directory: directory).binding(.splitSourceDown), ShortcutBinding("j", option: true))
     }
 }
 
