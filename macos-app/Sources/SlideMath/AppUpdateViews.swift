@@ -18,6 +18,14 @@ final class AppUpdates: ObservableObject {
     private let fetch: () async throws -> GitHubRelease?
     private let now: () -> Date
     private let download: (AppUpdate) async throws -> URL
+    private struct SavedDownload {
+        let version: ReleaseVersion
+        let assetURL: URL
+        let digest: String?
+        let size: Int64
+        let file: URL
+    }
+    @Published private var savedDownload: SavedDownload?
     private var dismissedVersion: ReleaseVersion?
     private var downloadTask: Task<Void, Never>?
     private static let automaticKey = "updates.automaticallyChecks"
@@ -39,6 +47,19 @@ final class AppUpdates: ObservableObject {
     }
 
     var isBusy: Bool { status == .checking || status == .downloading }
+    var readyFile: URL? {
+        guard let savedDownload, let update, let asset = update.asset,
+              savedDownload.version == update.version, savedDownload.assetURL == asset.browserDownloadURL,
+              savedDownload.digest == asset.digest, savedDownload.size == asset.size,
+              (try? savedDownload.file.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else { return nil }
+        return savedDownload.file
+    }
+    private var availableStatus: Status { readyFile.map(Status.downloaded) ?? (update == nil ? .idle : .available) }
+
+    func refreshDownload() {
+        if readyFile == nil { savedDownload = nil }
+        if case .downloaded = status { status = availableStatus }
+    }
     var message: String {
         switch status {
         case .idle: return "Check for new versions of Mathlidelux."
@@ -49,13 +70,14 @@ final class AppUpdates: ObservableObject {
         case .upToDate: return "You’re up to date."
         case .noRelease: return "No published release is available yet."
         case .downloading: return "Downloading Mathlidelux \(update?.version.description ?? "")…"
-        case .downloaded: return "Download ready. Open the disk image to install the update."
+        case .downloaded: return readyFile == nil ? "The downloaded file is no longer available. Download it again." : "Download ready. Open the disk image to install the update."
         case .failed(let message): return message
         }
     }
 
     func check(manually: Bool = true) async {
         guard !isBusy else { return }
+        refreshDownload()
         if !manually {
             guard automaticallyChecks, installedVersion != nil,
                   lastChecked.map({ now().timeIntervalSince($0) >= Self.checkInterval || now() < $0 }) ?? true else { return }
@@ -72,16 +94,20 @@ final class AppUpdates: ObservableObject {
             let release = try await fetch()
             try Task.checkCancellation()
             update = release.flatMap { AppUpdate(release: $0, currentVersion: version) }
+            refreshDownload()
             if let update {
-                status = .available
+                status = availableStatus
                 if manually || dismissedVersion != update.version { showsBanner = true }
             } else { status = release == nil ? .noRelease : .upToDate }
-        } catch is CancellationError { status = update == nil ? .idle : .available }
+        } catch is CancellationError { status = availableStatus }
+        catch let error as URLError where error.code == .cancelled { status = availableStatus }
         catch { status = .failed(error.localizedDescription) }
     }
 
     func acceptUpdate() {
-        guard !isBusy, let update, update.asset != nil else { return }
+        guard !isBusy, let update, let asset = update.asset else { return }
+        refreshDownload()
+        if let file = readyFile { status = .downloaded(file); showsBanner = true; return }
         status = .downloading
         showsBanner = true
         downloadTask = Task {
@@ -89,6 +115,8 @@ final class AppUpdates: ObservableObject {
             do {
                 let file = try await download(update)
                 try Task.checkCancellation()
+                savedDownload = SavedDownload(version: update.version, assetURL: asset.browserDownloadURL,
+                    digest: asset.digest, size: asset.size, file: file)
                 status = .downloaded(file)
             } catch is CancellationError { status = .available }
             catch let error as URLError where error.code == .cancelled { status = .available }
@@ -141,11 +169,16 @@ struct UpdateActions: View {
     var body: some View {
         if updates.status == .downloading {
             Button("Cancel", action: updates.cancelDownload)
-        } else if case .downloaded(let file) = updates.status {
+        } else if let file = updates.readyFile, !updates.isBusy {
             Button("Open Disk Image") {
+                updates.refreshDownload()
+                guard updates.readyFile != nil else { return }
                 if !NSWorkspace.shared.open(file) { NSWorkspace.shared.activateFileViewerSelecting([file]) }
             }.buttonStyle(.borderedProminent)
-            Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([file]) }
+            Button("Show in Finder") {
+                updates.refreshDownload()
+                if updates.readyFile != nil { NSWorkspace.shared.activateFileViewerSelecting([file]) }
+            }
         } else if let update = updates.update, !updates.isBusy {
             Link("View Release", destination: update.releaseURL)
             if update.asset != nil {

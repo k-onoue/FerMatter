@@ -128,7 +128,7 @@ final class AppUpdatesTests: XCTestCase {
     @MainActor
     func testAcceptanceCancellationFailureAndReadyStates() async throws {
         let candidate = release(assets: [asset()])
-        let ready = URL(fileURLWithPath: "/tmp/Mathlidelux.dmg")
+        let ready = try downloadFixture()
         var downloads = 0
         let updates = AppUpdates(defaults: isolatedDefaults(), installedVersion: "0.10.0", fetch: { candidate }, download: { _ in downloads += 1; return ready })
         await updates.check()
@@ -154,6 +154,108 @@ final class AppUpdatesTests: XCTestCase {
         try await settle(failed)
         XCTAssertEqual(failed.status, .failed(UpdateError.checksumMismatch.localizedDescription))
         XCTAssertNotNil(failed.update)
+    }
+
+    @MainActor
+    func testSameReleaseRecheckKeepsReadyFileWithoutAnotherDownload() async throws {
+        let candidate = release(assets: [asset()]), file = try downloadFixture()
+        var downloads = 0
+        var now = Date(timeIntervalSince1970: 1_800_000_000)
+        let updates = AppUpdates(defaults: isolatedDefaults(), installedVersion: "0.10.0", now: { now }, fetch: { candidate },
+            download: { _ in downloads += 1; return file })
+        await updates.check(); updates.acceptUpdate(); try await settle(updates)
+        await updates.check()
+        XCTAssertEqual(updates.status, .downloaded(file))
+        XCTAssertEqual(updates.readyFile, file)
+        now.addTimeInterval(AppUpdates.checkInterval)
+        await updates.check(manually: false)
+        XCTAssertEqual(updates.status, .downloaded(file))
+        updates.acceptUpdate()
+        XCTAssertEqual(downloads, 1)
+    }
+
+    @MainActor
+    func testOfflineRecheckShowsErrorWhileKeepingDownloadedFileActions() async throws {
+        let candidate = release(assets: [asset()]), file = try downloadFixture()
+        var offline = false
+        let updates = AppUpdates(defaults: isolatedDefaults(), installedVersion: "0.10.0", fetch: {
+            if offline { throw URLError(.notConnectedToInternet) }
+            return candidate
+        }, download: { _ in file })
+        await updates.check(); updates.acceptUpdate(); try await settle(updates)
+        offline = true
+        await updates.check()
+        guard case .failed = updates.status else { return XCTFail("Keep the failed-check message visible") }
+        XCTAssertEqual(updates.readyFile, file, "Open and Show in Finder remain available independently of check status")
+        offline = false
+        await updates.check()
+        XCTAssertEqual(updates.status, .downloaded(file))
+    }
+
+    @MainActor
+    func testCancelledRecheckRestoresReadyState() async throws {
+        let candidate = release(assets: [asset()]), file = try downloadFixture()
+        var holdCheck = false
+        let updates = AppUpdates(defaults: isolatedDefaults(), installedVersion: "0.10.0", fetch: {
+            if holdCheck { try await Task.sleep(nanoseconds: 5_000_000_000) }
+            return candidate
+        }, download: { _ in file })
+        await updates.check(); updates.acceptUpdate(); try await settle(updates)
+        holdCheck = true
+        let checking = Task { await updates.check() }
+        while updates.status != .checking { await Task.yield() }
+        checking.cancel()
+        await checking.value
+        XCTAssertEqual(updates.status, .downloaded(file))
+        XCTAssertEqual(updates.readyFile, file)
+    }
+
+    @MainActor
+    func testNewerReleaseDoesNotOfferThePreviousVersionsDownloadedFile() async throws {
+        var candidate = release(assets: [asset()])
+        let file = try downloadFixture()
+        let updates = AppUpdates(defaults: isolatedDefaults(), installedVersion: "0.10.0", fetch: { candidate }, download: { _ in file })
+        await updates.check(); updates.acceptUpdate(); try await settle(updates)
+        candidate = release(tag: "v0.12.0", assets: [asset(url: "https://github.com/k-onoue/mathlidelux/releases/download/v0.12.0/Mathlidelux.dmg")])
+        await updates.check()
+        XCTAssertEqual(updates.status, .available)
+        XCTAssertEqual(updates.update?.version, ReleaseVersion("0.12.0"))
+        XCTAssertNil(updates.readyFile)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path), "Never remove a previously accepted download")
+    }
+
+    @MainActor
+    func testRemovedDownloadBecomesRetryableEvenWhenAutomaticCheckIsThrottled() async throws {
+        let candidate = release(assets: [asset()]), file = try downloadFixture()
+        var downloads = 0, checks = 0
+        let updates = AppUpdates(defaults: isolatedDefaults(), installedVersion: "0.10.0", fetch: { checks += 1; return candidate }, download: { _ in
+            downloads += 1
+            try Data("downloaded disk image".utf8).write(to: file)
+            return file
+        })
+        await updates.check(); updates.acceptUpdate(); try await settle(updates)
+        try FileManager.default.removeItem(at: file)
+        XCTAssertNil(updates.readyFile)
+        await updates.check(manually: false)
+        XCTAssertEqual(checks, 1)
+        XCTAssertEqual(updates.status, .available)
+        updates.acceptUpdate(); try await settle(updates)
+        XCTAssertEqual(downloads, 2)
+        XCTAssertEqual(updates.status, .downloaded(file))
+        XCTAssertEqual(updates.readyFile, file)
+    }
+
+    @MainActor
+    func testReplacedAssetInvalidatesReadyFileWithoutDeletingIt() async throws {
+        var candidate = release(assets: [asset()])
+        let file = try downloadFixture()
+        let updates = AppUpdates(defaults: isolatedDefaults(), installedVersion: "0.10.0", fetch: { candidate }, download: { _ in file })
+        await updates.check(); updates.acceptUpdate(); try await settle(updates)
+        candidate = release(assets: [asset(digest: "sha256:" + String(repeating: "a", count: 64))])
+        await updates.check()
+        XCTAssertEqual(updates.status, .available)
+        XCTAssertNil(updates.readyFile)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
     }
 
     func testGitHubClientHandlesReleaseMissingRateLimitAndMalformedResponses() async throws {
@@ -185,6 +287,12 @@ final class AppUpdatesTests: XCTestCase {
     }
     private func release(tag: String = "v0.11.0", draft: Bool = false, prerelease: Bool = false, url: String? = nil, assets: [GitHubRelease.Asset] = []) -> GitHubRelease {
         .init(tagName: tag, htmlURL: URL(string: url ?? "https://github.com/k-onoue/mathlidelux/releases/tag/\(tag)")!, draft: draft, prerelease: prerelease, assets: assets)
+    }
+    private func downloadFixture() throws -> URL {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("MathlideluxUpdateTests-\(UUID()).dmg")
+        try Data("downloaded disk image".utf8).write(to: file)
+        addTeardownBlock { try? FileManager.default.removeItem(at: file) }
+        return file
     }
     private func isolatedDefaults() -> UserDefaults {
         let name = "MathlideluxUpdateTests.\(UUID().uuidString)"

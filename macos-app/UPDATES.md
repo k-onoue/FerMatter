@@ -21,6 +21,10 @@ to Applications. The updater does not replace the app or restart it. Files are
 saved in a unique `Mathlidelux-<version>-<id>` folder inside Downloads, avoiding
 collisions with earlier downloads. The user can delete the disk image after
 installation. Download failures leave the release available for retry.
+Rechecking the same release keeps the downloaded file ready in the current app
+session. A failed check shows its error while keeping Open Disk Image and Show in
+Finder available. A newer release, changed asset metadata, or a removed file
+offers a new download; existing files in Downloads are never removed by a check.
 
 ## Release contract
 
