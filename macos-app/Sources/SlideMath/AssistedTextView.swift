@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 final class AssistedTextView: NSTextView {
+    let sourcePreview = SourceMathPreviewController()
     // Each source tab/pane owns its edit history. Synchronizing another pane must
     // not clear the window-wide undo stack for the editor the user is typing in.
     private let sourceUndoManager = UndoManager()
@@ -90,7 +91,7 @@ final class AssistedTextView: NSTextView {
     var onSourceFocus: (() -> Void)?
     override func becomeFirstResponder() -> Bool {
         let accepted = super.becomeFirstResponder()
-        if accepted { onSourceFocus?() }
+        if accepted { onSourceFocus?(); sourcePreview.caretChanged() }
         return accepted
     }
     var sourceFormat: ProjectFormat = .latex
@@ -166,6 +167,7 @@ final class AssistedTextView: NSTextView {
     }
 
     override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53, suggestions.isEmpty, sourcePreview.isEnabled { sourcePreview.dismiss(); return }
         if !suggestions.isEmpty {
             switch event.keyCode {
             case 53: dismissSuggestions(); return
@@ -186,11 +188,12 @@ final class AssistedTextView: NSTextView {
     }
     override func cancelOperation(_ sender: Any?) {
         if !suggestions.isEmpty { dismissSuggestions() }
+        else if sourcePreview.isEnabled { sourcePreview.dismiss() }
         else { showSuggestions(manual: true) }
     }
     override func mouseDown(with event: NSEvent) { dismissSuggestions(); super.mouseDown(with: event) }
-    override func resignFirstResponder() -> Bool { dismissSuggestions(); return super.resignFirstResponder() }
-    override func viewWillMove(toWindow newWindow: NSWindow?) { dismissSuggestions(); super.viewWillMove(toWindow: newWindow) }
+    override func resignFirstResponder() -> Bool { dismissSuggestions(); sourcePreview.hide(); return super.resignFirstResponder() }
+    override func viewWillMove(toWindow newWindow: NSWindow?) { dismissSuggestions(); sourcePreview.hide(); super.viewWillMove(toWindow: newWindow) }
 
     override var rangeForUserCompletion: NSRange {
         SourceCompletion.completionRange(in: string, caret: selectedRange().location, format: sourceFormat)

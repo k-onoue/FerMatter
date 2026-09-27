@@ -51,6 +51,7 @@ struct SourceTextEditor: NSViewRepresentable {
     var controller: SourceEditorController? = nil
     var projectCompletions: [SourceCompletion] = []
     var isVisible = true
+    var mathPreview: SourcePreviewConfiguration? = nil
     var onFocus: (() -> Void)?
     func makeNSView(context: Context) -> SourceEditorContainer {
         let container = SourceEditorContainer(scroll: controller?.retainedScroll)
@@ -86,6 +87,7 @@ struct SourceTextEditor: NSViewRepresentable {
         scroll.drawsBackground = false; scroll.contentView.drawsBackground = false
         view.highlight()
         (scroll.verticalRulerView as? SourceLineRuler)?.refresh()
+        view.sourcePreview.configure(view: view, configuration: isVisible ? mathPreview : nil)
     }
 
 }

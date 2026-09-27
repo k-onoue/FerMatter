@@ -16,6 +16,7 @@ the existing prototype.
 | Source workspace UI | `ProjectFileTree.swift`, `ProjectFileViews.swift`, `SourcePaneLayout.swift`, `SourceTabInteractions.swift` | Native file tree, recursive splits, independent pane tabs, tab drag/drop and shortcuts. |
 | Shared text editor | `SourceEditor.swift`, `AssistedTextView.swift` | SwiftUI/AppKit bridge, retained editor instances, syntax coloring, text Undo and input handling. |
 | Syntax completion | `SourceCompletion.swift`, `ProjectCompletions.swift`, `SourceCompletionViews.swift` | Built-in and project-defined candidates, argument fields and completion popup. |
+| Caret preview | `SourceMathPreview.swift`, `source_preview.py` | Per-editor debounced previews, draft overlays in temporary project copies, and draggable image exports. |
 | Editor actions | `SourceEditingCommands.swift`, `SourceLineRuler.swift`, `SourceOutline.swift` | Line editing, logical line numbers and source heading navigation. |
 | PDF and export | `PDFNavigation.swift`, `SVGExporter.swift`, `ImageExporter.swift` | PDF/source mapping and vector/raster representations. |
 | App updates | `AppUpdates.swift`, `AppUpdateViews.swift`, `UpdateDownloader.swift` | SemVer and release validation, throttled in-app notifications, explicit download acceptance and disk-image handoff. |
@@ -44,6 +45,10 @@ the existing prototype.
 - The completion catalog supplies syntax assistance. It does not expose a
   separate Snippets menu. Library, source, template and new-project editors all
   use the same native text editor.
+- Source previews have an independent worker session and invalidate stale
+  results when the caret or any draft changes. UTF-16 ranges match AppKit's
+  caret offsets. The worker snapshots the project before overlaying drafts;
+  cancellation terminates its compiler process group and removes the snapshot.
 
 ## Checks
 

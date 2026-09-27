@@ -64,7 +64,8 @@ extension SourcePaneTests {
         autoreleasepool {
             let files = ProjectFiles(support: root.appendingPathComponent("support"), editorPreferences: manualEditorPreferences())
             files.configure(root: root, main: "main.typ", format: .typst)
-            let hosting = NSHostingView(rootView: ProjectSourcePane(files: files, active: true))
+            let hosting = NSHostingView(rootView: ProjectSourcePane(files: files, active: true)
+                .environmentObject(LibraryStore(support: root.appendingPathComponent("support"))))
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 600), styleMask: .borderless, backing: .buffered, defer: true)
             window.contentView = hosting
             hosting.layoutSubtreeIfNeeded()
@@ -86,7 +87,8 @@ extension SourcePaneTests {
         try Data("= Intro\n$ x^2 $\n".utf8).write(to: root.appendingPathComponent("main.typ"))
         let files = ProjectFiles(support: root.appendingPathComponent("support"), editorPreferences: manualEditorPreferences())
         files.configure(root: root, main: "main.typ", format: .typst)
-        let hosting = NSHostingView(rootView: ProjectSourcePane(files: files, active: true))
+        let hosting = NSHostingView(rootView: ProjectSourcePane(files: files, active: true)
+            .environmentObject(LibraryStore(support: root.appendingPathComponent("support"))))
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1200, height: 850), styleMask: .borderless, backing: .buffered, defer: true)
         window.contentView = hosting
         defer { window.contentView = nil }

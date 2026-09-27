@@ -252,6 +252,20 @@ preferred width. PDF navigation in Source mode opens the matching file and line.
 
 Both editors keep text opaque over the same glass background as the toolbar.
 
+### Preview at the caret
+
+- Place the caret inside an equation, TikZ picture, or CeTZ canvas in Source mode.
+  A small preview appears after a short pause. Move outside the item or press
+  Escape to dismiss it.
+- Drag the preview into a slide or Finder, or use its Copy button. Its format
+  menu selects SVG (default), PNG, JPEG, or PDF, shared with library exports.
+- Preview uses the project's preamble/imports and current open drafts, including
+  unsaved companion files. Compilation runs in a temporary project copy and
+  does not save your drafts or change the source files.
+- It uses the same literal source extraction as the library. Generated math or
+  unsupported dynamic imports may require rendering the full document instead.
+- Errors stay in the preview; moving the caret cancels obsolete compilation.
+
 | Editor action | Shortcut |
 | --- | --- |
 | Copy / cut selection, or the whole current line when nothing is selected | Command-C / Command-X |
