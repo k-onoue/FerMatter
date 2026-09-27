@@ -9,6 +9,7 @@
 **/dist/
 **/__pycache__/
 **/test-results/
+.venv-docs/
 *.py[cod]
 .DS_Store
 .env

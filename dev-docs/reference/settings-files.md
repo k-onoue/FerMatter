@@ -67,7 +67,7 @@ they operate on the currently selected export format.
 
 ## Themes, version 1
 
-The included [Ocean example](settings/ocean.theme.json) can be imported directly.
+The included [Ocean example](../../docs/settings/ocean.theme.json) can be imported directly.
 Each theme has a stable, namespaced `id` independent of its displayed `name`.
 Use lowercase letters and digits separated by dots or hyphens, for example
 `community.author.ocean`. IDs must contain at least one separator and have at most
