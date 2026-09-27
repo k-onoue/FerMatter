@@ -89,7 +89,7 @@ struct ProjectsView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                Image(systemName: "function").font(.system(size: 22, weight: .medium)).foregroundStyle(.blue)
+                AppBrandIcon(size: 36)
                 Text(AppIdentity.name).font(.system(size: 18, weight: .semibold))
                 Spacer()
                 WindowControls()

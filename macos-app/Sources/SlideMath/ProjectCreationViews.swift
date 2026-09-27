@@ -143,7 +143,7 @@ struct TemplateSettingsView: View {
                 VStack(spacing: 0) {
                     ForEach(templates.templates) { template in
                         HStack(spacing: 16) {
-                            Image(systemName: template.format == .latex ? "function" : "textformat")
+                            Image(systemName: "doc.text")
                                 .font(.title3).foregroundStyle(.blue).frame(width: 30)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(template.name).font(.headline)
