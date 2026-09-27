@@ -13,9 +13,9 @@ struct EquationImage: View {
                     .padding(card.kind == "figure" ? 8 : 0)
                     .background(card.kind == "figure" ? Color.white : .clear, in: RoundedRectangle(cornerRadius: 8))
             } else {
-                Image(systemName: card.status == "failed" ? "exclamationmark.triangle" : "function")
-                    .foregroundStyle(card.status == "failed" ? Color.orange : Color.secondary.opacity(0.4))
-                    .help(card.status == "failed" ? "Render error" : "Pending")
+                if card.status == "failed" {
+                    Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange).help("Render error")
+                } else { AppBrandIcon().help("Pending") }
             }
         }.task(id: card.pngPath) { image = card.pngPath.flatMap { NSImage(contentsOfFile: $0) } }
     }
@@ -191,7 +191,7 @@ struct EditorView: View {
                                 .help("Drag \(store.exportFormat.title)")
                             if let error = card.error { ScrollView { Text(error).font(.system(size: 10, design: .monospaced)).textSelection(.enabled) }.frame(maxHeight: 105) }
                         } else {
-                            Spacer(); Image(systemName: "function").font(.system(size: 30, weight: .light)).foregroundStyle(.tertiary); Spacer()
+                            Spacer(); AppBrandIcon(size: 48); Spacer()
                         }
                     }.padding(18).frame(maxWidth: .infinity).background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
                 }.frame(minWidth: 280).padding(.leading, 10)
