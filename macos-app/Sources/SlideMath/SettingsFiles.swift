@@ -62,8 +62,10 @@ final class SettingsFile<Document: SettingsDocument> {
 
     func load() throws -> Document {
         let data = try readData(url), document = try decode(data)
-        try data.write(to: recoveryURL, options: .atomic)
         loadedData = data
+        // A readable, valid primary remains authoritative even if its recovery copy
+        // cannot be refreshed (for example, a read-only settings directory).
+        try? data.write(to: recoveryURL, options: .atomic)
         return document
     }
 

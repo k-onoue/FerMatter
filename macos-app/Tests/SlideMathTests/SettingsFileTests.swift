@@ -120,6 +120,31 @@ final class SettingsFileTests: XCTestCase {
         XCTAssertEqual(ThemePreferences(directory: directory).document, .standard)
     }
 
+    @MainActor func testRecoveryWriteFailureKeepsValidPrimaryOnReloadAndRestart() throws {
+        let preferences = ThemePreferences(directory: directory)
+        let file = SettingsFile<ThemeDocument>(directory: directory, name: "theme.json")
+        // Make only the recovery destination unwritable without depending on process privileges.
+        try FileManager.default.removeItem(at: file.recoveryURL)
+        try FileManager.default.createDirectory(at: file.recoveryURL, withIntermediateDirectories: false)
+        var custom = ThemeDocument.standard
+        custom.id = "community.example.valid"; custom.name = "Valid primary"
+        custom.light["accent"] = "#123456"
+        try JSONEncoder().encode(custom).write(to: preferences.fileURL)
+
+        preferences.reload()
+        XCTAssertNil(preferences.fileError)
+        XCTAssertEqual(preferences.document, custom)
+        let restarted = ThemePreferences(directory: directory)
+        XCTAssertNil(restarted.fileError)
+        XCTAssertEqual(restarted.document, custom)
+
+        // A failed recovery write must also leave conflict detection synchronized with the primary.
+        XCTAssertEqual(try file.load(), custom)
+        custom.name = "Saved after reload"
+        XCTAssertNoThrow(try file.save(custom))
+        XCTAssertEqual(try file.read(file.url), custom)
+    }
+
     func testThemeSchemaRejectsInvalidIDsColorsTokensAndVersions() throws {
         try ThemeDocument.standard.validate()
         var document = ThemeDocument.standard; document.schemaVersion = 2
