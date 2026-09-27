@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [.executable(name: "Mathlidelux", targets: ["SlideMath"])],
     targets: [
-        .executableTarget(name: "SlideMath"),
+        .executableTarget(name: "SlideMath", resources: [.copy("Themes")]),
         .testTarget(name: "SlideMathTests", dependencies: ["SlideMath"], path: "Tests/SlideMathTests")
     ]
 )

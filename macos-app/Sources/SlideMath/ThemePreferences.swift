@@ -75,11 +75,22 @@ extension EnvironmentValues {
 @MainActor final class ThemePreferences: FileSettings {
     @Published private(set) var document: ThemeDocument
     @Published private(set) var fileError: String?
+    let presets: [ThemeDocument]
+    let presetError: String?
     private let file: SettingsFile<ThemeDocument>
     var fileURL: URL { file.url }
     init(directory: URL = AppIdentity.settingsDirectory) {
         file = SettingsFile(directory: directory, name: "theme.json")
         (document, fileError) = file.initial(.standard)
+        do { presets = try BundledThemes.load(); presetError = nil }
+        catch { presets = [.standard]; presetError = error.localizedDescription }
+    }
+    // Compare the complete document: edited/imported variants may retain a preset's ID.
+    var selectedPresetID: String? { presets.first(where: { $0 == document })?.id }
+    func selectPreset(_ id: String) {
+        guard let value = presets.first(where: { $0.id == id }) else { return }
+        do { try file.save(value); document = value; fileError = nil }
+        catch { fileError = error.localizedDescription }
     }
     func reload() {
         do { document = try file.load(); fileError = nil }
@@ -114,17 +125,59 @@ struct ThemeSettingsView: View {
                 Text("System").tag("system"); Text("Light").tag("light"); Text("Dark").tag("dark")
             }.pickerStyle(.segmented)
             Divider()
-            HStack {
-                Text(themes.document.name).font(.headline)
-                Spacer()
-                ForEach([ThemeToken.accent, .command, .delimiter, .number, .comment], id: \.rawValue) { token in
-                    Circle().fill(Color(nsColor: themes.document.color(token))).frame(width: 18, height: 18).help(token.rawValue)
+            Picker("Color Theme", selection: Binding(get: { themes.selectedPresetID ?? "custom" }, set: themes.selectPreset)) {
+                ForEach(themes.presets, id: \.id) { theme in
+                    Text(theme.name).tag(theme.id)
                 }
+                if themes.selectedPresetID == nil { Text(themes.document.name + " (Custom)").tag("custom") }
+            }
+            HStack(spacing: 12) {
+                ThemePalettePreview(theme: themes.document, scheme: .light)
+                ThemePalettePreview(theme: themes.document, scheme: .dark)
             }
             Text("Edit the theme file, then Reload to apply.").font(.caption).foregroundStyle(.secondary)
             SettingsFileControls(preferences: themes)
+            if let error = themes.presetError { Text(error).font(.caption).foregroundStyle(.orange) }
             if let error = themes.fileError { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             Spacer()
-        }.padding(24).frame(width: 640, height: 340)
+        }.padding(24).frame(width: 640, height: 460)
+    }
+}
+
+private struct ThemePalettePreview: View {
+    let theme: ThemeDocument
+    let scheme: ColorScheme
+
+    private func color(_ token: ThemeToken) -> Color {
+        var resolved = NSColor.clear
+        NSAppearance(named: scheme == .dark ? .darkAqua : .aqua)?.performAsCurrentDrawingAppearance {
+            resolved = theme.color(token).usingColorSpace(.sRGB) ?? token.systemColor
+        }
+        return Color(nsColor: resolved)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text(scheme == .light ? "Light" : "Dark").font(.caption.weight(.medium))
+                Spacer()
+                Circle().fill(color(.accent)).frame(width: 9, height: 9)
+            }
+            VStack(alignment: .leading, spacing: 5) {
+                Text("% Mathlidelux").foregroundColor(color(.comment))
+                (Text("\\frac").foregroundColor(color(.command))
+                    + Text("{").foregroundColor(color(.delimiter))
+                    + Text("x").foregroundColor(color(.text))
+                    + Text("}{").foregroundColor(color(.delimiter))
+                    + Text("2").foregroundColor(color(.number))
+                    + Text("}").foregroundColor(color(.delimiter)))
+            }.font(.system(size: 14, design: .monospaced))
+        }
+        .foregroundStyle(color(.text))
+        .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+        .background(color(.windowBackground), in: RoundedRectangle(cornerRadius: 12))
+        .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(color(.text).opacity(0.15)) }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(theme.name), \(scheme == .light ? "Light" : "Dark") preview")
     }
 }

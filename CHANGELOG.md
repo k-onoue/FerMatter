@@ -13,12 +13,15 @@
 - Task-based user guides, maintained in Markdown and available on the product site.
 - Shared contributor and agent documentation with review and release checklists.
 - File-managed shortcuts and declarative color themes, with import/export and recovery.
+- Fifteen bundled light/dark theme pairs with a picker and previews, including GitHub, Catppuccin, Solarized, Atom One, and Rosé Pine.
 - Stable-release notifications and accepted update downloads.
 - Draggable equation and figure previews at the Source editor caret.
 - Prototype DMG and PKG packaging with verification and checksums.
 
 ### Changed
 
+- Make shortcut settings easier to scan with larger, spaced key symbols and alternating rows.
+- Use a single theme background across each project card and its equation preview.
 - Simplify the product page around moving an equation from a paper to a slide.
 - Use the approved app artwork throughout the native app and website.
 - Save newly created projects in Documents/Mathlidelux and reveal their source folders in Finder.

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "mathlidelux.theme",
+  "id": "org.mathlidelux.tokyo-night",
+  "name": "Tokyo Night",
+  "light": {
+    "accent": "#2959AA",
+    "windowBackground": "#E6E7ED",
+    "surfaceBackground": "#D6D8DF",
+    "text": "#343B59",
+    "command": "#65359D",
+    "delimiter": "#006C86",
+    "number": "#965027",
+    "comment": "#888B94"
+  },
+  "dark": {
+    "accent": "#6183BB",
+    "windowBackground": "#1A1B26",
+    "surfaceBackground": "#16161E",
+    "text": "#A9B1D6",
+    "command": "#BB9AF7",
+    "delimiter": "#89DDFF",
+    "number": "#FF9E64",
+    "comment": "#51597D"
+  },
+  "extensions": {
+    "org.mathlidelux.theme-source": {
+      "variants": {
+        "light": "Tokyo Night Light",
+        "dark": "Tokyo Night"
+      },
+      "sources": [
+        {
+          "repository": "https://github.com/tokyo-night/tokyo-night-vscode-theme",
+          "revision": "7c0f11eaef322f293621ca7befe462214b7ea468",
+          "files": [
+            "themes/tokyo-night-light-color-theme.json",
+            "themes/tokyo-night-color-theme.json"
+          ],
+          "license": "MIT",
+          "licenseFile": "Licenses/tokyo-night-tokyo-night-vscode-theme.txt"
+        }
+      ],
+      "adaptation": "Editor/sidebar backgrounds, keyword commands, punctuation/operator delimiters, numeric constants, and comments; missing punctuation uses text. Accent uses links (Night Owl uses keyword). All RGB colors are opaque; upstream alpha is removed, not applied to text. Native glass and artwork rendering are unchanged."
+    }
+  }
+}

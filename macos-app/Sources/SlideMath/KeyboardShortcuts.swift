@@ -207,21 +207,26 @@ struct ShortcutSettingsView: View {
             Divider()
             ScrollView {
                 VStack(spacing: 0) {
-                    ForEach(AppCommand.allCases) { command in
-                        HStack {
-                            Text(command.title)
+                    ForEach(Array(AppCommand.allCases.enumerated()), id: \.element.id) { index, command in
+                        HStack(spacing: 14) {
+                            Text(command.title).font(.system(size: 14))
                             Spacer()
-                            ShortcutRecorder(label: shortcuts.binding(command).label, active: recording == command,
+                            ShortcutRecorder(commandName: command.title, label: shortcuts.binding(command).label, active: recording == command,
                                              start: { recording = command; error = nil }, cancel: { recording = nil },
                                              recorded: { binding in
                                 error = shortcuts.set(binding, for: command)
                                 if error == nil { recording = nil }
-                            }).frame(width: 126, height: 28)
-                            Button { recording = nil; error = shortcuts.set(.unassigned, for: command) } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary) }
+                            }).frame(width: 164, height: 34)
+                            Button { recording = nil; error = shortcuts.set(.unassigned, for: command) } label: {
+                                Image(systemName: "xmark.circle").foregroundStyle(.secondary).frame(width: 24, height: 28)
+                            }
                                 .buttonStyle(.plain).help("Clear shortcut").accessibilityLabel("Clear \(command.title) shortcut")
-                        }.padding(.horizontal, 24).padding(.vertical, 7)
+                                .disabled(shortcuts.binding(command).key.isEmpty)
+                        }.padding(.horizontal, 16).padding(.vertical, 6)
+                            .background(index.isMultiple(of: 2) ? Color.primary.opacity(0.035) : .clear,
+                                        in: RoundedRectangle(cornerRadius: 8))
                     }
-                }.padding(.vertical, 12)
+                }.padding(12)
             }
             Divider()
             HStack {
@@ -229,12 +234,13 @@ struct ShortcutSettingsView: View {
                     .font(.caption).foregroundStyle(error == nil && shortcuts.fileError == nil ? Color.secondary : Color.orange)
                 Spacer()
             }.frame(minHeight: 20).padding(18)
-        }.frame(width: 540, height: 640)
+        }.frame(width: 640, height: 640)
             .onDisappear { recording = nil }
     }
 }
 
 struct ShortcutRecorder: NSViewRepresentable {
+    let commandName: String
     let label: String
     let active: Bool
     let start: () -> Void
@@ -242,7 +248,10 @@ struct ShortcutRecorder: NSViewRepresentable {
     let recorded: (ShortcutBinding) -> Void
     func makeNSView(context: Context) -> RecordingButton { RecordingButton() }
     func updateNSView(_ button: RecordingButton, context: Context) {
-        button.title = active ? "Type shortcut…" : label
+        button.title = active ? "Type shortcut…" : label == "—" ? "Not set" : label.map(String.init).joined(separator: "  ")
+        button.setAccessibilityLabel(commandName + " shortcut")
+        button.setAccessibilityValue(active ? "Recording" : label)
+        button.toolTip = active ? "Press a shortcut. Esc to cancel." : "Click to change \(commandName) shortcut"
         button.start = start; button.cancel = cancel; button.recorded = recorded
         button.recording = active
     }
@@ -268,7 +277,7 @@ final class RecordingButton: NSButton {
             } else if let monitor { NSEvent.removeMonitor(monitor); self.monitor = nil }
         }
     }
-    init() { super.init(frame: .zero); bezelStyle = .rounded; target = self; action = #selector(begin); font = .monospacedSystemFont(ofSize: 12, weight: .medium) }
+    init() { super.init(frame: .zero); bezelStyle = .rounded; target = self; action = #selector(begin); font = .monospacedSystemFont(ofSize: 15, weight: .medium) }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     @objc private func begin() { start?() }
     override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); if window == nil { recording = false } }

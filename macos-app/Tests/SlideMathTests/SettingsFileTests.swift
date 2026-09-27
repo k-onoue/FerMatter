@@ -120,6 +120,69 @@ final class SettingsFileTests: XCTestCase {
         XCTAssertEqual(ThemePreferences(directory: directory).document, .standard)
     }
 
+    @MainActor func testBundledThemesProvideFifteenCompleteOpaqueLightDarkPairs() throws {
+        let presets = try BundledThemes.load()
+        XCTAssertEqual(presets.count, 16)
+        XCTAssertEqual(Set(presets.map(\.id)).count, presets.count)
+        XCTAssertEqual(presets.first, .standard)
+        for theme in presets.dropFirst() {
+            XCTAssertNotEqual(theme.light, theme.dark, theme.name)
+            XCTAssertNotNil(theme.extensions?["org.mathlidelux.theme-source"])
+            for palette in [theme.light, theme.dark] {
+                XCTAssertEqual(Set(palette.keys), Set(ThemeToken.allCases.map(\.rawValue)))
+                XCTAssertTrue(palette.values.allSatisfy { $0.hasPrefix("#") })
+            }
+            for name in [NSAppearance.Name.aqua, .darkAqua] {
+                try XCTUnwrap(NSAppearance(named: name)).performAsCurrentDrawingAppearance {
+                    for token in ThemeToken.allCases {
+                        XCTAssertEqual(theme.color(token).usingColorSpace(.sRGB)?.alphaComponent, 1)
+                    }
+                }
+            }
+        }
+    }
+
+    @MainActor func testPresetSelectionPersistsExportsAndRecognizesEditedPresetAsCustom() throws {
+        let preferences = ThemePreferences(directory: directory)
+        XCTAssertNil(preferences.presetError)
+        for preset in preferences.presets {
+            preferences.selectPreset(preset.id)
+            XCTAssertNil(preferences.fileError)
+            XCTAssertEqual(preferences.selectedPresetID, preset.id)
+            XCTAssertEqual(ThemePreferences(directory: directory).document, preset)
+        }
+        var edited = preferences.document
+        edited.light["text"] = "#123456"
+        try JSONEncoder().encode(edited).write(to: preferences.fileURL)
+        preferences.reload()
+        XCTAssertNil(preferences.selectedPresetID)
+        XCTAssertEqual(preferences.document, edited)
+        let exported = directory.appendingPathComponent("custom.theme.json")
+        preferences.exportFile(exported)
+        XCTAssertEqual(try JSONDecoder().decode(ThemeDocument.self, from: Data(contentsOf: exported)), edited)
+        preferences.selectPreset("unknown.theme")
+        XCTAssertEqual(preferences.document, edited)
+        preferences.reset()
+        XCTAssertEqual(preferences.selectedPresetID, ThemeDocument.standard.id)
+    }
+
+    @MainActor func testPresetSelectionPreservesUnloadedExternalChanges() throws {
+        let preferences = ThemePreferences(directory: directory)
+        var external = ThemeDocument.standard
+        external.name = "My theme"
+        let data = try JSONEncoder().encode(external)
+        try data.write(to: preferences.fileURL)
+        let preset = try XCTUnwrap(preferences.presets.last)
+        preferences.selectPreset(preset.id)
+        XCTAssertNotNil(preferences.fileError)
+        XCTAssertEqual(preferences.document, .standard)
+        XCTAssertEqual(try Data(contentsOf: preferences.fileURL), data)
+        preferences.reload()
+        preferences.selectPreset(preset.id)
+        XCTAssertNil(preferences.fileError)
+        XCTAssertEqual(preferences.document, preset)
+    }
+
     @MainActor func testRecoveryWriteFailureKeepsValidPrimaryOnReloadAndRestart() throws {
         let preferences = ThemePreferences(directory: directory)
         let file = SettingsFile<ThemeDocument>(directory: directory, name: "theme.json")

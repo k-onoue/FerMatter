@@ -14,6 +14,12 @@ future changes to the imported source do not affect the active settings. Export
 copies the active settings to a chosen file. Import and Restore Defaults explicitly
 replace the active file. Keep exported themes to switch between them using Import.
 
+- **Appearance → Color Theme** also offers Default and fifteen bundled light/dark pairs; see the [theme list](../../user-docs/preferences.md#color-themes).
+- Selecting a preset writes its complete document to `theme.json`; no theme download is needed at runtime.
+- A modified/imported document appears as **Custom**, even if it retains a preset's ID. Export it before switching to keep a reusable copy.
+- Preset selection refuses to overwrite external edits until Reload accepts them.
+- Bundled JSON, pinned source revisions, and MIT licenses: [Themes](../../macos-app/Sources/SlideMath/Themes/README.md).
+
 An invalid file leaves the current settings in use. The app retains hidden
 `.last-valid-*.json` recovery files, so invalid edits also retain the last valid
 settings across launches. If the active file was removed, the next launch restores
