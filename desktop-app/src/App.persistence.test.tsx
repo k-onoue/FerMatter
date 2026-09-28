@@ -11,7 +11,13 @@ import {
 import type { Card, Project } from "./types";
 import { defaults } from "./appearance";
 import App from "./App";
-const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
+import { flushWindow } from "./persistence";
+import { disposeProjectModels } from "./editor";
+import { initialInstant } from "./instant";
+const { rpc, events } = vi.hoisted(() => ({
+  rpc: vi.fn(),
+  events: new Map<string, Set<() => void>>(),
+}));
 vi.mock("./api", () => ({
   rpc,
   uid: () => crypto.randomUUID(),
@@ -26,7 +32,13 @@ vi.mock("./editor", () => ({
 vi.mock("./useAppearance", () => ({ useAppearance: () => {} }));
 vi.mock("./useDesktopBackground", () => ({ useDesktopBackground: () => null }));
 vi.mock("./PdfPane", () => ({ PdfPane: () => null }));
-vi.mock("@tauri-apps/api/event", () => ({ listen: async () => () => {} }));
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: async (name: string, callback: () => void) => {
+    if (!events.has(name)) events.set(name, new Set());
+    events.get(name)!.add(callback);
+    return () => events.get(name)?.delete(callback);
+  },
+}));
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({ setAlwaysOnTop: async () => {} }),
 }));
@@ -38,20 +50,35 @@ vi.mock("./ProjectsPage", () => ({
   ProjectsPage: ({
     projects,
     onOpen,
+    onProjects,
   }: {
     projects: Project[];
     onOpen: (p: Project) => void;
-  }) => <button onClick={() => onOpen(projects[0])}>Open synthetic</button>,
+    onProjects: (p: Project[]) => void;
+  }) => (
+    <>
+      {projects.map((p) => (
+        <button key={p.id} onClick={() => onOpen(p)}>
+          Open {p.id === "p" ? "synthetic" : p.id}
+        </button>
+      ))}
+      <button onClick={() => onProjects(projects.slice(1))}>
+        Remove first project
+      </button>
+    </>
+  ),
 }));
 vi.mock("./VariantEditor", () => ({
   VariantEditor: ({
     editing,
     setEditing,
     onSave,
+    onRender,
   }: {
     editing: Card;
     setEditing: (c: Card) => void;
     onSave: () => void;
+    onRender: () => void;
   }) => (
     <section>
       <textarea
@@ -60,6 +87,9 @@ vi.mock("./VariantEditor", () => ({
         onChange={(e) => setEditing({ ...editing, tex: e.target.value })}
       />
       <button onClick={onSave}>Save test variant</button>
+      {editing.requiresRender === true && (
+        <button onClick={onRender}>Render imported source</button>
+      )}
     </section>
   ),
 }));
@@ -68,6 +98,12 @@ let saved: Project[];
 let failSave: boolean;
 let delaySave: ((value: Project) => Promise<void>) | undefined;
 let scanImpl: (() => Promise<Project>) | undefined;
+let availableProjects: Project[];
+let pendingImports: {
+  token: string;
+  project: Project;
+  draft: ReturnType<typeof initialInstant>;
+}[];
 beforeEach(() => {
   vi.stubGlobal("matchMedia", () => ({
     matches: false,
@@ -107,6 +143,9 @@ beforeEach(() => {
     candidates: ["main.typ"],
   } as Project;
   saved = [];
+  availableProjects = [project];
+  pendingImports = [];
+  vi.mocked(disposeProjectModels).mockClear();
   failSave = false;
   delaySave = undefined;
   scanImpl = undefined;
@@ -116,7 +155,7 @@ beforeEach(() => {
       async (operation: string, payload: Record<string, unknown>) => {
         if (operation === "startup")
           return {
-            projects: [project],
+            projects: availableProjects,
             projectProblems: [],
             setupRequired: false,
             defaultProjectDirectory: "/synthetic",
@@ -136,14 +175,36 @@ beforeEach(() => {
             },
             templates: { custom: [] },
           };
-        if (operation === "open_project") return project;
+        if (operation === "incoming_import") {
+          if (payload?.token) {
+            expect(pendingImports[0]?.token).toBe(payload.token);
+            pendingImports.shift();
+          }
+          return pendingImports[0] || null;
+        }
+        if (operation === "open_project")
+          return (
+            availableProjects.find((p) => p.root === payload.path) || project
+          );
         if (operation === "tree") return [];
+        if (operation === "read_drafts") return { buffers: {}, warnings: [] };
+        if (operation === "read_file")
+          return {
+            path: payload.path,
+            text: "$ x $",
+            revision: "source",
+            bom: false,
+            newline: "\n",
+          };
         if (operation === "save_project") {
           if (failSave) throw Error("disk full");
           const next = structuredClone(payload.value as Project);
           await delaySave?.(next);
           saved.push(next);
           project = next;
+          availableProjects = availableProjects.map((p) =>
+            p.id === next.id ? next : p,
+          );
           return null;
         }
         if (operation === "scan") return scanImpl ? scanImpl() : project;
@@ -151,6 +212,189 @@ beforeEach(() => {
         return null;
       },
     );
+});
+
+it("reuses project tabs and restores each Library/Source mode and search without disposing models", async () => {
+  const other = { ...project, id: "other", root: "/other" };
+  availableProjects.push(other);
+  await openProject();
+  fireEvent.change(screen.getByPlaceholderText("Search equations"), {
+    target: { value: "remember filter" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Source" }));
+  fireEvent.click(screen.getByRole("tab", { name: "Projects" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Open other" }));
+  await screen.findByTitle("New equation");
+  expect(
+    (screen.getByPlaceholderText("Search equations") as HTMLInputElement).value,
+  ).toBe("");
+  fireEvent.click(screen.getByTitle("/synthetic"));
+  await waitFor(() =>
+    expect(
+      screen
+        .getByRole("button", { name: "Source" })
+        .classList.contains("active"),
+    ).toBe(true),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Library" }));
+  expect(
+    (screen.getByPlaceholderText("Search equations") as HTMLInputElement).value,
+  ).toBe("remember filter");
+  expect(screen.getAllByRole("tab")).toHaveLength(3);
+  expect(disposeProjectModels).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("tab", { name: "Projects" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Open synthetic" }),
+  );
+  await screen.findByTitle("New equation");
+  expect(screen.getAllByRole("tab")).toHaveLength(3);
+});
+
+it("closing a project tab saves its draft and disposes only that project's models", async () => {
+  await openProject();
+  edit("draft before tab close");
+  failSave = true;
+  fireEvent.keyDown(document.body, { key: "w", metaKey: true });
+  await screen.findByText(/disk full/);
+  expect(screen.getAllByRole("tab")).toHaveLength(2);
+  expect(disposeProjectModels).not.toHaveBeenCalled();
+  failSave = false;
+  fireEvent.keyDown(document.body, { key: "w", metaKey: true });
+  await screen.findByRole("button", { name: "Open synthetic" });
+  expect((saved.at(-1)?.libraryDraft as Card).tex).toBe(
+    "draft before tab close",
+  );
+  expect(screen.getAllByRole("tab")).toHaveLength(1);
+  expect(disposeProjectModels).toHaveBeenCalledExactlyOnceWith("p");
+});
+
+it("reopening an existing project with another entrypoint persists it before scanning and preserves its draft", async () => {
+  await openProject();
+  edit("retained on entrypoint change");
+  fireEvent.click(screen.getByRole("tab", { name: "Projects" }));
+  await screen.findByRole("button", { name: "Open synthetic" });
+  const base = rpc.getMockImplementation()!;
+  rpc.mockImplementation((operation, ...args) => {
+    if (operation === "open_project") {
+      project = {
+        ...project,
+        main: "other.typ",
+        candidates: ["main.typ", "other.typ"],
+      };
+      return Promise.resolve(project);
+    }
+    return base(operation, ...args);
+  });
+  const scannedEntrypoints: string[] = [];
+  scanImpl = async () => {
+    scannedEntrypoints.push(project.main);
+    return structuredClone(project);
+  };
+  fireEvent.click(screen.getByRole("button", { name: "Open synthetic" }));
+  await waitFor(() => expect(scannedEntrypoints).toEqual(["other.typ"]));
+  expect(saved.at(-1)?.main).toBe("other.typ");
+  expect((saved.at(-1)?.libraryDraft as Card).tex).toBe(
+    "retained on entrypoint change",
+  );
+  expect(screen.getAllByRole("tab")).toHaveLength(2);
+});
+
+it("SVG restoration reuses an existing tab, preserves its prior draft, and waits for Render", async () => {
+  await openProject();
+  edit("my existing scratch");
+  const draft = { ...initialInstant(), source: "imported source" };
+  pendingImports.push({ token: "svg-one", project, draft });
+  await act(async () => {
+    for (const event of events.get("workspace-import-pending") || []) event();
+  });
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("textbox", {
+          name: "Variant source",
+        }) as HTMLTextAreaElement
+      ).value,
+    ).toBe("imported source"),
+  );
+  await waitFor(() => expect(pendingImports).toHaveLength(0));
+  expect(screen.getAllByRole("tab")).toHaveLength(2);
+  expect(
+    saved.at(-1)?.cards.some((card) => card.tex === "my existing scratch"),
+  ).toBe(true);
+  expect((saved.at(-1)?.libraryDraft as Card).requiresRender).toBe(true);
+  await act(async () => {
+    await new Promise((done) => setTimeout(done, 450));
+  });
+  expect(
+    rpc.mock.calls.some(
+      ([op, payload]) =>
+        op === "render" &&
+        payload.cards?.some((card: Card) => card.tex === "imported source"),
+    ),
+  ).toBe(false);
+  expect(rpc.mock.calls.some(([op]) => op === "save_file")).toBe(false);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Render imported source" }),
+  );
+  await waitFor(() =>
+    expect(
+      rpc.mock.calls.some(
+        ([op, payload]) =>
+          op === "render" &&
+          payload.cards?.some((card: Card) => card.tex === "imported source"),
+      ),
+    ).toBe(true),
+  );
+});
+
+it("native close drains a queued SVG into a new project tab before acknowledging persistence", async () => {
+  await openProject();
+  const other = { ...project, id: "other", root: "/other" };
+  pendingImports.push({
+    token: "svg-two",
+    project: other,
+    draft: { ...initialInstant(), source: "second project" },
+  });
+  await act(async () => {
+    await flushWindow();
+  });
+  expect(pendingImports).toHaveLength(0);
+  expect((saved.at(-1)?.libraryDraft as Card).tex).toBe("second project");
+  expect(saved.at(-1)?.id).toBe("other");
+  expect(screen.getAllByRole("tab")).toHaveLength(3);
+});
+
+it("failed SVG persistence keeps its queue token and retries without duplicating the prior draft", async () => {
+  await openProject();
+  edit("retained scratch");
+  pendingImports.push({
+    token: "retry",
+    project,
+    draft: { ...initialInstant(), source: "incoming" },
+  });
+  failSave = true;
+  await act(async () => {
+    await expect(flushWindow()).rejects.toThrow("disk full");
+  });
+  expect(pendingImports).toHaveLength(1);
+  failSave = false;
+  await act(async () => {
+    await flushWindow();
+  });
+  expect(pendingImports).toHaveLength(0);
+  expect(
+    saved.at(-1)?.cards.filter((card) => card.tex === "retained scratch"),
+  ).toHaveLength(1);
+});
+
+it("prunes tabs and their models when a project is removed from Projects", async () => {
+  await openProject();
+  fireEvent.click(screen.getByRole("tab", { name: "Projects" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Remove first project" }),
+  );
+  await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(1));
+  expect(disposeProjectModels).toHaveBeenCalledExactlyOnceWith("p");
 });
 afterEach(() => {
   cleanup();
@@ -162,6 +406,7 @@ async function openProject() {
     await screen.findByRole("button", { name: "Open synthetic" }),
   );
   await screen.findByTitle("New equation");
+  await waitFor(() => expect(document.documentElement.inert).toBe(false));
 }
 function edit(text: string) {
   fireEvent.click(screen.getByTitle("New equation"));

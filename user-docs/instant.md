@@ -65,8 +65,10 @@
 - Export or copy **SVG** from Library, Source/PDF previews, or Instant to include editable source and output settings.
 - Choose **Open SVG** or **Edit from Clipboard** in Instant or the Mathlidelux menu-bar menu. Dropping an SVG into the app also restores it.
 - In Finder, use **Open With → Mathlidelux**, or drop the SVG onto the Dock icon.
-- A uniquely matching registered project opens its own Instant. Missing or ambiguous projects open the standalone Instant.
-- The current draft is kept in History. Imported source waits for **Render** (`⌘Enter`); opening a file does not execute its code.
+- Drag artwork from PowerPoint or drop an SVG file into Mathlidelux to reopen its source.
+- A matching project tab or Instant is reused. If neither is open, dropping into the main window opens a project tab; other entry points open Instant. Missing or ambiguous projects open the standalone Instant.
+- A project tab opens the imported source in **Edit Variant**. Its original source files stay unchanged; an existing Library draft is preserved as a variant. Instant keeps the previous draft in History.
+- Imported source waits for **Render**; opening a file does not execute its code.
 - SVG source includes the equation and template/preamble. Review it before sharing; the complete manuscript and app storage paths are not embedded.
 - Project-specific Typst definitions, imported files, packages and fonts may still require the original project. Standalone fallback cannot recreate missing dependencies.
 - Other applications may strip SVG metadata when pasting or copying it. Keep the original SVG or use Instant History if the copied artwork has no editable source. SVGs exported by older versions have no restoration metadata.
@@ -77,6 +79,7 @@
 - **Instant from Anywhere**: `⌃⌥⌘N`. **Edit SVG from Clipboard**: `⌃⌥⌘V`.
 - Change or disable either shortcut in **Settings → Shortcuts** or `keybindings.json`. If another app owns a shortcut, choose a different binding.
 - Closing the main window keeps the app available. **Quit Mathlidelux** (`⌘Q`) ends the app after saving recoverable work.
+- Reopening Mathlidelux through Spotlight or another app copy reuses the running app and its menu-bar icon.
 - Login autostart is not enabled automatically.
 
 ## Current scope

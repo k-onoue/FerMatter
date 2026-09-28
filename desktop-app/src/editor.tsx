@@ -3,6 +3,7 @@ import * as monaco from "monaco-editor";
 import EditorWorker from "monaco-editor/editor/editor.worker.js?worker";
 import type { Palette } from "./types";
 import { ModelOwnership } from "./modelOwnership";
+import { runWhenWindowInteractive } from "./persistence";
 (self as unknown as { MonacoEnvironment: unknown }).MonacoEnvironment = {
   getWorker: () => new EditorWorker(),
 };
@@ -248,6 +249,7 @@ export interface EditorProps {
     endUTF16?: number;
   };
   fontSize?: number;
+  focusRequest?: string;
 }
 export function CodeEditor(props: EditorProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -367,6 +369,10 @@ export function CodeEditor(props: EditorProps) {
   useEffect(() => {
     editorRef.current?.updateOptions({ readOnly: !!props.readOnly });
   }, [props.readOnly]);
+  useEffect(() => {
+    if (props.focusRequest)
+      return runWhenWindowInteractive(() => editorRef.current?.focus());
+  }, [props.focusRequest]);
   useEffect(() => {
     const editor = editorRef.current,
       model = editor?.getModel();

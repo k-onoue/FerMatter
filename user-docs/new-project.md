@@ -19,6 +19,13 @@
 - Existing projects retain their saved locations; opening a folder uses it in place.
 - **Reveal in Finder** on a project opens its source folder.
 
+## Switch between projects
+
+- Open projects appear as tabs above the workspace; **Projects** returns to the project list.
+- Opening the same project selects its existing tab.
+- Each tab retains its Library/Source view, open source files and PDF view while you switch.
+- Close a project tab with its **×** button. Source file tabs remain inside that project's Source view.
+
 ## Try two equations
 
 - LaTeX, **One per line**:

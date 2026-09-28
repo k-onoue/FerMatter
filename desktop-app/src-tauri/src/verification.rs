@@ -277,6 +277,76 @@ fn verify_project_instant(output: &Path) -> Result<()> {
         if colored["card"]["svgPath"] == previous["card"]["svgPath"] {
             return Err("Project Instant reused stale colors.".into());
         }
+        // The same restored recipe must work as a Library variant, where the
+        // ordinary batch renderer (rather than Instant's template wrapper) runs.
+        let context_file = draft["contextFile"].as_str().unwrap_or(main);
+        let mut variants = vec![];
+        for (name, color) in [
+            ("blue", Some("2356ab")),
+            ("red", Some("aa2244")),
+            ("default", None),
+        ] {
+            let mut card = json!({"id":name,"tex":draft["source"],"kind":"block",
+                "file":context_file,"restoredContextFile":context_file,"origin":"custom",
+                "requiresRender":false,"exportFontSize":24});
+            if let Some(color) = color {
+                card["instantColor"] = json!(color);
+            }
+            variants.push(card);
+        }
+        compiler::render(
+            &root,
+            main,
+            "project",
+            &variants.clone(),
+            &temp.path().join(format!("{format}-restored")),
+            &cancel,
+            |event| {
+                let card = variants
+                    .iter_mut()
+                    .find(|v| v["id"] == event["id"])
+                    .unwrap();
+                for (key, value) in event.as_object().unwrap() {
+                    card[key] = value.clone();
+                }
+            },
+        )?;
+        for (card, expected) in variants
+            .iter()
+            .zip([[35u8, 86, 171], [170, 34, 68], [0, 0, 0]])
+        {
+            if card["status"] != "ready" {
+                return Err(format!(
+                    "Restored {format} variant failed: {}",
+                    card["error"]
+                ));
+            }
+            let pixels = image::open(string(card, "pngPath"))
+                .map_err(err)?
+                .into_rgba8();
+            if !pixels
+                .pixels()
+                .any(|p| p[3] > 240 && (0..3).all(|i| p[i].abs_diff(expected[i]) <= 4))
+            {
+                return Err(format!(
+                    "Restored {format} variant lost its color or leaked the previous card's color."
+                ));
+            }
+            if format == "typst" && card["sourceFontSize"] != 13. {
+                return Err("Restored Typst variant lost its parent context.".into());
+            }
+            let recipe = crate::roundtrip::card_recipe(&store, &p, card, 24.)?;
+            if recipe["draft"]["contextFile"] != context_file || recipe["draft"]["fontSize"] != 24.
+            {
+                return Err("Restored variant lost its portable context or size.".into());
+            }
+        }
+        if variants[0]["svgPath"] == variants[1]["svgPath"] {
+            return Err("Restored variants reused a cache entry for different colors.".into());
+        }
+        if fingerprint(&root)? != before {
+            return Err("Restored Library variants changed source files.".into());
+        }
         let definitions = root.join(if format == "latex" {
             "definitions.tex"
         } else {
@@ -298,7 +368,7 @@ fn verify_project_instant(output: &Path) -> Result<()> {
         if instant::render_project(&store, id, &draft, &cancel).is_ok() {
             return Err("Cancelled Project Instant returned artwork.".into());
         }
-        reports.push(json!({"format":format,"status":"ready","nestedTypstContext":!nested.is_null(),"sourceUnchanged":true,"externalChangesDetected":true}));
+        reports.push(json!({"format":format,"status":"ready","nestedTypstContext":!nested.is_null(),"restoredLibraryContext":true,"restoredLibraryColors":true,"sourceUnchanged":true,"externalChangesDetected":true}));
     }
     json_write(
         &output.join("instant-project-verification.json"),

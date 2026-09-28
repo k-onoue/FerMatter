@@ -1,7 +1,7 @@
 import { dropSVG } from "./svgImport";
 import { LibraryNavigation } from "./LibraryNavigation";
 import { VariantEditor } from "./VariantEditor";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -38,8 +38,12 @@ import {
 } from "./persistence";
 import { installWindowPersistence } from "./windowPersistence";
 import { mergeScan, mergeRenderedCard } from "./projectUpdates";
-import { SourceWorkspace } from "./SourceWorkspace";
-import { PdfPane } from "./PdfPane";
+import { SourceWorkspace, type SourceSession } from "./SourceWorkspace";
+import { PdfPane, type PdfViewState } from "./PdfPane";
+import { WorkspaceArtifacts, WorkspaceTabs } from "./WorkspaceTabs";
+import { newWorkspace, type WorkspaceState } from "./workspaces";
+import { restoredVariant } from "./restoredVariant";
+import type { InstantDraft } from "./instant";
 import { OutputSizeOptions } from "./OutputSizeOptions";
 import { ImagePreview, Modal, Prompt, ContextMenu, type Ask } from "./ui";
 import { Settings } from "./settings";
@@ -90,6 +94,11 @@ import { initialTemplates, type TemplateConfiguration } from "./templates";
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]),
     [project, setProject] = useState<Project | null>(null);
+  const [workspaces, setWorkspaceState] = useState<WorkspaceState[]>([]);
+  const workspacesRef = useRef(workspaces);
+  const sourceSessions = useRef(new Map<string, SourceSession>());
+  const pdfViews = useRef(new Map<string, PdfViewState>());
+  const workspaceRegistration = useRef(Promise.resolve());
   const [projectProblems, setProjectProblems] = useState<ProjectProblem[]>([]);
   const [mode, setMode] = useState<"library" | "source">("library");
   const [libraryStale, setLibraryStale] = useState(false);
@@ -147,7 +156,7 @@ export default function App() {
     endUTF16?: number;
   }>();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [editing, setEditing] = useState<Card | null>(null);
+  const [editing, setEditingState] = useState<Card | null>(null);
   const [editPreview, setEditPreview] = useState<Card | null>(null);
   const [editBusy, setEditBusy] = useState(false);
   useCardArtifacts(editPreview);
@@ -177,6 +186,10 @@ export default function App() {
   );
   const editingRef = useRef(editing);
   editingRef.current = editing;
+  function setEditing(value: Card | null) {
+    editingRef.current = value;
+    setEditingState(value);
+  }
   const closeFlush = useRef(async () => {});
   const projectTransition = useRef(0);
   const jobs = useRef(new Map<string, string>());
@@ -184,6 +197,34 @@ export default function App() {
   const selectedAnchor = useRef<string | undefined>(undefined);
   const grid = useRef<HTMLDivElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
+  const viewRef = useRef<WorkspaceState | null>(null);
+  if (project)
+    viewRef.current = {
+      project,
+      mode,
+      libraryStale,
+      sourceMounted,
+      canvasZoom,
+      search,
+      kind,
+      filter,
+      collapsed,
+      selected,
+      selectedAnchor: selectedAnchor.current,
+      pdfOpen,
+      pdf,
+      pdfTarget,
+      pdfView: pdfViews.current.get(project.id),
+      navigate,
+      drafts,
+      editing,
+      editPreview,
+      inspector,
+      scrollTop: grid.current?.scrollTop || 0,
+    };
+  const importFlight = useRef<Promise<void> | null>(null);
+  const importCards = useRef(new Map<string, Card>());
+  const consumeImports = useRef<() => Promise<void>>(async () => {});
   const dark =
     settings.appearance === "system"
       ? systemDark
@@ -199,6 +240,72 @@ export default function App() {
         .catch(() => {});
     }
   }
+  function setWorkspaces(next: WorkspaceState[]) {
+    workspacesRef.current = next;
+    setWorkspaceState(next);
+  }
+  function registerWorkspaces() {
+    const projects = workspacesRef.current.map(
+      (workspace) => workspace.project.id,
+    );
+    const operation = workspaceRegistration.current
+      .catch(() => {})
+      .then(async () => {
+        await rpc("resident_workspace", { projects });
+      });
+    workspaceRegistration.current = operation;
+    return operation;
+  }
+  function captureWorkspace() {
+    const current = projectRef.current;
+    if (!current || !viewRef.current) return;
+    const snapshot: WorkspaceState = {
+      ...viewRef.current,
+      project: current,
+      editing: editingRef.current,
+      selectedAnchor: selectedAnchor.current,
+      pdfView: pdfViews.current.get(current.id),
+      scrollTop: grid.current?.scrollTop || 0,
+    };
+    setWorkspaces(
+      workspacesRef.current.map((item) =>
+        item.project.id === current.id ? snapshot : item,
+      ),
+    );
+  }
+  function restoreWorkspace(next: WorkspaceState) {
+    viewRef.current = next;
+    projectRef.current = next.project;
+    setProject(next.project);
+    setMode(next.mode);
+    setLibraryStale(next.libraryStale);
+    setSourceMounted(next.sourceMounted);
+    setCanvasZoom(next.canvasZoom);
+    setSearch(next.search);
+    setKind(next.kind);
+    setFilter(next.filter);
+    setCollapsed(next.collapsed);
+    setSelected(next.selected);
+    selectedAnchor.current = next.selectedAnchor;
+    setPdfOpen(next.pdfOpen);
+    setPdf(next.pdf);
+    setPdfTarget(next.pdfTarget);
+    setNavigate(next.navigate);
+    setDrafts(next.drafts);
+    setEditing(next.editing);
+    setEditPreview(next.editPreview);
+    setEditBusy(false);
+    setInspector(next.inspector);
+    setError("");
+    setContext(null);
+    setShowProjectSettings(false);
+  }
+  useLayoutEffect(() => {
+    if (grid.current)
+      grid.current.scrollTop =
+        workspacesRef.current.find((item) => item.project.id === project?.id)
+          ?.scrollTop || 0;
+  }, [project?.id]);
   useEffect(() => {
     void getCurrentWebview().setZoom(windowZoom).catch(report);
   }, [windowZoom]);
@@ -289,8 +396,15 @@ export default function App() {
     return () => clearTimeout(t);
   }, [notice]);
   function persist(next: Project) {
-    setProject(next);
-    projectRef.current = next;
+    if (projectRef.current?.id === next.id) {
+      setProject(next);
+      projectRef.current = next;
+    }
+    setWorkspaces(
+      workspacesRef.current.map((item) =>
+        item.project.id === next.id ? { ...item, project: next } : item,
+      ),
+    );
     setProjects((all) => [next, ...all.filter((p) => p.id !== next.id)]);
     const operation = writer.current.save(next);
     void operation.catch(report);
@@ -392,44 +506,221 @@ export default function App() {
   async function activate(
     p: Project,
     transition = ++projectTransition.current,
+    importing = false,
+    refreshEntrypoint = false,
   ) {
-    if (transition !== projectTransition.current) return;
+    if (transition !== projectTransition.current) return false;
+    const release = lockWindowInteraction();
+    try {
+      await flushWindow(importing ? ["workspace-imports"] : []);
+      if (transition !== projectTransition.current) return false;
+      await cancelJobs();
+      if (transition !== projectTransition.current) return false;
+      captureWorkspace();
+      const existing = workspacesRef.current.find(
+        (item) => item.project.id === p.id,
+      );
+      let next = existing || newWorkspace(p);
+      if (existing && refreshEntrypoint) {
+        const changed =
+          existing.project.main !== p.main ||
+          existing.project.format !== p.format;
+        next = {
+          ...existing,
+          project: {
+            ...existing.project,
+            main: p.main,
+            format: p.format,
+            candidates: p.candidates,
+          },
+          libraryStale: existing.libraryStale || changed,
+          pdf: changed ? null : existing.pdf,
+        };
+        setWorkspaces(
+          workspacesRef.current.map((item) =>
+            item.project.id === p.id ? next : item,
+          ),
+        );
+      } else if (!existing) setWorkspaces([...workspacesRef.current, next]);
+      // open_project saves its chosen entrypoint before this transition flushes
+      // the old workspace. Restore the chosen metadata before a rescan reads it.
+      if (existing && refreshEntrypoint) await persist(next.project);
+      if (transition !== projectTransition.current) return false;
+      restoreWorkspace(next);
+      setProjects((all) => [next.project, ...all.filter((x) => x.id !== p.id)]);
+      await registerWorkspaces();
+      if (!existing && !p.cards?.length && !importing) void rescan(p);
+      return true;
+    } finally {
+      release();
+    }
+  }
+  async function showProjects() {
+    const transition = ++projectTransition.current;
     const release = lockWindowInteraction();
     try {
       await flushWindow();
       if (transition !== projectTransition.current) return;
       await cancelJobs();
       if (transition !== projectTransition.current) return;
-      if (projectRef.current?.id === p.id)
-        p = {
-          ...p,
-          ...projectRef.current,
-          main: p.main,
-          format: p.format,
-          candidates: p.candidates,
-        };
-      if (projectRef.current) disposeProjectModels(projectRef.current.id);
-      projectRef.current = p;
-      setProject(p);
-      setProjects((all) => [p, ...all.filter((x) => x.id !== p.id)]);
-      setMode("library");
-      setLibraryStale(false);
+      captureWorkspace();
+      projectRef.current = null;
+      viewRef.current = null;
+      setProject(null);
+      setEditing(null);
+      setEditPreview(null);
       setSourceMounted(false);
       setPdf(null);
       setPdfOpen(false);
-      setSelected(new Set());
-      setSearch("");
-      setFilter("all");
-      setKind("all");
-      setDrafts({});
-      setEditing((p.libraryDraft as Card | undefined) || null);
-      setEditPreview(null);
-      setError("");
-      if (!p.cards?.length) void rescan(p);
+      setContext(null);
+      setShowProjectSettings(false);
     } finally {
       release();
     }
   }
+  async function selectWorkspace(id: string | null) {
+    if (id === projectRef.current?.id || (!id && !projectRef.current)) return;
+    if (!id) return showProjects();
+    const target = workspacesRef.current.find((item) => item.project.id === id);
+    if (target) await activate(target.project);
+  }
+  async function closeWorkspace(id: string) {
+    const release = lockWindowInteraction();
+    try {
+      await flushWindow();
+      const all = workspacesRef.current;
+      const index = all.findIndex((item) => item.project.id === id);
+      if (index < 0) return;
+      if (projectRef.current?.id === id) {
+        const next = all[index + 1] || all[index - 1];
+        if (next) await activate(next.project);
+        else await showProjects();
+        if (projectRef.current?.id === id) return;
+      }
+      setWorkspaces(
+        workspacesRef.current.filter((item) => item.project.id !== id),
+      );
+      sourceSessions.current.delete(id);
+      pdfViews.current.delete(id);
+      disposeProjectModels(id);
+      await registerWorkspaces();
+    } finally {
+      release();
+    }
+  }
+  async function reconcileProjects(next: Project[]) {
+    const release = lockWindowInteraction();
+    try {
+      await flushWindow();
+      const ids = new Set(next.map((item) => item.id));
+      if (projectRef.current && !ids.has(projectRef.current.id))
+        await showProjects();
+      const removed = workspacesRef.current.filter(
+        (item) => !ids.has(item.project.id),
+      );
+      setWorkspaces(
+        workspacesRef.current
+          .filter((item) => ids.has(item.project.id))
+          .map((item) => ({
+            ...item,
+            project:
+              next.find((project) => project.id === item.project.id) ||
+              item.project,
+          })),
+      );
+      for (const item of removed) {
+        sourceSessions.current.delete(item.project.id);
+        pdfViews.current.delete(item.project.id);
+        disposeProjectModels(item.project.id);
+      }
+      setProjects(next);
+      await registerWorkspaces();
+    } finally {
+      release();
+    }
+  }
+  consumeImports.current = () => {
+    if (importFlight.current) return importFlight.current;
+    if (!ready || setupRequired) return Promise.resolve();
+    const operation = (async () => {
+      const release = lockWindowInteraction();
+      try {
+        let item = await rpc<{
+          token: string;
+          project: Project;
+          draft: InstantDraft;
+        } | null>("incoming_import");
+        while (item) {
+          if (
+            !(await activate(item.project, ++projectTransition.current, true))
+          )
+            throw new Error("SVG is waiting. Select its project to try again.");
+          const current = projectRef.current!;
+          let restored = importCards.current.get(item.token);
+          if (!restored) {
+            restored = restoredVariant(item.draft, current);
+            importCards.current.set(item.token, restored);
+          }
+          // A second import must never replace the user's existing scratch work.
+          const previous = editingRef.current;
+          const preservedID = `draft-before-${item.token}`;
+          const cards =
+            previous?.tex.trim() &&
+            previous.id !== restored.id &&
+            !current.cards.some((card) => card.id === preservedID)
+              ? [
+                  ...current.cards,
+                  {
+                    ...savedVariant(
+                      previous,
+                      viewRef.current?.editPreview || null,
+                    ),
+                    id: preservedID,
+                  },
+                ]
+              : current.cards;
+          await persist({ ...current, cards, libraryDraft: restored });
+          setEditing(restored);
+          setEditPreview(null);
+          setMode("library");
+          setEditBusy(false);
+          const token = item.token;
+          item = await rpc("incoming_import", { token });
+          importCards.current.delete(token);
+        }
+      } finally {
+        release();
+      }
+    })();
+    importFlight.current = operation;
+    void operation
+      .finally(() => {
+        if (importFlight.current === operation) importFlight.current = null;
+      })
+      .catch(() => {});
+    return operation;
+  };
+  useEffect(() => {
+    const unregister = registerWindowFlush("workspace-imports", () =>
+      consumeImports.current(),
+    );
+    let stopped = false;
+    const consume = () => {
+      if (!stopped) void consumeImports.current().catch(report);
+    };
+    const subscription = listen("workspace-import-pending", consume);
+    window.addEventListener("focus", consume);
+    void subscription.then(consume).catch(report);
+    return () => {
+      stopped = true;
+      unregister();
+      window.removeEventListener("focus", consume);
+      void subscription.then((stop) => stop());
+    };
+  }, []);
+  useEffect(() => {
+    if (ready && !setupRequired) void consumeImports.current().catch(report);
+  }, [ready, setupRequired]);
   async function openProject(type = "folder") {
     const transition = ++projectTransition.current;
     try {
@@ -444,7 +735,12 @@ export default function App() {
               : undefined,
       });
       if (typeof path !== "string") return;
-      await activate(await rpc<Project>("open_project", { path }), transition);
+      await activate(
+        await rpc<Project>("open_project", { path }),
+        transition,
+        false,
+        true,
+      );
     } catch (e) {
       report(e);
     }
@@ -455,17 +751,26 @@ export default function App() {
       await activate(
         await rpc<Project>("open_project", { path: p.root, main: p.main }),
         transition,
+        false,
+        true,
       );
     } catch (e) {
       report(e);
     }
   }
   async function renderCards(p: Project, cards = p.cards) {
+    cards = cards.filter((card) => card.requiresRender !== true);
+    if (!cards.length) return;
     const ticket = uid();
     jobs.current.set("render", ticket);
     setBusy("Rendering…");
     try {
       await writer.current.flush();
+      if (
+        jobs.current.get("render") !== ticket ||
+        projectRef.current?.id !== p.id
+      )
+        return;
       const results = await rpc<Partial<Card>[]>("render", {
         project: p.id,
         key: `${p.id}:render`,
@@ -502,6 +807,11 @@ export default function App() {
     setBusy("Scanning…");
     try {
       await writer.current.flush();
+      if (
+        jobs.current.get("scan") !== ticket ||
+        projectRef.current?.id !== p.id
+      )
+        return;
       const next = await rpc<Project>("scan", {
         project: p.id,
         key: `${p.id}:scan`,
@@ -622,7 +932,10 @@ export default function App() {
   useEffect(() => {
     const sequence = ++editJob.current;
     const p = project;
-    if (!editing || !p) return;
+    if (!editing || !p || editing.requiresRender === true) {
+      setEditBusy(false);
+      return;
+    }
     void rpc("cancel", { key: `${p.id}:edit` });
     const timer = setTimeout(() => {
       setEditBusy(true);
@@ -644,7 +957,13 @@ export default function App() {
         });
     }, 400);
     return () => clearTimeout(timer);
-  }, [editing?.tex, editing?.kind, editing?.id]);
+  }, [
+    project?.id,
+    editing?.tex,
+    editing?.kind,
+    editing?.id,
+    editing?.requiresRender,
+  ]);
   function closeEditor() {
     if (projectRef.current?.libraryDraft)
       void persist({ ...projectRef.current, libraryDraft: null });
@@ -851,6 +1170,25 @@ export default function App() {
         return;
       }
       if (!ready || setupRequired) return;
+      if (
+        event.metaKey &&
+        !event.shiftKey &&
+        event.key.toLowerCase() === "w" &&
+        project
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (
+          mode === "source" &&
+          target.closest(".source-container") &&
+          target.closest(".monaco-editor")
+        )
+          window.dispatchEvent(
+            new CustomEvent("source-command", { detail: "closeSourceTab" }),
+          );
+        else void closeWorkspace(project.id).catch(report);
+        return;
+      }
       const inModal = !!target.closest('[role="dialog"]');
       if (inModal) return;
       const typing = !!target.closest(
@@ -929,20 +1267,7 @@ export default function App() {
       return;
     }
     if (id === "projects") {
-      const transition = ++projectTransition.current;
-      const release = lockWindowInteraction();
-      try {
-        await flushWindow();
-        if (transition !== projectTransition.current) return;
-        await cancelJobs();
-        if (transition !== projectTransition.current) return;
-        if (projectRef.current) disposeProjectModels(projectRef.current.id);
-        setProject(null);
-        projectRef.current = null;
-      } finally {
-        release();
-      }
-      return;
+      return showProjects();
     }
     if (id === "projectSource") {
       switchMode(mode === "library" ? "source" : "library");
@@ -1013,7 +1338,7 @@ export default function App() {
     <div
       className="app"
       onDragOver={(event) => event.preventDefault()}
-      onDropCapture={(event) => dropSVG(event, report)}
+      onDropCapture={(event) => dropSVG(event, report, "workspace")}
       onDrop={(event) => event.preventDefault()}
     >
       {desktopBackground && (
@@ -1026,10 +1351,23 @@ export default function App() {
         <span data-tauri-drag-region>Mathlidelux</span>
       </div>
       {ready && !setupRequired && (
+        <WorkspaceTabs
+          workspaces={workspaces}
+          active={project?.id || null}
+          onSelect={(id) => void selectWorkspace(id).catch(report)}
+          onClose={(id) => void closeWorkspace(id).catch(report)}
+        />
+      )}
+      {workspaces
+        .filter((item) => item.project.id !== project?.id)
+        .map((item) => (
+          <WorkspaceArtifacts key={item.project.id} workspace={item} />
+        ))}
+      {ready && !setupRequired && (
         <ProjectRecovery
           problems={projectProblems}
           onProblems={setProjectProblems}
-          onProjects={setProjects}
+          onProjects={(next) => void reconcileProjects(next).catch(report)}
         />
       )}
       {!ready ? (
@@ -1054,7 +1392,7 @@ export default function App() {
       ) : !project ? (
         <ProjectsPage
           projects={projects}
-          onProjects={setProjects}
+          onProjects={(next) => void reconcileProjects(next).catch(report)}
           settings={settings}
           onSettings={(s) => void updateSettings(s)}
           onOpen={(p) => void openRecent(p)}
@@ -1302,7 +1640,11 @@ export default function App() {
                         />
                         <strong>{card.name}</strong>
                         <span className="card-path">
-                          {card.file ? `${card.file}:${card.line}` : "Library"}
+                          {card.file
+                            ? card.line
+                              ? `${card.file}:${card.line}`
+                              : card.file
+                            : "Library"}
                         </span>
                       </article>
                     ))}
@@ -1396,6 +1738,15 @@ export default function App() {
                       key={project.id}
                       project={project}
                       autoSave={settings.autoSave}
+                      session={sourceSessions.current.get(project.id)}
+                      onSession={(session) => {
+                        if (
+                          workspacesRef.current.some(
+                            (item) => item.project.id === project.id,
+                          )
+                        )
+                          sourceSessions.current.set(project.id, session);
+                      }}
                       onDrafts={setDrafts}
                       onError={setError}
                       ask={ask}
@@ -1523,11 +1874,14 @@ export default function App() {
               />
               <div className="pdf-column" style={{ width: settings.pdfWidth }}>
                 <PdfPane
+                  key={project.id}
                   document={pdf}
                   project={project}
                   building={pdfBusy}
                   onBuild={() => void buildPdf()}
                   onClose={closePdf}
+                  initialView={pdfViews.current.get(project.id)}
+                  onView={(view) => pdfViews.current.set(project.id, view)}
                   target={pdfTarget}
                   onSource={(file, line) => {
                     const matches = targetsAtLine(
@@ -1707,6 +2061,7 @@ export default function App() {
           editBusy={editBusy}
           onClose={closeEditor}
           onSave={() => void saveVariant().catch(report)}
+          onRender={() => setEditing({ ...editing, requiresRender: false })}
           onDrag={(card) =>
             void rpc<string>("preview_export", {
               project: project.id,

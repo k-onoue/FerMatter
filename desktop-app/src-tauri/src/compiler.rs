@@ -300,6 +300,133 @@ fn cache_hit(card: &Value, base: &Path) -> Option<Value> {
         None
     }
 }
+pub(crate) fn card_color(card: &Value) -> Result<Option<&str>> {
+    match card.get("instantColor").filter(|v| !v.is_null()) {
+        None => Ok(None),
+        Some(Value::String(color))
+            if color.len() == 6 && color.bytes().all(|b| b.is_ascii_hexdigit()) =>
+        {
+            Ok(Some(color))
+        }
+        _ => Err("Invalid equation color.".into()),
+    }
+}
+
+// Restored variants need definitions after the original equation as well. Find
+// include ancestry even when the selected file contains no extracted equations.
+fn restored_typst_context(
+    root: &Path,
+    main: &str,
+    file: &str,
+    c: &Cancellation,
+) -> Result<Vec<Value>> {
+    if !file.ends_with(".typ") || file.contains(['\\', ':', '\0']) {
+        return Err("Choose a Typst context file inside the project.".into());
+    }
+    let root = root.canonicalize().map_err(err)?;
+    let selected = safe(&root, file)?;
+    let target = selected.strip_prefix(&root).map_err(err)?.to_string_lossy();
+    let text = read(&selected)?;
+    let final_frame = json!({"file":target,"offset":text.chars().count()});
+    struct ContextScan<'a> {
+        root: &'a Path,
+        target: &'a str,
+        cancel: &'a Cancellation,
+        bytes: usize,
+        visited: std::collections::HashSet<String>,
+    }
+    impl ContextScan<'_> {
+        fn walk(&mut self, name: &str, depth: usize) -> Result<Option<Vec<Value>>> {
+            self.cancel.check()?;
+            if name == self.target {
+                return Ok(Some(vec![]));
+            }
+            if depth >= 32 || !self.visited.insert(name.to_owned()) {
+                return Ok(None);
+            }
+            if self.visited.len() > 30_000 {
+                return Err("Typst context exceeds 30,000 files.".into());
+            }
+            let text = read(&safe(self.root, name)?)?;
+            self.bytes += text.len();
+            if self.bytes > 100 * 1024 * 1024 {
+                return Err("Typst context exceeds 100 MB.".into());
+            }
+            for token in scan::tokens_checked(&text, &|| self.cancel.check())? {
+                if token.kind != "include" {
+                    continue;
+                }
+                let child = token.extra.as_str().unwrap_or("");
+                let path = if child.starts_with('/') {
+                    self.root.join(child.trim_start_matches('/'))
+                } else {
+                    self.root.join(name).parent().unwrap().join(child)
+                };
+                let Ok(path) = path.canonicalize() else {
+                    continue;
+                };
+                let Ok(relative) = path.strip_prefix(self.root) else {
+                    continue;
+                };
+                let relative = relative.to_string_lossy();
+                if relative.is_empty() || !path.is_file() {
+                    continue;
+                }
+                if let Some(mut frames) = self.walk(&relative, depth + 1)? {
+                    frames.insert(
+                        0,
+                        json!({"file":name,"offset":text[..token.start].chars().count()}),
+                    );
+                    return Ok(Some(frames));
+                }
+            }
+            Ok(None)
+        }
+    }
+    let mut frames = ContextScan {
+        root: &root,
+        target: &target,
+        cancel: c,
+        bytes: text.len(),
+        visited: Default::default(),
+    }
+    .walk(main, 0)?
+    .unwrap_or_default();
+    frames.push(final_frame);
+    Ok(frames)
+}
+
+fn prepare_cards(root: &Path, main: &str, cards: &[Value], c: &Cancellation) -> Result<Vec<Value>> {
+    // This gate must precede cache hits, filesystem reads, and compiler startup.
+    for card in cards {
+        if card["requiresRender"] == true {
+            return Err("Press Render to compile imported source.".into());
+        }
+        card_color(card)?;
+    }
+    let mut contexts = std::collections::HashMap::new();
+    cards
+        .iter()
+        .map(|card| {
+            c.check()?;
+            let mut card = card.clone();
+            if main.ends_with(".typ") {
+                if let Some(value) = card.get("restoredContextFile").filter(|v| !v.is_null()) {
+                    let file = value.as_str().ok_or("Invalid restored context file.")?;
+                    if !contexts.contains_key(file) {
+                        contexts.insert(
+                            file.to_owned(),
+                            restored_typst_context(root, main, file, c)?,
+                        );
+                    }
+                    card["typstContext"] = json!(contexts[file]);
+                }
+            }
+            Ok(card)
+        })
+        .collect()
+}
+
 pub fn render(
     root: &Path,
     main: &str,
@@ -310,6 +437,7 @@ pub fn render(
     mut emit: impl FnMut(Value),
 ) -> Result<()> {
     let _permit = WorkPermit::acquire(c)?;
+    let cards = prepare_cards(root, main, cards, c)?;
     let lease = crate::cache::Lease::new(cache, &Value::Null);
     let staging = tempfile::tempdir().map_err(err)?;
     let mut deliver = |mut event: Value| {
@@ -363,10 +491,10 @@ pub fn render(
     };
     let mut pending = vec![];
     let toolchain = c.2.fingerprint();
-    for card in cards {
+    for card in &cards {
         c.check()?;
         let mut cache_key = format!(
-            "rust-1|{stamp}|{main}|{engine}|{version}|{toolchain}|{}|{}|{}",
+            "rust-2|{stamp}|{main}|{engine}|{version}|{toolchain}|{}|{}|{}",
             card["kind"], card["tex"], card["typstContext"]
         );
         if let Some(color) = card["instantColor"].as_str() {
@@ -458,9 +586,7 @@ fn render_typst(
                     json!(format!("/{}", child.strip_prefix(stage).unwrap().display()))
                 )
             } else {
-                let color = card["instantColor"]
-                    .as_str()
-                    .filter(|s| s.len() == 6 && s.bytes().all(|b| b.is_ascii_hexdigit()))
+                let color = card_color(card)?
                     .map(|s| format!("#set text(fill: rgb(\"{s}\"))\n"))
                     .unwrap_or_default();
                 format!("#set page(width: auto, height: auto, margin: 2pt, fill: none, header: none, footer: none, background: none, foreground: none, numbering: none)\n#set math.equation(numbering: none)\n{color}#context [#metadata(text.size.pt()) <slide-math-font>]\n{}\n",typst_body(card)?)
@@ -522,7 +648,18 @@ fn render_tex_group(
     let job = format!("mathlidelux-{}", uuid::Uuid::new_v4());
     let result = (|| -> Result<f64> {
         let figures = group.iter().any(|(v, _)| string(v, "kind") == "figure");
-        let document=format!("\\PassOptionsToPackage{{active,tightpage}}{{preview}}\n{preamble}\n{}\n\\usepackage{{preview}}\n\\pagestyle{{empty}}\n\\begin{{document}}\n\\ifdefined\\ClearShipoutPictureBG\\ClearShipoutPictureBG\\fi\n\\ifdefined\\ClearShipoutPictureFG\\ClearShipoutPictureFG\\fi\n\\ifdefined\\nolinenumbers\\nolinenumbers\\fi\n\\ifdefined\\tikzexternaldisable\\tikzexternaldisable\\fi\n\\makeatletter\\typeout{{SLIDEMATHFONT:\\f@size}}\\makeatother\n{}\n\\end{{document}}\n",if figures{"\\usepackage{tikz}"}else{""},group.iter().map(|(v,_)|format!("\\begin{{preview}}\n{}\n\\end{{preview}}",tex_body(v))).collect::<Vec<_>>().join("\n"));
+        let mut previews = vec![];
+        let mut colored = false;
+        for (card, _) in group {
+            let body = if let Some(color) = card_color(card)? {
+                colored = true;
+                format!("{{\\color[HTML]{{{color}}}\n{}\n}}", tex_body(card))
+            } else {
+                tex_body(card)
+            };
+            previews.push(format!("\\begin{{preview}}\n{body}\n\\end{{preview}}"));
+        }
+        let document=format!("\\PassOptionsToPackage{{active,tightpage}}{{preview}}\n{preamble}\n{}\n{}\n\\usepackage{{preview}}\n\\pagestyle{{empty}}\n\\begin{{document}}\n\\ifdefined\\ClearShipoutPictureBG\\ClearShipoutPictureBG\\fi\n\\ifdefined\\ClearShipoutPictureFG\\ClearShipoutPictureFG\\fi\n\\ifdefined\\nolinenumbers\\nolinenumbers\\fi\n\\ifdefined\\tikzexternaldisable\\tikzexternaldisable\\fi\n\\makeatletter\\typeout{{SLIDEMATHFONT:\\f@size}}\\makeatother\n{}\n\\end{{document}}\n",if figures{"\\usepackage{tikz}"}else{""},if colored{"\\usepackage{xcolor}"}else{""},previews.join("\n"));
         fs::write(stage.join(format!("{job}.tex")), document).map_err(err)?;
         run(
             "latexmk",
@@ -946,6 +1083,90 @@ pub fn navigate(document: &Value, request: &Value, c: &Cancellation) -> Result<V
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn imported_cards_require_render_before_files_or_compilers_are_accessed() {
+        let temp = tempfile::tempdir().unwrap();
+        let cache = temp.path().join("unused-cache");
+        let error = super::render(
+            &temp.path().join("missing-project"),
+            "missing.typ",
+            "project",
+            &[serde_json::json!({"requiresRender":true})],
+            &cache,
+            &super::Cancellation::default(),
+            |_| panic!("unexpected artwork"),
+        )
+        .unwrap_err();
+        assert!(error.contains("Press Render"));
+        assert!(!cache.exists());
+    }
+
+    #[test]
+    fn restored_typst_context_includes_ancestors_and_late_definitions_without_equations() {
+        let temp = tempfile::tempdir().unwrap();
+        fs::create_dir(temp.path().join("sections")).unwrap();
+        let main = "#set text(size: 19pt)\n日本語\n#include \"sections/definitions.typ\"\n";
+        let definitions = "#let early = 1\n#let last(x) = x + early\n";
+        fs::write(temp.path().join("main.typ"), main).unwrap();
+        fs::write(temp.path().join("sections/definitions.typ"), definitions).unwrap();
+        let input = json!({"tex":"last(2)","kind":"block","restoredContextFile":"sections/definitions.typ","typstContext":[{"file":"missing.typ","offset":0}]});
+        let cards =
+            prepare_cards(temp.path(), "main.typ", &[input], &Cancellation::default()).unwrap();
+        assert_eq!(
+            cards[0]["typstContext"],
+            json!([
+                {"file":"main.typ","offset":main[..main.find("#include").unwrap()].chars().count()},
+                {"file":"sections/definitions.typ","offset":definitions.chars().count()}
+            ])
+        );
+        for path in [
+            "../main.typ",
+            "/main.typ",
+            "sections\\definitions.typ",
+            "missing.typ",
+        ] {
+            assert!(restored_typst_context(
+                temp.path(),
+                "main.typ",
+                path,
+                &Cancellation::default()
+            )
+            .is_err());
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn restored_context_rejects_symlinks_outside_the_project() {
+        let project = tempfile::tempdir().unwrap();
+        let external = tempfile::tempdir().unwrap();
+        fs::write(external.path().join("private.typ"), "#let private = 1").unwrap();
+        std::os::unix::fs::symlink(
+            external.path().join("private.typ"),
+            project.path().join("context.typ"),
+        )
+        .unwrap();
+        assert!(restored_typst_context(
+            project.path(),
+            "main.typ",
+            "context.typ",
+            &Cancellation::default()
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn restored_color_rejects_markup_and_accepts_hex() {
+        assert_eq!(card_color(&json!({})).unwrap(), None);
+        assert_eq!(
+            card_color(&json!({"instantColor":"aB1234"})).unwrap(),
+            Some("aB1234")
+        );
+        for color in [json!("#123456"), json!("123456}\\input{secret}"), json!(1)] {
+            assert!(card_color(&json!({"instantColor":color})).is_err());
+        }
+    }
+
     #[test]
     fn oversized_raster_is_rejected_before_pixel_allocation() {
         let temp = tempfile::tempdir().unwrap();

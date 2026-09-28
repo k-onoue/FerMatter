@@ -11,7 +11,7 @@ import {
 import type { EditorProps } from "./editor";
 import type { Buffer, Project } from "./types";
 import { flushWindow, lockWindowInteraction } from "./persistence";
-import { SourceWorkspace } from "./SourceWorkspace";
+import { SourceWorkspace, type SourceSession } from "./SourceWorkspace";
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("./api", () => ({ rpc, uid: () => crypto.randomUUID() }));
 vi.mock("./editor", () => ({
@@ -210,4 +210,250 @@ it("nested mutation/close locks cannot re-enable editing before the final save c
   expect(document.documentElement.inert).toBe(true);
   close();
   expect(document.documentElement.inert).toBe(false);
+});
+
+it("restores Source panes and unsaved buffers with the same model after tab suspension", async () => {
+  let session: SourceSession | undefined;
+  const props = {
+    project,
+    autoSave: false,
+    onDrafts: () => {},
+    onError: vi.fn(),
+    ask: async () => null,
+    onSaved: () => {},
+    beforeMutation: async () => {},
+    onProjectChanged: () => {},
+    onCursor: () => {},
+    onSession: (value: SourceSession) => {
+      session = value;
+    },
+  };
+  const first = render(<SourceWorkspace {...props} />);
+  const editor = await screen.findByRole("textbox", { name: "Source editor" });
+  fireEvent.change(editor, { target: { value: "$ draft survives $" } });
+  act(() =>
+    window.dispatchEvent(
+      new CustomEvent("source-command", { detail: "splitSourceDown" }),
+    ),
+  );
+  await act(() => flushWindow());
+  const model = editor.getAttribute("data-model");
+  first.unmount();
+  expect(session?.buffers["main.typ"].dirty).toBe(true);
+  render(<SourceWorkspace {...props} session={session} />);
+  const editors = await screen.findAllByRole("textbox", {
+    name: "Source editor",
+  });
+  expect(editors).toHaveLength(2);
+  for (const restored of editors) {
+    expect((restored as HTMLTextAreaElement).value).toBe("$ draft survives $");
+    expect(restored.getAttribute("data-model")).toBe(model);
+  }
+  expect(rpc.mock.calls.filter(([op]) => op === "read_drafts")).toHaveLength(1);
+  expect(session?.buffers["main.typ"].recovered).not.toBe(true);
+});
+
+it("keeps the restored active file instead of replaying old PDF navigation, but accepts a new navigation", async () => {
+  const session: SourceSession = {
+    buffers: {
+      "main.typ": { ...disk, dirty: true, modelKey: "main-model" },
+      "other.typ": {
+        ...disk,
+        path: "other.typ",
+        text: "$ other $",
+        dirty: true,
+        modelKey: "other-model",
+      },
+    },
+    layout: {
+      id: "pane",
+      tabs: ["main.typ", "other.typ"],
+      active: "other.typ",
+    },
+    activePane: "pane",
+    expanded: new Set(),
+    treeMode: "files",
+    query: "",
+    previewSize: 0,
+    caret: { file: "other.typ", line: 3, offset: 9 },
+    navigationNonce: 7,
+  };
+  const props = {
+    project,
+    session,
+    autoSave: false,
+    onDrafts: () => {},
+    onError: vi.fn(),
+    ask: async () => null,
+    onSaved: () => {},
+    beforeMutation: async () => {},
+    onProjectChanged: () => {},
+    onCursor: () => {},
+  };
+  const view = render(
+    <SourceWorkspace
+      {...props}
+      navigate={{ path: "main.typ", line: 10, nonce: 7 }}
+    />,
+  );
+  expect(
+    (
+      await screen.findByRole("textbox", { name: "Source editor" })
+    ).getAttribute("data-model"),
+  ).toBe("other-model");
+  view.rerender(
+    <SourceWorkspace
+      {...props}
+      navigate={{ path: "main.typ", line: 10, nonce: 8 }}
+    />,
+  );
+  await waitFor(() =>
+    expect(
+      screen
+        .getByRole("textbox", { name: "Source editor" })
+        .getAttribute("data-model"),
+    ).toBe("main-model"),
+  );
+});
+
+it("does not suspend an incomplete initial file read as an empty restored session", async () => {
+  let session: SourceSession | undefined;
+  const props = {
+    project,
+    autoSave: false,
+    onDrafts: () => {},
+    onError: vi.fn(),
+    ask: async () => null,
+    onSaved: () => {},
+    beforeMutation: async () => {},
+    onProjectChanged: () => {},
+    onCursor: () => {},
+    onSession: (value: SourceSession) => {
+      session = value;
+    },
+  };
+  const base = rpc.getMockImplementation()!;
+  let finish!: (value: Buffer) => void;
+  rpc.mockImplementation((operation, ...args) => {
+    if (operation === "tree") return Promise.resolve([]);
+    if (operation === "read_file")
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    return base(operation, ...args);
+  });
+  const first = render(<SourceWorkspace {...props} />);
+  await waitFor(() => expect(finish).toBeDefined());
+  await act(() => flushWindow());
+  first.unmount();
+  expect(session).toBeUndefined();
+  rpc.mockImplementation(base);
+  render(<SourceWorkspace {...props} session={session} />);
+  await act(async () => {
+    finish({ ...disk, text: "$ obsolete read $" });
+  });
+  const editor = await screen.findByRole("textbox", { name: "Source editor" });
+  expect((editor as HTMLTextAreaElement).value).toBe("$ original $");
+});
+
+it("applies initial PDF navigation only after recovered drafts and the default file finish opening", async () => {
+  const base = rpc.getMockImplementation()!;
+  let finishDrafts!: () => void;
+  let finishMain!: () => void;
+  rpc.mockImplementation((operation, payload) => {
+    if (operation === "tree") return Promise.resolve([]);
+    if (operation === "read_drafts")
+      return new Promise((resolve) => {
+        finishDrafts = () => resolve({ buffers: {}, warnings: [] });
+      });
+    if (operation === "read_file" && payload.path === "main.typ")
+      return new Promise((resolve) => {
+        finishMain = () => resolve({ ...disk });
+      });
+    if (operation === "read_file")
+      return Promise.resolve({
+        ...disk,
+        path: payload.path,
+        text: "$ navigation target $",
+      });
+    return base(operation, payload);
+  });
+  render(
+    <SourceWorkspace
+      project={project}
+      autoSave={false}
+      onDrafts={() => {}}
+      onError={vi.fn()}
+      ask={async () => null}
+      onSaved={() => {}}
+      beforeMutation={async () => {}}
+      onProjectChanged={() => {}}
+      onCursor={() => {}}
+      navigate={{ path: "target.typ", line: 8, nonce: 1 }}
+    />,
+  );
+  await act(async () => {
+    finishDrafts();
+  });
+  await waitFor(() => expect(finishMain).toBeDefined());
+  await act(async () => {
+    finishMain();
+  });
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("textbox", {
+          name: "Source editor",
+        }) as HTMLTextAreaElement
+      ).value,
+    ).toBe("$ navigation target $"),
+  );
+});
+
+it("refreshes clean suspended buffers without replacing newer typing", async () => {
+  let session: SourceSession | undefined;
+  const props = {
+    project,
+    autoSave: false,
+    onDrafts: () => {},
+    onError: vi.fn(),
+    ask: async () => null,
+    onSaved: () => {},
+    beforeMutation: async () => {},
+    onProjectChanged: () => {},
+    onCursor: () => {},
+    onSession: (value: SourceSession) => {
+      session = value;
+    },
+  };
+  const first = render(<SourceWorkspace {...props} />);
+  await screen.findByRole("textbox", { name: "Source editor" });
+  await act(() => flushWindow());
+  first.unmount();
+  disk = { ...disk, text: "$ external change $", revision: "external" };
+  const second = render(<SourceWorkspace {...props} session={session} />);
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("textbox", {
+          name: "Source editor",
+        }) as HTMLTextAreaElement
+      ).value,
+    ).toBe("$ external change $"),
+  );
+  second.unmount();
+  const base = rpc.getMockImplementation()!;
+  const reads: ((value: Buffer) => void)[] = [];
+  rpc.mockImplementation((operation, ...args) =>
+    operation === "read_file"
+      ? new Promise((resolve) => reads.push(resolve))
+      : base(operation, ...args),
+  );
+  render(<SourceWorkspace {...props} session={session} />);
+  const editor = await screen.findByRole("textbox", { name: "Source editor" });
+  fireEvent.change(editor, { target: { value: "$ typed after return $" } });
+  await act(async () => {
+    for (const done of reads) done({ ...disk, text: "$ obsolete read $" });
+  });
+  expect((editor as HTMLTextAreaElement).value).toBe("$ typed after return $");
 });

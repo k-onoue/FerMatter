@@ -13,6 +13,7 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 pub struct Resident {
     pending: Mutex<HashMap<String, VecDeque<Value>>>,
     keys: Mutex<Vec<(Shortcut, String)>>,
+    workspace: Mutex<std::collections::HashSet<String>>,
 }
 pub fn show_projects(app: &tauri::AppHandle) {
     let _ = crate::lifecycle::on_main(app, |app| {
@@ -48,6 +49,9 @@ pub fn open_instant(app: &tauri::AppHandle) -> Result<()> {
     instant::open(app, None).map_err(err)
 }
 pub fn import_svg(app: &tauri::AppHandle, sources: &[String]) -> Result<()> {
+    import_svg_to(app, sources, "")
+}
+pub fn import_svg_to(app: &tauri::AppHandle, sources: &[String], target: &str) -> Result<()> {
     if crate::lifecycle::quitting(app) {
         return Err("Finish saving before opening another SVG.".into());
     }
@@ -69,9 +73,45 @@ pub fn import_svg(app: &tauri::AppHandle, sources: &[String]) -> Result<()> {
         .iter()
         .map(|s| roundtrip::decode(s).and_then(|v| roundtrip::resolve(&runtime.store, &v)))
         .collect::<Result<Vec<_>>>()?;
-    crate::lifecycle::on_main(app, move |app| admit_imports(&app, restored))
+    let target = target.to_owned();
+    crate::lifecycle::on_main(app, move |app| admit_imports(&app, restored, &target))
 }
-fn admit_imports(app: &tauri::AppHandle, restored: Vec<(Option<Value>, Value)>) -> Result<()> {
+fn destination(project: &str, target: &str, workspace: bool, instant: bool) -> String {
+    if project.is_empty() {
+        return "instant".into();
+    }
+    let label = format!("instant-{project}");
+    if target == label || (!workspace && instant) {
+        return label;
+    }
+    if target == "workspace" || workspace {
+        return "main".into();
+    }
+    label
+}
+pub fn workspace(app: &tauri::AppHandle, label: &str, ids: &Value) -> Result<()> {
+    if label != "main" {
+        return Err("Main workspace required.".into());
+    }
+    let ids = ids.as_array().ok_or("Expected workspace project IDs.")?;
+    if ids.len() > 1000 {
+        return Err("Too many workspace tabs.".into());
+    }
+    let runtime = app.state::<Arc<Runtime>>();
+    let mut projects = std::collections::HashSet::new();
+    for id in ids {
+        let id = id.as_str().ok_or("Invalid workspace project ID.")?;
+        runtime.store.root(id)?;
+        projects.insert(id.to_owned());
+    }
+    *app.state::<Resident>().workspace.lock().unwrap() = projects;
+    Ok(())
+}
+fn admit_imports(
+    app: &tauri::AppHandle,
+    restored: Vec<(Option<Value>, Value)>,
+    target: &str,
+) -> Result<()> {
     // Queue admission and window creation must be ordered with native Quit's
     // window snapshot; an editor created afterward could escape its save barrier.
     if crate::lifecycle::quitting(app) {
@@ -85,22 +125,30 @@ fn admit_imports(app: &tauri::AppHandle, restored: Vec<(Option<Value>, Value)>) 
     }
     for (project, draft) in restored {
         let ident = project.as_ref().map(|p| string(p, "id")).unwrap_or("");
-        let label = if ident.is_empty() {
-            "instant".to_owned()
-        } else {
-            format!("instant-{ident}")
-        };
+        let label = destination(
+            ident,
+            target,
+            state.workspace.lock().unwrap().contains(ident),
+            app.get_webview_window(&format!("instant-{ident}"))
+                .is_some(),
+        );
         let token = uuid::Uuid::new_v4().to_string();
         pending
             .entry(label.clone())
             .or_default()
-            .push_back(json!({"token":token,"draft":draft}));
+            .push_back(json!({"token":token,"project":project,"draft":draft}));
         queued.push((project, label, token));
     }
     drop(pending);
     let mut failure = None;
     for (project, label, token) in queued {
-        if let Err(error) = instant::open(app, project.as_ref()) {
+        let opened = if label == "main" {
+            show_projects(app);
+            Ok(())
+        } else {
+            instant::open(app, project.as_ref())
+        };
+        if let Err(error) = opened {
             let mut pending = state.pending.lock().unwrap();
             if let Some(queue) = pending.get_mut(&label) {
                 queue.retain(|v| v["token"] != token);
@@ -108,13 +156,18 @@ fn admit_imports(app: &tauri::AppHandle, restored: Vec<(Option<Value>, Value)>) 
             failure = Some(err(error));
             continue;
         }
-        let _ = app.emit_to(&label, "instant-import-pending", ());
+        let event = if label == "main" {
+            "workspace-import-pending"
+        } else {
+            "instant-import-pending"
+        };
+        let _ = app.emit_to(&label, event, ());
     }
     failure.map_or(Ok(()), Err)
 }
 pub fn incoming(app: &tauri::AppHandle, label: &str, token: &str) -> Result<Value> {
-    if !label.starts_with("instant") {
-        return Err("Instant window required.".into());
+    if label != "main" && label != "instant" && !label.starts_with("instant-") {
+        return Err("Editor window required.".into());
     }
     let state = app.state::<Resident>();
     let mut pending = state.pending.lock().unwrap();
@@ -153,8 +206,11 @@ pub fn open_files(app: &tauri::AppHandle, paths: Vec<PathBuf>) {
     });
 }
 pub fn from_clipboard(app: &tauri::AppHandle) -> Result<()> {
+    from_clipboard_to(app, "")
+}
+pub fn from_clipboard_to(app: &tauri::AppHandle, target: &str) -> Result<()> {
     // AppKit clipboard access is dispatched to the main thread by all callers.
-    import_svg(app, &native_import::clipboard()?)
+    import_svg_to(app, &native_import::clipboard()?, target)
 }
 fn shortcuts(value: &Value) -> Result<Vec<(Shortcut, String)>> {
     let mut keys = vec![];
@@ -357,6 +413,15 @@ pub fn install(app: &tauri::AppHandle) -> tauri::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn imported_svg_reuses_matching_windows_without_crossing_project_scopes() {
+        assert_eq!(destination("", "workspace", false, false), "instant");
+        assert_eq!(destination("p", "workspace", false, false), "main");
+        assert_eq!(destination("p", "workspace", false, true), "instant-p");
+        assert_eq!(destination("p", "", true, true), "main");
+        assert_eq!(destination("p", "instant-p", true, true), "instant-p");
+        assert_eq!(destination("q", "instant-p", false, false), "instant-q");
+    }
     #[test]
     fn shortcut_overrides_disable_and_legacy_conflicts_match_editor_settings() {
         let mut value = json!({"schemaVersion":1,"kind":"mathlidelux.keybindings","bindings":{}});

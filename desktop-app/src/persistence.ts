@@ -28,6 +28,25 @@ export class SnapshotWriter<T> {
 }
 
 let interactionLocks = 0;
+const interactiveCallbacks = new Set<() => void>();
+
+/** Defers focus until every save/transition lease is released. Returns cancellation. */
+export function runWhenWindowInteractive(callback: () => void) {
+  let active = true;
+  const run = () => {
+    if (!active) return;
+    active = false;
+    interactiveCallbacks.delete(run);
+    callback();
+  };
+  if (interactionLocks === 0) run();
+  else interactiveCallbacks.add(run);
+  return () => {
+    active = false;
+    interactiveCallbacks.delete(run);
+  };
+}
+
 export function lockWindowInteraction() {
   if (typeof document === "undefined") return () => {};
   interactionLocks++;
@@ -38,6 +57,15 @@ export function lockWindowInteraction() {
     released = true;
     interactionLocks--;
     document.documentElement.inert = interactionLocks > 0;
+    while (interactionLocks === 0 && interactiveCallbacks.size > 0) {
+      const callback = interactiveCallbacks.values().next().value!;
+      try {
+        callback();
+      } catch (error) {
+        // A focus callback must not turn a successful document save into a failure.
+        console.error(error);
+      }
+    }
   };
 }
 
@@ -48,12 +76,14 @@ export function registerWindowFlush(key: string, flush: () => Promise<void>) {
     if (handlers.get(key) === flush) handlers.delete(key);
   };
 }
-export async function flushWindow() {
+export async function flushWindow(skipKeys: readonly string[] = []) {
   const release = lockWindowInteraction();
   try {
     // A source failure must not prevent another editor from preserving its draft.
     const results = await Promise.allSettled(
-      [...handlers.values()].map((flush) => flush()),
+      [...handlers.entries()]
+        .filter(([key]) => !skipKeys.includes(key))
+        .map(([, flush]) => flush()),
     );
     const errors = results.flatMap((result) =>
       result.status === "rejected" ? [String(result.reason)] : [],

@@ -34,6 +34,17 @@ import {
   type Leaf,
   type Pane,
 } from "./panes";
+export interface SourceSession {
+  buffers: Record<string, Buffer>;
+  layout: Pane;
+  activePane: string;
+  expanded: Set<string>;
+  treeMode: "files" | "outline";
+  query: string;
+  previewSize: number;
+  caret: { file: string; offset: number; line: number } | null;
+  navigationNonce?: number;
+}
 function PaneView({
   pane,
   renderLeaf,
@@ -103,6 +114,8 @@ export function SourceWorkspace({
   beforeMutation,
   onProjectChanged,
   onCursor,
+  session,
+  onSession,
 }: {
   project: Project;
   autoSave: boolean;
@@ -120,16 +133,26 @@ export function SourceWorkspace({
   beforeMutation: () => Promise<void>;
   onProjectChanged: (patch: Pick<Project, "main" | "candidates">) => void;
   onCursor: (file: string, offset: number, line: number) => void;
+  session?: SourceSession;
+  onSession?: (session: SourceSession) => void;
 }) {
   const [tree, setTree] = useState<TreeEntry[]>([]);
-  const [buffers, setBufferState] = useState<Record<string, Buffer>>({});
-  const [draftsLoaded, setDraftsLoaded] = useState(false);
-  const draftsHydrated = useRef(false);
+  const [buffers, setBufferState] = useState<Record<string, Buffer>>(
+    session?.buffers || {},
+  );
+  const [draftsLoaded, setDraftsLoaded] = useState(!!session);
+  const draftsHydrated = useRef(!!session);
   const first = useRef(leaf());
-  const [layout, setLayout] = useState<Pane>(first.current);
-  const [activePane, setActivePane] = useState(first.current.id);
-  const [expanded, setExpanded] = useState(new Set<string>());
-  const [treeMode, setTreeMode] = useState<"files" | "outline">("files");
+  const [layout, setLayout] = useState<Pane>(session?.layout || first.current);
+  const [activePane, setActivePane] = useState(
+    session?.activePane || first.current.id,
+  );
+  const [expanded, setExpanded] = useState(
+    session?.expanded || new Set<string>(),
+  );
+  const [treeMode, setTreeMode] = useState<"files" | "outline">(
+    session?.treeMode || "files",
+  );
   const [compactNavigation, setCompactNavigation] = useState(false);
   const navigationElement = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -143,7 +166,7 @@ export function SourceWorkspace({
     return () => observer.disconnect();
   }, []);
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(session?.query || "");
   const [menu, setMenu] = useState<{
     x: number;
     y: number;
@@ -161,7 +184,7 @@ export function SourceWorkspace({
     file: string;
     offset: number;
     line: number;
-  } | null>(null);
+  } | null>(session?.caret || null);
   const [reveal, setReveal] = useState<{
     file: string;
     line: number;
@@ -170,9 +193,37 @@ export function SourceWorkspace({
     endUTF16?: number;
   } | null>(null);
   const [drop, setDrop] = useState<{ pane: string; edge: string } | null>(null);
-  const [previewSize, setPreviewSize] = useState(0);
+  const [previewSize, setPreviewSize] = useState(session?.previewSize || 0);
   const refs = useRef({ buffers, layout, activePane });
+  const processedNavigation = useRef(session?.navigationNonce);
   refs.current = { buffers, layout, activePane };
+  const snapshot = useRef(() => {});
+  snapshot.current = () => {
+    if (draftsLoaded)
+      onSession?.({
+        ...refs.current,
+        expanded,
+        treeMode,
+        query,
+        previewSize,
+        caret,
+        navigationNonce: processedNavigation.current,
+      });
+  };
+  useEffect(
+    () => snapshot.current(),
+    [
+      buffers,
+      layout,
+      activePane,
+      expanded,
+      treeMode,
+      query,
+      previewSize,
+      caret,
+      draftsLoaded,
+    ],
+  );
   const updateBuffers = useCallback(
     (
       update:
@@ -305,51 +356,81 @@ export function SourceWorkspace({
   useEffect(() => {
     mounted.current = true;
     void refresh();
-    void rpc<{ buffers: Record<string, Buffer>; warnings: string[] }>(
-      "read_drafts",
-      {
-        project: project.id,
-      },
-    )
-      .then(async ({ buffers: drafts, warnings }) => {
-        if (!mounted.current) return;
-        const recovered = Object.fromEntries(
-          Object.entries(drafts).map(([k, v]) => [
-            k,
-            {
-              ...v,
-              modelKey: v.modelKey || uid(),
-              dirty: true,
-              recovered: true,
-            },
-          ]),
-        );
-        refs.current.buffers = recovered;
-        updateBuffers(recovered);
-        if (warnings.length) onError(warnings.join("\n"));
-        draftsHydrated.current = true;
-        setDraftsLoaded(true);
-        for (const path of Object.keys(recovered)) await open(path);
-        await open(project.main);
-      })
-      .catch(fail);
+    if (session) {
+      // Tab suspension preserves dirty buffers; refresh only unchanged clean
+      // buffers so edits made in an external editor become visible on return.
+      for (const [path, before] of Object.entries(session.buffers)) {
+        if (before.dirty || before.recovered) continue;
+        void rpc<Buffer>("read_file", { project: project.id, path })
+          .then((fresh) => {
+            if (!mounted.current || refs.current.buffers[path] !== before)
+              return;
+            updateBuffers((current) => ({
+              ...current,
+              [path]: { ...fresh, modelKey: before.modelKey },
+            }));
+          })
+          .catch((error) => {
+            if (!mounted.current || refs.current.buffers[path] !== before)
+              return;
+            updateBuffers((current) => ({
+              ...current,
+              [path]: { ...before, error: String(error) },
+            }));
+          });
+      }
+    }
+    if (!session)
+      void rpc<{ buffers: Record<string, Buffer>; warnings: string[] }>(
+        "read_drafts",
+        {
+          project: project.id,
+        },
+      )
+        .then(async ({ buffers: drafts, warnings }) => {
+          if (!mounted.current) return;
+          const recovered = Object.fromEntries(
+            Object.entries(drafts).map(([k, v]) => [
+              k,
+              {
+                ...v,
+                modelKey: v.modelKey || uid(),
+                dirty: true,
+                recovered: true,
+              },
+            ]),
+          );
+          refs.current.buffers = recovered;
+          updateBuffers(recovered);
+          if (warnings.length) onError(warnings.join("\n"));
+          draftsHydrated.current = true;
+          for (const path of Object.keys(recovered)) await open(path);
+          await open(project.main);
+          if (mounted.current) setDraftsLoaded(true);
+        })
+        .catch(fail);
     return () => {
+      snapshot.current();
       mounted.current = false;
       ticket.current++;
       void rpc("cancel", { key: `${project.id}:caret` });
     };
   }, [project.id]);
   useEffect(() => {
+    if (!draftsLoaded) return;
     let stale = false;
-    if (navigate)
+    if (navigate && navigate.nonce !== processedNavigation.current)
       void open(navigate.path, undefined, navigate.line).then((opened) => {
-        if (opened && mounted.current && !stale)
+        if (opened && mounted.current && !stale) {
+          processedNavigation.current = navigate.nonce;
           setReveal({ ...navigate, file: navigate.path });
+          snapshot.current();
+        }
       });
     return () => {
       stale = true;
     };
-  }, [navigate]);
+  }, [navigate, draftsLoaded]);
   useEffect(() => {
     if (!draftsLoaded) return;
     onDrafts(sources);
@@ -378,6 +459,7 @@ export function SourceWorkspace({
       autoSave: autoSaveRef.current && !mutating.current,
     });
     await draftWriter.current.flush();
+    snapshot.current();
   };
   useEffect(
     () =>
@@ -494,6 +576,8 @@ export function SourceWorkspace({
       }
       if (command === "splitSource") split(pane.id, "row");
       if (command === "splitSourceDown") split(pane.id, "column");
+      if (command === "closeSourceTab" && pane.active)
+        closeTab(pane.id, pane.active);
     };
     window.addEventListener("source-command", handler);
     return () => window.removeEventListener("source-command", handler);
