@@ -33,6 +33,7 @@ import {
   SnapshotWriter,
   registerWindowFlush,
   flushWindow,
+  lockWindowInteraction,
 } from "./persistence";
 import { installWindowPersistence } from "./windowPersistence";
 import { mergeScan, mergeRenderedCard } from "./projectUpdates";
@@ -173,6 +174,7 @@ export default function App() {
   const editingRef = useRef(editing);
   editingRef.current = editing;
   const closeFlush = useRef(async () => {});
+  const projectTransition = useRef(0);
   const jobs = useRef(new Map<string, string>());
   const editJob = useRef(0);
   const selectedAnchor = useRef<string | undefined>(undefined);
@@ -376,30 +378,49 @@ export default function App() {
     setBusy("");
     setPdfBusy(false);
   }
-  async function activate(p: Project) {
-    await flushWindow();
-    await cancelJobs();
-    if (projectRef.current && projectRef.current.id !== p.id)
-      disposeProjectModels(projectRef.current.id);
-    projectRef.current = p;
-    setProject(p);
-    setProjects((all) => [p, ...all.filter((x) => x.id !== p.id)]);
-    setMode("library");
-    setLibraryStale(false);
-    setSourceMounted(false);
-    setPdf(null);
-    setPdfOpen(false);
-    setSelected(new Set());
-    setSearch("");
-    setFilter("all");
-    setKind("all");
-    setDrafts({});
-    setEditing((p.libraryDraft as Card | undefined) || null);
-    setEditPreview(null);
-    setError("");
-    if (!p.cards?.length) void rescan(p);
+  async function activate(
+    p: Project,
+    transition = ++projectTransition.current,
+  ) {
+    if (transition !== projectTransition.current) return;
+    const release = lockWindowInteraction();
+    try {
+      await flushWindow();
+      if (transition !== projectTransition.current) return;
+      await cancelJobs();
+      if (transition !== projectTransition.current) return;
+      if (projectRef.current?.id === p.id)
+        p = {
+          ...p,
+          ...projectRef.current,
+          main: p.main,
+          format: p.format,
+          candidates: p.candidates,
+        };
+      if (projectRef.current) disposeProjectModels(projectRef.current.id);
+      projectRef.current = p;
+      setProject(p);
+      setProjects((all) => [p, ...all.filter((x) => x.id !== p.id)]);
+      setMode("library");
+      setLibraryStale(false);
+      setSourceMounted(false);
+      setPdf(null);
+      setPdfOpen(false);
+      setSelected(new Set());
+      setSearch("");
+      setFilter("all");
+      setKind("all");
+      setDrafts({});
+      setEditing((p.libraryDraft as Card | undefined) || null);
+      setEditPreview(null);
+      setError("");
+      if (!p.cards?.length) void rescan(p);
+    } finally {
+      release();
+    }
   }
   async function openProject(type = "folder") {
+    const transition = ++projectTransition.current;
     try {
       const path = await open({
         directory: type === "folder",
@@ -412,15 +433,17 @@ export default function App() {
               : undefined,
       });
       if (typeof path !== "string") return;
-      await activate(await rpc<Project>("open_project", { path }));
+      await activate(await rpc<Project>("open_project", { path }), transition);
     } catch (e) {
       report(e);
     }
   }
   async function openRecent(p: Project) {
+    const transition = ++projectTransition.current;
     try {
       await activate(
         await rpc<Project>("open_project", { path: p.root, main: p.main }),
+        transition,
       );
     } catch (e) {
       report(e);
@@ -778,6 +801,7 @@ export default function App() {
   }, [pdf?.pdfPath, pdfTarget]);
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
+      if (document.documentElement.inert) return;
       const target = event.target as HTMLElement;
       if (event.isComposing || target.closest(".key-recorder")) return;
       const command = commandForEvent(event, keys);
@@ -881,11 +905,19 @@ export default function App() {
       return;
     }
     if (id === "projects") {
-      await flushWindow();
-      await cancelJobs();
-      if (projectRef.current) disposeProjectModels(projectRef.current.id);
-      setProject(null);
-      projectRef.current = null;
+      const transition = ++projectTransition.current;
+      const release = lockWindowInteraction();
+      try {
+        await flushWindow();
+        if (transition !== projectTransition.current) return;
+        await cancelJobs();
+        if (transition !== projectTransition.current) return;
+        if (projectRef.current) disposeProjectModels(projectRef.current.id);
+        setProject(null);
+        projectRef.current = null;
+      } finally {
+        release();
+      }
       return;
     }
     if (id === "projectSource") {

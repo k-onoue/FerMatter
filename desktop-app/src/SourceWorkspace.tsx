@@ -290,7 +290,11 @@ export function SourceWorkspace({
         if (line) setReveal({ file: path, line, nonce: Date.now() });
         return true;
       } catch (e) {
-        if (mounted.current && fileOpens.current.get(target) === sequence)
+        if (
+          mounted.current &&
+          revision === filesystemRevision.current &&
+          fileOpens.current.get(target) === sequence
+        )
           onError(String(e));
         return false;
       }

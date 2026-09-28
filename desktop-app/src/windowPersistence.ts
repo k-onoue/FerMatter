@@ -11,18 +11,22 @@ export async function installWindowPersistence(
   const stopFlush = await listen<{ token: number }>(
     "flush-window",
     async ({ payload }) => {
-      let error = "";
       const release = lockWindowInteraction();
       try {
-        await flushWindow();
-      } catch (failure) {
-        error = String(failure);
-        report(failure);
+        let error = "";
+        try {
+          await flushWindow();
+        } catch (failure) {
+          error = String(failure);
+          report(failure);
+        }
+        await rpc("window_flush_complete", {
+          token: payload.token,
+          error,
+        }).catch(report);
+      } finally {
+        release();
       }
-      await rpc("window_flush_complete", { token: payload.token, error }).catch(
-        report,
-      );
-      release();
     },
   );
   return () => {

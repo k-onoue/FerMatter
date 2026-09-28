@@ -404,6 +404,7 @@ export default function InstantWindow() {
   }
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
+      if (document.documentElement.inert) return;
       if (event.isComposing) return;
       const command = commandForEvent(event, keys);
       let action: (() => void) | undefined;

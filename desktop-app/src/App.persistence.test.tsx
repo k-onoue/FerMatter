@@ -254,3 +254,36 @@ it("typing during a Library save keeps the newer editor draft open", async () =>
   );
   expect(saved.at(-1)?.cards.some((card) => card.tex === "newer")).toBe(true);
 });
+
+it("an older project-open response cannot replace the most recently requested project", async () => {
+  const base = rpc.getMockImplementation()!;
+  const opens: ((value: Project) => void)[] = [];
+  rpc.mockImplementation((operation, ...args) =>
+    operation === "open_project"
+      ? new Promise((resolve) => opens.push(resolve))
+      : base(operation, ...args),
+  );
+  render(<App />);
+  const button = await screen.findByRole("button", { name: "Open synthetic" });
+  fireEvent.click(button);
+  fireEvent.click(button);
+  await waitFor(() => expect(opens).toHaveLength(2));
+  await act(async () => {
+    opens[1]({
+      ...project,
+      id: "new",
+      cards: [{ ...project.cards[0], name: "Newest project card" }],
+    });
+  });
+  await screen.findByText("Newest project card");
+  await act(async () => {
+    opens[0]({
+      ...project,
+      id: "old",
+      cards: [{ ...project.cards[0], name: "Older project card" }],
+    });
+  });
+  expect(screen.getByText("Newest project card")).toBeTruthy();
+  expect(screen.queryByText("Older project card")).toBeNull();
+  expect(document.documentElement.inert).toBe(false);
+});
