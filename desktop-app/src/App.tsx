@@ -187,6 +187,10 @@ export default function App() {
   const editingRef = useRef(editing);
   editingRef.current = editing;
   function setEditing(value: Card | null) {
+    // Older restored drafts waited for an explicit Render. Opening the editor
+    // now previews them automatically, without rendering unopened saved cards.
+    if (value?.requiresRender === true)
+      value = { ...value, requiresRender: false };
     editingRef.current = value;
     setEditingState(value);
   }

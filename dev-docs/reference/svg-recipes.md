@@ -33,7 +33,7 @@
 - A project-tab import opens a new Library variant. Source files remain unchanged. Typst context and output color/size travel with the restored variant.
 - Prefer the matching Instant when it is the drop target; otherwise reuse the matching workspace tab, then an existing Instant. Main-window drops can open a new project tab; other entry points open Instant when no editor exists.
 - macOS reads SVG representations from the actual drag pasteboard, including PowerPoint's `com.microsoft.image-svg-xml`. Inline SVG/data URLs and bounded Office ZIP artwork are decoded without executing markup or fetching linked resources.
-- Imported drafts persist `requiresRender: true`; neither initial import, restart nor editing automatically compiles them. Explicit Render clears the flag.
+- Restored SVG recipes start the editor's usual debounced preview automatically, with cancellation and stale-result checks. Import does not modify project source files.
 - OS clipboard reads happen only after an explicit user command; no polling of clipboard contents.
 - Finder Open With and Dock file events use Tauri `RunEvent::Opened`. Existing windows are reused by scope.
 - A per-user single-instance lock forwards launches and file-open events to the running app before a second copy creates windows or a tray icon.

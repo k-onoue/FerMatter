@@ -17,3 +17,4 @@
 - Use Tab/Shift-Tab to move between inserted argument fields.
 - Project-defined commands contribute suggestions; installed packages and generated definitions are not fully indexed.
 - [Export settings](export.md) control the copied image's size and format.
+- **Format** (`⇧⌥F`) formats the equation or figure source; `⌘Z` restores the previous text. It affects this variant only. See [formatters](source-editor.md#editing-shortcuts).

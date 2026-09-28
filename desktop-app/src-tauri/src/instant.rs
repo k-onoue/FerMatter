@@ -113,7 +113,9 @@ pub fn source(draft: &Value) -> Result<(String, String, Value)> {
             &before[position..]
         )
     };
-    let card = json!({"id":"instant","name":"Instant","tex":draft["source"],"kind":draft["kind"],"origin":"custom","sourceOrder":0,"status":"pending","typstContext":[{"file":main,"offset":prefix.chars().count()}]});
+    // The compiler renders isolated preview environments, which may reset the
+    // document's current color. Apply color to the artwork itself as well.
+    let card = json!({"id":"instant","name":"Instant","tex":draft["source"],"kind":draft["kind"],"origin":"custom","sourceOrder":0,"status":"pending","instantColor":color,"typstContext":[{"file":main,"offset":prefix.chars().count()}]});
     let body = if typst {
         compiler::typst_body(&card)?
     } else {

@@ -299,7 +299,7 @@ it("reopening an existing project with another entrypoint persists it before sca
   expect(screen.getAllByRole("tab")).toHaveLength(2);
 });
 
-it("SVG restoration reuses an existing tab, preserves its prior draft, and waits for Render", async () => {
+it("SVG restoration reuses an existing tab, preserves its prior draft, and previews automatically", async () => {
   await openProject();
   edit("my existing scratch");
   const draft = { ...initialInstant(), source: "imported source" };
@@ -321,21 +321,7 @@ it("SVG restoration reuses an existing tab, preserves its prior draft, and waits
   expect(
     saved.at(-1)?.cards.some((card) => card.tex === "my existing scratch"),
   ).toBe(true);
-  expect((saved.at(-1)?.libraryDraft as Card).requiresRender).toBe(true);
-  await act(async () => {
-    await new Promise((done) => setTimeout(done, 450));
-  });
-  expect(
-    rpc.mock.calls.some(
-      ([op, payload]) =>
-        op === "render" &&
-        payload.cards?.some((card: Card) => card.tex === "imported source"),
-    ),
-  ).toBe(false);
-  expect(rpc.mock.calls.some(([op]) => op === "save_file")).toBe(false);
-  fireEvent.click(
-    screen.getByRole("button", { name: "Render imported source" }),
-  );
+  expect((saved.at(-1)?.libraryDraft as Card).requiresRender).toBe(false);
   await waitFor(() =>
     expect(
       rpc.mock.calls.some(
@@ -345,6 +331,35 @@ it("SVG restoration reuses an existing tab, preserves its prior draft, and waits
       ),
     ).toBe(true),
   );
+  expect(rpc.mock.calls.some(([op]) => op === "save_file")).toBe(false);
+});
+
+it("opening a legacy imported Library draft enables preview without changing original cards or source files", async () => {
+  const original = structuredClone(project.cards);
+  project.libraryDraft = {
+    ...project.cards[0],
+    id: "restored",
+    origin: "custom",
+    tex: "legacy import",
+    requiresRender: true,
+  };
+  await openProject();
+  await waitFor(() =>
+    expect(
+      rpc.mock.calls.some(
+        ([op, payload]) =>
+          op === "render" &&
+          payload.cards?.some(
+            (card: Card) =>
+              card.tex === "legacy import" && card.requiresRender === false,
+          ),
+      ),
+    ).toBe(true),
+  );
+  await act(async () => flushWindow());
+  expect(saved.at(-1)?.cards).toEqual(original);
+  expect((saved.at(-1)?.libraryDraft as Card).requiresRender).toBe(false);
+  expect(rpc.mock.calls.some(([op]) => op === "save_file")).toBe(false);
 });
 
 it("native close drains a queued SVG into a new project tab before acknowledging persistence", async () => {

@@ -15,6 +15,7 @@
 | Project workspace tabs and retained view state | `src/workspaces.ts`, `src/WorkspaceTabs.tsx` |
 | Library outline/labels and variant editor | `src/LibraryNavigation.tsx`, `src/VariantEditor.tsx` |
 | Shared Monaco models, coloring, completion | `src/editor.tsx` |
+| Manual formatting and isolated parsers | `src/formatting.ts`, `src/formatting.worker.ts`, `src/latexFormatting.ts`, `src-tauri/src/formatting.rs` |
 | Source buffers, file tree, tabs and split panes | `src/SourceWorkspace.tsx`, `src/panes.ts` |
 | Source-file mutation commands | `src-tauri/src/source_commands.rs` |
 | PDF viewer, source ranges and hit matching | `src/PdfPane.tsx`, `src/navigation.ts` |
@@ -51,6 +52,8 @@
 - Library variants only change metadata; Source mode changes real files.
 - Remap open buffers/tabs after file rename or move.
 - Use UTF-16 offsets consistently for scans, caret previews and PDF navigation.
+- Format through a normal Monaco edit bracketed by undo stops; retain save behavior and line endings. Abort on edits, model/language changes, unmount, and window flush; check model/version again before applying results.
+- LaTeX uses bundled Prettier/unified-latex in a disposable Web Worker. Typst uses bundled Typstyle in a text-only helper process that runs before Tauri setup. Both accept at most 1 MiB and time out after 10 seconds; formatting never runs a project compiler or reads imports.
 - See [storage](reference/storage.md) for legacy import and conflict handling.
 
 ## Limits and validation

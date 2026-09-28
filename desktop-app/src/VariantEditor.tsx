@@ -69,6 +69,7 @@ export function VariantEditor({
           }
           value={editing.tex}
           format={project.format}
+          formatMode={editing.kind === "figure" ? "document" : "math"}
           onChange={(tex) => setEditing({ ...editing, tex })}
           onSave={onSave}
         />

@@ -1,9 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AlignLeft, LoaderCircle, X } from "lucide-react";
 import * as monaco from "monaco-editor";
 import EditorWorker from "monaco-editor/editor/editor.worker.js?worker";
 import type { Palette } from "./types";
 import { ModelOwnership } from "./modelOwnership";
-import { runWhenWindowInteractive } from "./persistence";
+import { registerWindowFlush, runWhenWindowInteractive } from "./persistence";
+import { formatSource } from "./formatting";
+import type { FormatMode } from "./formattingTypes";
 (self as unknown as { MonacoEnvironment: unknown }).MonacoEnvironment = {
   getWorker: () => new EditorWorker(),
 };
@@ -250,12 +253,83 @@ export interface EditorProps {
   };
   fontSize?: number;
   focusRequest?: string;
+  formatMode?: FormatMode | false;
 }
 export function CodeEditor(props: EditorProps) {
   const container = useRef<HTMLDivElement>(null);
   const latest = useRef(props);
   latest.current = props;
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const formatting = useRef<AbortController | null>(null);
+  const formatCurrent = useRef<() => Promise<void>>(async () => {});
+  const [formatBusy, setFormatBusy] = useState(false);
+  const [formatError, setFormatError] = useState("");
+  const canFormat =
+    props.formatMode !== false &&
+    (props.format === "latex" || props.format === "typst");
+  formatCurrent.current = async () => {
+    const editor = editorRef.current;
+    const model = editor?.getModel();
+    const {
+      format: language,
+      formatMode: mode = "document",
+      readOnly,
+    } = latest.current;
+    if (
+      !editor ||
+      !model ||
+      readOnly ||
+      mode === false ||
+      (language !== "latex" && language !== "typst")
+    )
+      return;
+    editor.focus();
+    formatting.current?.abort();
+    const request = new AbortController();
+    formatting.current = request;
+    const version = model.getVersionId();
+    setFormatBusy(true);
+    setFormatError("");
+    try {
+      const result = await formatSource(
+        { source: model.getValue(), language, mode },
+        request.signal,
+      );
+      if (
+        request.signal.aborted ||
+        editorRef.current !== editor ||
+        model.isDisposed() ||
+        editor.getModel() !== model ||
+        model.getVersionId() !== version ||
+        latest.current.readOnly ||
+        document.documentElement.inert
+      )
+        return;
+      formatting.current = null;
+      if (result !== model.getValue()) {
+        const viewState = editor.saveViewState();
+        editor.pushUndoStop();
+        editor.executeEdits("format-source", [
+          { range: model.getFullModelRange(), text: result },
+        ]);
+        editor.pushUndoStop();
+        if (viewState) editor.restoreViewState(viewState);
+      }
+    } catch (error) {
+      if (!request.signal.aborted && editorRef.current === editor)
+        setFormatError(
+          (error instanceof Error ? error.message : String(error)).slice(
+            0,
+            240,
+          ),
+        );
+    } finally {
+      if (formatting.current === request || formatting.current === null) {
+        formatting.current = null;
+        setFormatBusy(false);
+      }
+    }
+  };
   useEffect(() => {
     const node = container.current!;
     const uri = monaco.Uri.from({
@@ -311,9 +385,10 @@ export function CodeEditor(props: EditorProps) {
     const key = modelKey + "::" + props.pane;
     const state = states.get(key);
     if (state) editor.restoreViewState(state);
-    const changed = model.onDidChangeContent(() =>
-      latest.current.onChange(model!.getValue()),
-    );
+    const changed = model.onDidChangeContent(() => {
+      formatting.current?.abort();
+      latest.current.onChange(model!.getValue());
+    });
     const cursor = editor.onDidChangeCursorPosition((e) =>
       latest.current.onCaret?.(
         model!.getOffsetAt(e.position),
@@ -321,6 +396,18 @@ export function CodeEditor(props: EditorProps) {
       ),
     );
     const focus = editor.onDidFocusEditorText(() => latest.current.onFocus?.());
+    const cancelFormat = registerWindowFlush(`formatter:${key}`, async () => {
+      formatting.current?.abort();
+    });
+    editor.addAction({
+      id: "mathlidelux.formatSource",
+      label: "Format Source",
+      keybindings: [
+        monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF,
+      ],
+      precondition: "!editorReadonly",
+      run: () => formatCurrent.current(),
+    });
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () =>
       latest.current.onSave?.(),
     );
@@ -352,6 +439,8 @@ export function CodeEditor(props: EditorProps) {
       editor.pushUndoStop();
     });
     return () => {
+      formatting.current?.abort();
+      cancelFormat();
       const viewState = editor.saveViewState();
       if (viewState) {
         states.delete(key);
@@ -369,6 +458,17 @@ export function CodeEditor(props: EditorProps) {
   useEffect(() => {
     editorRef.current?.updateOptions({ readOnly: !!props.readOnly });
   }, [props.readOnly]);
+  useEffect(() => {
+    formatting.current?.abort();
+    setFormatBusy(false);
+    setFormatError("");
+  }, [
+    props.format,
+    props.formatMode,
+    props.readOnly,
+    props.project,
+    props.modelKey || props.path,
+  ]);
   useEffect(() => {
     if (props.focusRequest)
       return runWhenWindowInteractive(() => editorRef.current?.focus());
@@ -410,5 +510,41 @@ export function CodeEditor(props: EditorProps) {
       editorRef.current?.focus();
     }
   }, [props.reveal]);
-  return <div className="code-editor" ref={container} />;
+  return (
+    <div className="code-editor">
+      {canFormat && (
+        <div className="editor-format-toolbar">
+          {formatError && (
+            <span role="alert" className="editor-format-error">
+              {formatError}
+            </span>
+          )}
+          {formatError && (
+            <button
+              aria-label="Dismiss formatting error"
+              onClick={() => setFormatError("")}
+            >
+              <X size={13} />
+            </button>
+          )}
+          <span className="spacer" />
+          <button
+            disabled={props.readOnly || formatBusy}
+            aria-label="Format Source"
+            title={`Format ${props.format === "typst" ? "Typst" : "LaTeX"} (⇧⌥F)`}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => void formatCurrent.current()}
+          >
+            {formatBusy ? (
+              <LoaderCircle size={14} className="spin" />
+            ) : (
+              <AlignLeft size={14} />
+            )}
+            Format
+          </button>
+        </div>
+      )}
+      <div className="code-editor-content" ref={container} />
+    </div>
+  );
 }
