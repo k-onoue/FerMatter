@@ -6,6 +6,8 @@ mod scan;
 mod settings;
 mod storage;
 pub mod verification;
+#[cfg(target_os = "macos")]
+mod wallpaper;
 use files::*;
 use serde_json::{json, Value};
 use std::{
@@ -45,7 +47,7 @@ async fn request(
     }
     let cancellation = if matches!(
         operation.as_str(),
-        "scan" | "render" | "source_preview" | "document"
+        "scan" | "render" | "source_preview" | "document" | "pdf_navigate"
     ) {
         Some(job(&runtime, string(&payload, "key")))
     } else {
@@ -67,6 +69,12 @@ fn dispatch(
     let store = &runtime.store;
     let ident = string(&v, "project");
     match op {
+        "desktop_background" => {
+            #[cfg(target_os = "macos")]
+            return wallpaper::background(app, string(&v, "key"));
+            #[cfg(not(target_os = "macos"))]
+            Ok(Value::Null)
+        }
         "startup" => {
             let templates = store.home.join("templates.json");
             if !templates.exists() && store.legacy.join("templates.json").is_file() {
@@ -424,9 +432,19 @@ fn dispatch(
             result
         }
         "pdf_navigate" => {
+            let c = cancellation.unwrap_or_default();
             store.allowed_artifact(Path::new(string(&v["document"], "pdfPath")))?;
             store.allowed_artifact(Path::new(string(&v["document"], "sourceRoot")))?;
-            compiler::navigate(&v["document"], &v, &compiler::Cancellation::default())
+            let result = compiler::navigate(&v["document"], &v, &c);
+            let mut jobs = runtime.jobs.lock().unwrap();
+            let key = string(&v, "key");
+            if jobs
+                .get(key)
+                .is_some_and(|current| Arc::ptr_eq(&current.0, &c.0))
+            {
+                jobs.remove(key);
+            }
+            result
         }
         "load_source" => {
             let p = Path::new(string(&v, "path"));
@@ -490,12 +508,9 @@ pub fn run() {
             }));
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
-                let _ = window_vibrancy::apply_vibrancy(
-                    &window,
-                    window_vibrancy::NSVisualEffectMaterial::UnderWindowBackground,
-                    Some(window_vibrancy::NSVisualEffectState::Active),
-                    Some(10.),
-                );
+                // The CSS background controls translucency. A native material here
+                // leaves an opaque tint behind it and defeats the opacity slider.
+                window.set_background_color(Some(tauri::utils::config::Color(0, 0, 0, 0)))?;
             }
             Ok(())
         })

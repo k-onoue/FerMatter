@@ -503,6 +503,7 @@ pub fn document(
     fs::create_dir_all(&out).map_err(err)?;
     let result = (|| {
         snapshot(root, &stage, drafts)?;
+        let targets = scan::extract(&stage, main, None)?["cards"].clone();
         let (pdf, anchors) = if main.ends_with(".typ") {
             typst_document(&stage, main, &out, c)?
         } else {
@@ -519,7 +520,7 @@ pub fn document(
             (pdf, vec![])
         };
         Ok(
-            json!({"pdfPath":pdf,"sourceRoot":stage,"format":if main.ends_with(".typ"){"typst"}else{"latex"},"anchors":anchors}),
+            json!({"pdfPath":pdf,"sourceRoot":stage,"format":if main.ends_with(".typ"){"typst"}else{"latex"},"anchors":anchors,"targets":targets}),
         )
     })();
     if result.is_err() {
@@ -621,7 +622,18 @@ fn typst_document(
 
 pub fn navigate(document: &Value, request: &Value, c: &Cancellation) -> Result<Value> {
     let file = string(request, "file");
-    let line = request["line"].as_u64().unwrap_or(1);
+    let mut line = request["line"].as_u64().unwrap_or(1);
+    // TeX emits display/align nodes at the end of the environment. Its opening
+    // line (and even early body lines in align) can map to preceding prose.
+    if let Some(target) = document["targets"].as_array().and_then(|targets| {
+        targets
+            .iter()
+            .find(|t| t["file"] == file && t["line"].as_u64() == Some(line))
+    }) {
+        if string(target, "kind") != "inline" {
+            line = target["endLine"].as_u64().unwrap_or(line);
+        }
+    }
     let page = request["page"].as_u64().unwrap_or(1);
     let x = request["x"].as_f64().unwrap_or(0.);
     let y = request["y"].as_f64().unwrap_or(0.);
@@ -650,14 +662,20 @@ pub fn navigate(document: &Value, request: &Value, c: &Cancellation) -> Result<V
             c,
         )?
     };
+    let mut records = vec![];
     let mut record = std::collections::HashMap::new();
     for line in output.lines() {
         if let Some((key, value)) = line.split_once(':') {
+            if key == "Output" && record.contains_key("Page") {
+                records.push(std::mem::take(&mut record));
+            }
             record
                 .entry(key.to_owned())
                 .or_insert(value.trim().to_owned());
         }
     }
+    records.push(record);
+    let record = &records[0];
     if reverse {
         let file = record
             .get("Input")
@@ -668,11 +686,30 @@ pub fn navigate(document: &Value, request: &Value, c: &Cancellation) -> Result<V
             return Err("PDF source is outside the snapshot".into());
         }
         Ok(
-            json!({"file":file.strip_prefix(root).unwrap(),"line":record.get("Line").and_then(|s|s.parse::<u64>().ok()).unwrap_or(1)}),
+            json!({"file":file.strip_prefix(root).unwrap(),"line":record.get("Line").and_then(|s|s.parse::<u64>().ok()).unwrap_or(1),"column":record.get("Column").and_then(|s|s.parse::<i64>().ok()).unwrap_or(-1)}),
         )
     } else {
+        let number = |r: &std::collections::HashMap<String, String>, key: &str| {
+            r.get(key).and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.)
+        };
+        let x = number(record, "x");
+        let y = number(record, "y");
+        // Prefer the tight equation box sharing the first hit's left edge;
+        // the first outer box can include the distant equation number.
+        let bounds = records
+            .iter()
+            .filter(|r| {
+                r.get("Page") == record.get("Page")
+                    && (number(r, "h") - x).abs() < 0.2
+                    && number(r, "W") > 0.
+                    && number(r, "H") > 0.
+                    && number(r, "v") >= y
+                    && number(r, "v") - number(r, "H") <= y
+            })
+            .min_by(|a, b| number(a, "W").total_cmp(&number(b, "W")))
+            .unwrap_or(record);
         Ok(
-            json!({"page":record.get("Page").and_then(|s|s.parse::<u64>().ok()).ok_or("No PDF location for this source line.")?,"x":record.get("x").and_then(|s|s.parse::<f64>().ok()).unwrap_or(0.),"y":record.get("y").and_then(|s|s.parse::<f64>().ok()).unwrap_or(0.)}),
+            json!({"page":record.get("Page").and_then(|s|s.parse::<u64>().ok()).ok_or("No PDF location for this source line.")?,"x":number(bounds,"h"),"y":number(bounds,"v")-number(bounds,"H"),"width":number(bounds,"W"),"height":number(bounds,"H")}),
         )
     }
 }

@@ -105,6 +105,32 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
             if reverse["file"].as_str().is_none() {
                 return Err("SyncTeX reverse navigation failed".into());
             }
+            for card in cards.iter().filter(|card| {
+                ["Trajectory", "Velocity", "Ridge solution"].contains(&string(card, "name"))
+            }) {
+                let anchor = compiler::navigate(
+                    &document,
+                    &json!({"file":card["file"],"line":card["line"]}),
+                    &c,
+                )?;
+                let reverse = compiler::navigate(
+                    &document,
+                    &json!({"reverse":true,"page":anchor["page"],
+                    "x":anchor["x"].as_f64().unwrap() + anchor["width"].as_f64().unwrap() / 2.,
+                    "y":anchor["y"].as_f64().unwrap() + anchor["height"].as_f64().unwrap() / 2.}),
+                    &c,
+                )?;
+                let line = reverse["line"].as_u64().unwrap();
+                if reverse["file"] != card["file"]
+                    || line < card["line"].as_u64().unwrap()
+                    || line > card["endLine"].as_u64().unwrap()
+                {
+                    return Err(format!(
+                        "SyncTeX equation round trip failed: {} -> {}",
+                        card["name"], reverse
+                    ));
+                }
+            }
         }
         // Verify resized vector PDF output independently of the UI.
         let scaled =

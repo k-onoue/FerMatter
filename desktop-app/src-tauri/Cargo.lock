@@ -2112,6 +2112,7 @@ dependencies = [
  "libc",
  "lopdf",
  "objc",
+ "plist",
  "regex",
  "resvg",
  "serde",
@@ -2123,9 +2124,9 @@ dependencies = [
  "tauri-plugin-drag",
  "tempfile",
  "trash",
+ "url",
  "uuid",
  "walkdir",
- "window-vibrancy",
  "zip",
 ]
 

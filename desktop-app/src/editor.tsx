@@ -235,7 +235,12 @@ export interface EditorProps {
   onCaret?: (offset: number, line: number) => void;
   onFocus?: () => void;
   onSave?: () => void;
-  reveal?: { line: number; nonce: number };
+  reveal?: {
+    line: number;
+    nonce: number;
+    startUTF16?: number;
+    endUTF16?: number;
+  };
   fontSize?: number;
 }
 export function CodeEditor(props: EditorProps) {
@@ -357,6 +362,23 @@ export function CodeEditor(props: EditorProps) {
         lineNumber: props.reveal.line,
         column: 1,
       });
+      const model = editorRef.current?.getModel();
+      if (
+        model &&
+        props.reveal.startUTF16 !== undefined &&
+        props.reveal.endUTF16 !== undefined
+      ) {
+        const start = model.getPositionAt(props.reveal.startUTF16);
+        const end = model.getPositionAt(props.reveal.endUTF16);
+        editorRef.current?.setSelection(
+          new monaco.Range(
+            start.lineNumber,
+            start.column,
+            end.lineNumber,
+            end.column,
+          ),
+        );
+      }
       editorRef.current?.focus();
     }
   }, [props.reveal]);

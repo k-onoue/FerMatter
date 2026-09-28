@@ -22,6 +22,7 @@
 
 ### Changed
 
+- Rust preview: background-only translucency and active-display full-screen wallpaper; single-click PDF, Library, and Source equation navigation with visible selection.
 - Make shortcut settings easier to scan with larger, spaced key symbols and alternating rows.
 - Use a single theme background across each project card and its equation preview.
 - Simplify the product page around moving an equation from a paper to a slide.

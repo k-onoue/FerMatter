@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useDesktopBackground } from "./useDesktopBackground";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import {
@@ -49,7 +50,9 @@ import type {
   DocumentPDF,
   Buffer,
   TreeEntry,
+  SourceTarget,
 } from "./types";
+import { targetAtSource, targetsAtLine } from "./navigation";
 import icon from "../src-tauri/icons/icon.png";
 const initialPreferences: Preferences = {
   appearance: "dark",
@@ -104,6 +107,8 @@ export default function App() {
     path: string;
     line: number;
     nonce: number;
+    startUTF16?: number;
+    endUTF16?: number;
   }>();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<Card | null>(null);
@@ -188,7 +193,8 @@ export default function App() {
       "--opacity",
       String(settings.opacity),
     );
-    document.documentElement.style.colorScheme = dark ? "dark" : "light";
+    // Keep WebKit's page canvas transparent; color-scheme on the root paints
+    // an opaque default canvas even when the body background is transparent.
   }, [theme, dark, settings.opacity]);
   useEffect(() => {
     let gone = false;
@@ -610,17 +616,46 @@ export default function App() {
       });
     } else setSelected(new Set([card.id]));
     selectedAnchor.current = card.id;
-    setPdfTarget(card.id);
+    setPdfTarget(card.parentID || card.id);
+  }
+  function revealPDFTarget(target: SourceTarget) {
+    if (!project) return;
+    setPdfTarget(target.id);
+    const card = project.cards.find((c) => c.id === target.id);
+    if (mode === "source" || !card) {
+      switchMode("source");
+      setNavigate({
+        path: target.file,
+        line: target.line,
+        nonce: Date.now(),
+        startUTF16: target.startUTF16,
+        endUTF16: target.endUTF16,
+      });
+    } else {
+      setSelected(new Set([card.id]));
+      setFilter("all");
+      setKind("all");
+      setSearch("");
+      const id = project.id;
+      requestAnimationFrame(() => {
+        if (projectRef.current?.id === id)
+          grid.current
+            ?.querySelector(`[data-id="${card.id}"]`)
+            ?.scrollIntoView({ block: "center" });
+      });
+    }
   }
   const selectedCard = project?.cards.find((c) => selected.has(c.id));
   useEffect(() => {
     let stale = false;
     if (pdf?.format === "latex" && pdfTarget && project) {
       const target =
+        pdf.targets?.find((c) => c.id === pdfTarget) ||
         project.cards.find((c) => c.id === pdfTarget) ||
         project.outline?.find((h) => h.id === pdfTarget);
       if (target?.file)
         void rpc<{ page: number; x: number; y: number }>("pdf_navigate", {
+          key: "pdf-forward",
           document: pdf,
           file: target.file,
           line: target.line,
@@ -645,6 +680,7 @@ export default function App() {
     }
     return () => {
       stale = true;
+      void rpc("cancel", { key: "pdf-forward" });
     };
   }, [pdf?.pdfPath, pdfTarget]);
   useEffect(() => {
@@ -771,8 +807,15 @@ export default function App() {
     });
   }
   const title = mode === "source" ? "Source" : "Library";
+  const desktopBackground = useDesktopBackground();
   return (
     <div className="app">
+      {desktopBackground && (
+        <div
+          className="desktop-wallpaper"
+          style={{ backgroundImage: `url(${desktopBackground})` }}
+        />
+      )}
       <div className="titlebar" data-tauri-drag-region>
         <span data-tauri-drag-region>
           Mathlidelux <span className="preview-tag">Rust</span>
@@ -1250,6 +1293,15 @@ export default function App() {
                       onError={setError}
                       ask={ask}
                       navigate={navigate}
+                      onCursor={(file, offset) => {
+                        if (mode !== "source" || !pdf) return;
+                        const target = targetAtSource(
+                          pdf.targets || [],
+                          file,
+                          offset,
+                        );
+                        if (target) setPdfTarget(target.id);
+                      }}
                       onSaved={() => {
                         setPdf(null);
                         setLibraryStale(true);
@@ -1359,10 +1411,30 @@ export default function App() {
                   onClose={() => setPdfOpen(false)}
                   target={pdfTarget}
                   onSource={(file, line) => {
-                    switchMode("source");
-                    setNavigate({ path: file, line, nonce: Date.now() });
+                    const matches = targetsAtLine(
+                      pdf?.targets || [],
+                      file,
+                      line,
+                    );
+                    if (matches.length === 1) revealPDFTarget(matches[0]);
+                    else if (matches.length > 1 && mode === "library") {
+                      // Some TeX engines return a source line without a column.
+                      // Preserve that ambiguity instead of choosing the wrong equation.
+                      revealPDFTarget(matches[0]);
+                      setSelected(new Set(matches.map((t) => t.id)));
+                    } else {
+                      switchMode("source");
+                      setNavigate({ path: file, line, nonce: Date.now() });
+                    }
                   }}
                   onNavigate={(anchor) => {
+                    const target = pdf?.targets?.find(
+                      (t) => t.id === anchor.targetID,
+                    );
+                    if (target) {
+                      revealPDFTarget(target);
+                      return;
+                    }
                     const card = project.cards.find(
                       (c) => c.id === anchor.targetID,
                     );

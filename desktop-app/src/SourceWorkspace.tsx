@@ -93,14 +93,22 @@ export function SourceWorkspace({
   ask,
   navigate,
   onSaved,
+  onCursor,
 }: {
   project: Project;
   autoSave: boolean;
   onDrafts: (sources: Record<string, string>) => void;
   onError: (message: string) => void;
   ask: Ask;
-  navigate?: { path: string; line: number; nonce: number };
+  navigate?: {
+    path: string;
+    line: number;
+    nonce: number;
+    startUTF16?: number;
+    endUTF16?: number;
+  };
   onSaved: () => void;
+  onCursor: (file: string, offset: number, line: number) => void;
 }) {
   const [tree, setTree] = useState<TreeEntry[]>([]);
   const [buffers, setBuffers] = useState<Record<string, Buffer>>({});
@@ -133,6 +141,8 @@ export function SourceWorkspace({
     file: string;
     line: number;
     nonce: number;
+    startUTF16?: number;
+    endUTF16?: number;
   } | null>(null);
   const [drop, setDrop] = useState<{ pane: string; edge: string } | null>(null);
   const [previewSize, setPreviewSize] = useState(0);
@@ -143,6 +153,7 @@ export function SourceWorkspace({
   savedCallback.current = onSaved;
   const pending = useRef(new Map<string, Promise<void>>());
   const mounted = useRef(true);
+  const fileOpens = useRef(new Map<string, number>());
   const ticket = useRef(0);
   const sources = Object.fromEntries(
     Object.values(buffers)
@@ -197,15 +208,18 @@ export function SourceWorkspace({
   const open = useCallback(
     async (path: string, pane?: string, line?: number) => {
       const target = pane || refs.current.activePane;
+      const sequence = (fileOpens.current.get(target) || 0) + 1;
+      fileOpens.current.set(target, sequence);
       try {
         if (!refs.current.buffers[path]) {
           const buffer = await rpc<Buffer>("read_file", {
             project: project.id,
             path,
           });
-          if (!mounted.current) return;
+          if (!mounted.current) return false;
           setBuffers((b) => (b[path] ? b : { ...b, [path]: buffer }));
         }
+        if (fileOpens.current.get(target) !== sequence) return false;
         setLayout((current) =>
           update(current, target, (p) => ({
             ...p,
@@ -215,8 +229,11 @@ export function SourceWorkspace({
         );
         setActivePane(target);
         if (line) setReveal({ file: path, line, nonce: Date.now() });
+        return true;
       } catch (e) {
-        onError(String(e));
+        if (mounted.current && fileOpens.current.get(target) === sequence)
+          onError(String(e));
+        return false;
       }
     },
     [project.id],
@@ -256,7 +273,15 @@ export function SourceWorkspace({
     };
   }, [project.id]);
   useEffect(() => {
-    if (navigate) void open(navigate.path, undefined, navigate.line);
+    let stale = false;
+    if (navigate)
+      void open(navigate.path, undefined, navigate.line).then((opened) => {
+        if (opened && mounted.current && !stale)
+          setReveal({ ...navigate, file: navigate.path });
+      });
+    return () => {
+      stale = true;
+    };
   }, [navigate]);
   useEffect(() => {
     if (!draftsLoaded) return;
@@ -844,9 +869,10 @@ export function SourceWorkspace({
                         : "text"
                   }
                   onChange={(text) => change(p.active, text)}
-                  onCaret={(offset, line) =>
-                    setCaret({ file: p.active, offset, line })
-                  }
+                  onCaret={(offset, line) => {
+                    setCaret({ file: p.active, offset, line });
+                    onCursor(p.active, offset, line);
+                  }}
                   onFocus={() => setActivePane(p.id)}
                   onSave={() => void save(p.active)}
                   reveal={reveal?.file === p.active ? reveal : undefined}

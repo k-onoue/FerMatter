@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { asset, rpc } from "./api";
 import type { DocumentPDF, Anchor } from "./types";
+import { anchorAtPoint } from "./navigation";
 pdfjs.GlobalWorkerOptions.workerSrc = workerURL;
 export function PdfPane({
   document,
@@ -36,9 +37,16 @@ export function PdfPane({
   const [fit, setFit] = useState(true);
   const [width, setWidth] = useState(400);
   const [error, setError] = useState("");
+  const [pageSize, setPageSize] = useState({ width: 1, height: 1, scale: 1 });
   const canvas = useRef<HTMLCanvasElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const navigation = useRef(0);
+  const highlight = useRef<HTMLDivElement>(null);
+  const selectedAnchor = document?.anchors.find(
+    (a) => a.targetID === target && a.page === page,
+  );
+  const selectedName =
+    document?.targets?.find((t) => t.id === target)?.name || "Equation";
   useEffect(() => {
     const observer = new ResizeObserver((entries) =>
       setWidth(entries[0].contentRect.width),
@@ -86,7 +94,14 @@ export function PdfPane({
   useEffect(() => {
     const a = document?.anchors.find((a) => a.targetID === target);
     if (a) setPage(a.page);
-  }, [target, document]);
+  }, [target, document, pdf]);
+  useEffect(
+    () => () => {
+      navigation.current++;
+      void rpc("cancel", { key: "pdf-reverse" });
+    },
+    [page, document?.pdfPath],
+  );
   useEffect(() => {
     let gone = false;
     let render: pdfjs.RenderTask | undefined;
@@ -100,6 +115,11 @@ export function PdfPane({
             ? Math.max(0.2, (width - 32) / natural.width)
             : zoom;
           const viewport = p.getViewport({ scale });
+          setPageSize({
+            width: viewport.width,
+            height: viewport.height,
+            scale,
+          });
           const el = canvas.current!;
           el.width = Math.ceil(viewport.width * devicePixelRatio);
           el.height = Math.ceil(viewport.height * devicePixelRatio);
@@ -121,6 +141,9 @@ export function PdfPane({
       render?.cancel();
     };
   }, [pdf, page, zoom, fit, width]);
+  useEffect(() => {
+    highlight.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [target, pageSize, document?.anchors]);
   useEffect(() => {
     function command(e: Event) {
       const id = (e as CustomEvent<string>).detail;
@@ -176,40 +199,68 @@ export function PdfPane({
             </button>
           </div>
         )}
-        <canvas
-          style={{ display: pdf ? "block" : "none" }}
-          ref={canvas}
-          onDoubleClick={async (e) => {
-            if (!pdf || !document) return;
-            const sequence = ++navigation.current;
-            const rect = e.currentTarget.getBoundingClientRect();
-            const p = await pdf.getPage(page);
-            if (sequence !== navigation.current) return;
-            const viewport = p.getViewport({ scale: 1 });
-            const x = ((e.clientX - rect.left) * viewport.width) / rect.width,
-              y = ((e.clientY - rect.top) * viewport.height) / rect.height;
-            if (document.format === "latex") {
-              try {
-                const result = await rpc<{ file: string; line: number }>(
-                  "pdf_navigate",
-                  { document, reverse: true, page, x, y },
-                );
-                if (sequence === navigation.current)
-                  onSource(result.file, result.line);
-              } catch (error) {
-                if (sequence === navigation.current) setError(String(error));
-              }
-              return;
-            }
-            const nearby = document.anchors
-              .filter((a) => a.page === page)
-              .sort(
-                (a, b) =>
-                  Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y),
-              )[0];
-            if (nearby) onNavigate(nearby);
+        <div
+          className="pdf-page"
+          style={{
+            display: pdf ? "block" : "none",
+            width: pageSize.width,
+            height: pageSize.height,
           }}
-        />
+        >
+          <canvas
+            aria-label={`PDF page ${page}`}
+            ref={canvas}
+            onClick={async (e) => {
+              if (!pdf || !document) return;
+              setError("");
+              const sequence = ++navigation.current;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const p = await pdf.getPage(page);
+              if (sequence !== navigation.current) return;
+              const viewport = p.getViewport({ scale: 1 });
+              const x = ((e.clientX - rect.left) * viewport.width) / rect.width,
+                y = ((e.clientY - rect.top) * viewport.height) / rect.height;
+              if (document.format === "latex") {
+                try {
+                  const result = await rpc<{ file: string; line: number }>(
+                    "pdf_navigate",
+                    { key: "pdf-reverse", document, reverse: true, page, x, y },
+                  );
+                  if (sequence === navigation.current)
+                    onSource(result.file, result.line);
+                } catch (error) {
+                  if (sequence === navigation.current) setError(String(error));
+                }
+                return;
+              }
+              const nearby = anchorAtPoint(document.anchors, page, x, y);
+              if (nearby) onNavigate(nearby);
+            }}
+          />
+          {selectedAnchor && (
+            <div
+              ref={highlight}
+              className="pdf-highlight"
+              role="status"
+              aria-label={`Selected equation: ${selectedName}`}
+              style={{
+                left: Math.max(0, selectedAnchor.x - 6) * pageSize.scale,
+                top:
+                  Math.max(
+                    0,
+                    selectedAnchor.y - (selectedAnchor.height ? 3 : 21),
+                  ) * pageSize.scale,
+                width:
+                  Math.min(
+                    (selectedAnchor.width || 100) + 12,
+                    pageSize.width / pageSize.scale -
+                      Math.max(0, selectedAnchor.x - 6),
+                  ) * pageSize.scale,
+                height: ((selectedAnchor.height || 36) + 6) * pageSize.scale,
+              }}
+            />
+          )}
+        </div>
       </div>
       <footer>
         <button

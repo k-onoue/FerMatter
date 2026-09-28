@@ -115,4 +115,16 @@ export interface DocumentPDF {
   sourceRoot: string;
   format: string;
   anchors: Anchor[];
+  targets: SourceTarget[];
+}
+export interface SourceTarget {
+  id: string;
+  parentID?: string;
+  name: string;
+  kind: string;
+  file: string;
+  line: number;
+  endLine: number;
+  startUTF16: number;
+  endUTF16: number;
 }

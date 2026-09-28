@@ -36,7 +36,7 @@ open 'src-tauri/target/release/bundle/macos/Mathlidelux Rust.app'
 | Source | Real file editing, tree operations, shared editor models, nested horizontal/vertical panes, draggable/middle-click tabs |
 | Editing | Monaco Undo/Redo, line numbers/actions, syntax coloring, command completion, project definitions, recoverable drafts |
 | Preview | Unsaved source snapshot at caret; export/drag; isolated compiler processes with cancellation |
-| PDF | Whole-document build, PDF.js viewer, Typst anchors and LaTeX SyncTeX navigation, retained pane width |
+| PDF | Whole-document build, single-click PDF ↔ Library/Source navigation, selected-equation highlight, caret tracking, retained pane width |
 | Settings | Light/dark/system appearance, fifteen theme pairs, shortcut JSON, recovery/conflict checks, background opacity, pinning |
 
 ## Compatibility boundaries
@@ -50,11 +50,14 @@ open 'src-tauri/target/release/bundle/macos/Mathlidelux Rust.app'
 - Recovered Rust drafts wait for an edit or explicit save. Swift's unsaved drafts remain in Swift storage; they are not automatically adopted.
 - Preview settings use the existing version-1 theme/shortcut schemas; extension metadata survives edits.
 - Extraction is literal/static. Symlinked resources are excluded from compilation snapshots; dynamic TeX/Typst programs are not full semantic extraction.
+- PDF navigation uses the compiled snapshot. Rebuild the PDF after changing source text; Library variants navigate to their original equation.
+- When SyncTeX reports several inline equations on one line without a column, Library selects those candidates; Source navigates to the line.
+- Background opacity changes only background layers. In native full-screen Spaces, the active display's image/aerial wallpaper is used as a fallback; unrelated defaults and ambiguous shuffled/Space-specific choices are never guessed.
 
 ## Remaining release gates
 
-- Complete native macOS interaction verification before treating this as a replacement for the Swift app: Undo/Redo, IME, file operations, PDF navigation, native clipboard/drag into presentation software.
-- The Swift full-screen wallpaper resolver is not ported. Rust uses native macOS material; external-monitor/clamshell/full-screen appearance needs separate validation.
+- Complete native macOS interaction verification before treating this as a replacement for the Swift app: Undo/Redo, IME, file operations, native clipboard/drag into presentation software.
+- External-monitor changes and clamshell transitions still need physical verification. Full-screen wallpaper and background-opacity changes have been checked on the current screen.
 - Existing manual library ordering and Swift draft migration are not replacement-complete.
 - Rust release updates need their own signed release artifacts/feed. The preview does not offer Swift builds as Rust updates.
 - Intel macOS, Ubuntu, and Windows have not been built or tested. Native clipboard, reveal, and no-overwrite rename adapters currently target macOS.
@@ -71,9 +74,10 @@ python3 -B scripts/check-publication.py
 git diff --check
 ```
 
-- Rust unit tests: extraction compatibility, Unicode positions, conflict saves, encoding/newlines, snapshots, settings recovery, process cancellation, SVG/raster export.
-- Frontend tests: nested editor-group state, independent tabs, pasted equation composition, and template validation.
-- Real-compiler check: four synthetic `examples/` projects; scans, all image formats, scaled vector PDF, document PDFs, SyncTeX forward/reverse navigation, unchanged source fingerprints.
+- Rust unit tests: extraction compatibility, Unicode positions, conflict saves, encoding/newlines, snapshots, settings recovery, process cancellation, SVG/raster export, active-display wallpaper selection.
+- Frontend tests: nested editor-group state, independent tabs, pasted equation composition, template validation, source-range and PDF hit matching.
+- Real-compiler check: four synthetic `examples/` projects; scans, all image formats, scaled vector PDF, document PDFs, equation/align SyncTeX round trips, unchanged source fingerprints.
+- Native UI checks: LaTeX/Typst card ↔ PDF, PDF → exact Source selection, Source caret → PDF; LaTeX cross-page navigation; full-screen wallpaper and 45%/72% background opacity with opaque text.
 - Comparison fixture: [`tests/fixtures/extraction.json`](tests/fixtures/extraction.json), captured from the existing Python workers using only synthetic examples. Tests do not require Python.
 - Compiler checks run by default. `MATHLIDELUX_COMPILER_TESTS=0` explicitly prints a skip.
 - Isolated UI QA: set `MATHLIDELUX_DATA_DIR` to `desktop-app/build/qa-data` when launching the executable. This excludes the real legacy library and uses only the generated examples.
@@ -88,6 +92,7 @@ git diff --check
 | `src-tauri/src/files.rs`, `storage.rs` | Path boundaries, conflicts, snapshots, archives and metadata |
 | `src-tauri/src/export.rs`, `native.rs` | Image scaling/encoding and macOS clipboard |
 | `src-tauri/src/settings.rs` | Validated file settings, recovery and external-edit conflicts |
+| `src-tauri/src/wallpaper.rs` | Read-only active-display wallpaper selection and cached native image decoding |
 | `src-tauri/src/lib.rs` | Tauri IPC, session ownership, OS operations |
 | `src/editor.tsx`, `SourceWorkspace.tsx`, `panes.ts` | Shared Monaco models, source buffers and groups |
 | `src/PdfPane.tsx`, `settings.tsx`, `App.tsx` | Viewer, preferences and application workflows |
