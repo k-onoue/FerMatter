@@ -1,11 +1,7 @@
 //! Portable SVG recipes. Never execute imported code or follow embedded paths.
 use crate::{files::*, instant, storage::Storage};
 use serde_json::{json, Value};
-use std::{
-    fs,
-    io::{Read, Write},
-    path::Path,
-};
+use std::{fs, io::Write, path::Path};
 
 pub const SVG_LIMIT: u64 = 16 * 1024 * 1024;
 const RECIPE_LIMIT: usize = 2 * 1024 * 1024;
@@ -19,28 +15,21 @@ pub fn read_svg(path: &Path) -> Result<String> {
     {
         return Err("Choose an SVG exported by Mathlidelux.".into());
     }
-    let file = fs::File::open(path).map_err(err)?;
-    if !file.metadata().map_err(err)?.is_file() {
-        return Err("Choose an SVG file.".into());
-    }
-    let mut text = String::new();
-    file.take(SVG_LIMIT + 1)
-        .read_to_string(&mut text)
-        .map_err(err)?;
-    if text.len() as u64 > SVG_LIMIT {
-        return Err("SVG exceeds 16 MB.".into());
-    }
-    Ok(text)
+    String::from_utf8(read_bounded(path, SVG_LIMIT)?).map_err(err)
 }
 
 pub fn project_uuid(root: &Path, create: bool) -> Result<Option<String>> {
     let path = root.join(IDENTITY);
-    if path.exists() {
-        let metadata = fs::symlink_metadata(&path).map_err(err)?;
+    let metadata = match fs::symlink_metadata(&path) {
+        Ok(metadata) => Some(metadata),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => return Err(err(error)),
+    };
+    if let Some(metadata) = metadata {
         if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() > 4096 {
             return Err("Invalid Mathlidelux project identity; the file was preserved.".into());
         }
-        let value = json_read(&path)?;
+        let value: Value = serde_json::from_slice(&read_bounded(&path, 4096)?).map_err(err)?;
         let uuid = string(&value, "uuid");
         if value["schemaVersion"] != 1
             || value["kind"] != "mathlidelux.project"
@@ -334,6 +323,23 @@ mod tests {
             .collect();
         assert!(ids.iter().all(|id| id == &ids[0]));
         assert_eq!(project_uuid(dir.path(), false).unwrap().unwrap(), ids[0]);
+    }
+    #[cfg(unix)]
+    #[test]
+    fn special_svg_inputs_and_dangling_identities_fail_without_replacement() {
+        let dir = tempfile::tempdir().unwrap();
+        let fifo = dir.path().join("special.svg");
+        let path = std::ffi::CString::new(fifo.to_str().unwrap()).unwrap();
+        assert_eq!(unsafe { libc::mkfifo(path.as_ptr(), 0o600) }, 0);
+        assert!(read_svg(&fifo).is_err());
+        let identity = dir.path().join(IDENTITY);
+        std::os::unix::fs::symlink("missing.json", &identity).unwrap();
+        assert!(project_uuid(dir.path(), true).is_err());
+        assert!(identity
+            .symlink_metadata()
+            .unwrap()
+            .file_type()
+            .is_symlink());
     }
     #[test]
     fn fallback_never_runs_imported_source() {
