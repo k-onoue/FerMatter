@@ -3,6 +3,7 @@ use serde_json::{json, Value};
 use std::{
     collections::HashMap,
     fs,
+    io::Read,
     path::{Path, PathBuf},
     sync::Mutex,
 };
@@ -63,7 +64,7 @@ impl SettingsFiles {
         valid_name(name)?;
         let path = self.dir.join(name);
         let backup = self.dir.join(format!(".last-valid-{name}"));
-        let bytes = match fs::read(&path) {
+        let bytes = match read_document(&path) {
             Ok(bytes) => Some(bytes),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
             Err(_) => {
@@ -90,7 +91,7 @@ impl SettingsFiles {
         let value = match current {
             Ok(value) => value,
             Err(error) if strict => return Err(error),
-            Err(_) => fs::read(&backup)
+            Err(_) => read_document(&backup)
                 .ok()
                 .and_then(|b| parse(&b).ok())
                 .unwrap_or_else(|| default_document(name)),
@@ -123,7 +124,7 @@ impl SettingsFiles {
             return Err("Settings exceed 1 MB.".into());
         }
         let path = self.dir.join(name);
-        let actual = fs::read(&path).map(hash).unwrap_or_default();
+        let actual = read_document(&path).map(hash).unwrap_or_default();
         if expected.is_empty() || expected != actual {
             return Err("Settings changed on disk. Reload the file before saving.".into());
         }
@@ -133,6 +134,32 @@ impl SettingsFiles {
         Ok(hash(bytes))
     }
 }
+fn read_document(path: &Path) -> std::io::Result<Vec<u8>> {
+    let mut options = fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+    }
+    let file = options.open(path)?;
+    if !file.metadata()?.is_file() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Settings must be a regular file.",
+        ));
+    }
+    let mut bytes = Vec::new();
+    file.take(1_000_001).read_to_end(&mut bytes)?;
+    if bytes.len() > 1_000_000 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Settings exceed 1 MB.",
+        ));
+    }
+    Ok(bytes)
+}
+
 fn valid_name(name: &str) -> Result<()> {
     if [
         "preferences.json",
@@ -392,6 +419,24 @@ pub fn validate_templates(value: &Value) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn oversized_settings_remain_untouched_and_cannot_be_saved_over() {
+        let dir = tempfile::tempdir().unwrap();
+        let settings = SettingsFiles::new(dir.path());
+        let first = settings.snapshot("preferences.json", false).unwrap();
+        let path = dir.path().join("Settings/preferences.json");
+        let file = fs::OpenOptions::new().write(true).open(&path).unwrap();
+        file.set_len(32 * 1024 * 1024).unwrap();
+        assert!(settings.snapshot("preferences.json", false).is_err());
+        assert!(settings
+            .save(
+                "preferences.json",
+                &first["value"],
+                string(&first, "revision")
+            )
+            .is_err());
+        assert_eq!(fs::metadata(path).unwrap().len(), 32 * 1024 * 1024);
+    }
     #[test]
     fn another_reader_cannot_authorize_a_stale_writer() {
         let dir = tempfile::tempdir().unwrap();

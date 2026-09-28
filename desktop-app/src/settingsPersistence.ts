@@ -45,6 +45,10 @@ export class SettingsWriter<T extends object> {
     this.tail = next.catch(() => {});
     return next;
   }
+  async flush() {
+    await this.tail;
+    if (this.failure) throw this.failure;
+  }
   async reload(read: () => Promise<SettingsSnapshot<T>>) {
     if (this.reloading) return;
     this.reloading = true;

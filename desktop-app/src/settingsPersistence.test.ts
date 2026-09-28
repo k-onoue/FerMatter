@@ -26,7 +26,7 @@ describe("settings caller revisions", () => {
     expect(requests).toHaveLength(1);
     expect(values.at(-1)).toEqual({ opacity: 1, autoSave: false });
     complete("r2");
-    await Promise.all([first, second, last]);
+    await Promise.all([first, second, last, writer.flush()]);
     expect(requests[1].revision).toBe("r2");
     expect(requests.at(-1)?.value).toEqual({ opacity: 1, autoSave: false });
     expect(values.at(-1)).toEqual({ opacity: 1, autoSave: false });
@@ -50,11 +50,15 @@ describe("settings caller revisions", () => {
     const results = await Promise.allSettled(saves);
     expect(results.every((result) => result.status === "rejected")).toBe(true);
     expect(calls).toBe(1);
+    await expect(writer.flush()).rejects.toThrow(
+      "Reload the file before saving",
+    );
     await writer.reload(async () => ({
       value: { opacity: 0.7 },
       revision: "external",
     }));
     await writer.patch({ opacity: 0.6 });
     expect(calls).toBe(2);
+    await expect(writer.flush()).resolves.toBeUndefined();
   });
 });
