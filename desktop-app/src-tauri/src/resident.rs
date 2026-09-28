@@ -41,6 +41,9 @@ pub fn import_svg(app: &tauri::AppHandle, sources: &[String]) -> Result<()> {
     if sources.is_empty() || sources.len() > 16 {
         return Err("Open between 1 and 16 SVG files.".into());
     }
+    if sources.iter().map(String::len).sum::<usize>() > 64 * 1024 * 1024 {
+        return Err("SVG selection exceeds 64 MB.".into());
+    }
     let runtime = app.state::<Arc<Runtime>>();
     if project_setup::required(&runtime.store)? {
         show_projects(app);
@@ -54,6 +57,11 @@ pub fn import_svg(app: &tauri::AppHandle, sources: &[String]) -> Result<()> {
         .map(|s| roundtrip::decode(s).and_then(|v| roundtrip::resolve(&runtime.store, &v)))
         .collect::<Result<Vec<_>>>()?;
     let state = app.state::<Resident>();
+    let mut queued = Vec::new();
+    let mut pending = state.pending.lock().unwrap();
+    if pending.values().map(VecDeque::len).sum::<usize>() + restored.len() > 32 {
+        return Err("Finish the pending SVG imports first.".into());
+    }
     for (project, draft) in restored {
         let ident = project.as_ref().map(|p| string(p, "id")).unwrap_or("");
         let label = if ident.is_empty() {
@@ -62,16 +70,14 @@ pub fn import_svg(app: &tauri::AppHandle, sources: &[String]) -> Result<()> {
             format!("instant-{ident}")
         };
         let token = uuid::Uuid::new_v4().to_string();
-        {
-            let mut pending = state.pending.lock().unwrap();
-            if pending.values().map(VecDeque::len).sum::<usize>() >= 32 {
-                return Err("Finish the pending SVG imports first.".into());
-            }
-            pending
-                .entry(label.clone())
-                .or_default()
-                .push_back(json!({"token":token,"draft":draft}));
-        }
+        pending
+            .entry(label.clone())
+            .or_default()
+            .push_back(json!({"token":token,"draft":draft}));
+        queued.push((project, label, token));
+    }
+    drop(pending);
+    for (project, label, token) in queued {
         if let Err(error) = instant::open(app, project.as_ref()) {
             let mut pending = state.pending.lock().unwrap();
             if let Some(queue) = pending.get_mut(&label) {
@@ -101,11 +107,23 @@ pub fn incoming(app: &tauri::AppHandle, label: &str, token: &str) -> Result<Valu
 pub fn open_files(app: &tauri::AppHandle, paths: Vec<PathBuf>) {
     let app = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let result = paths
-            .iter()
-            .map(|p| roundtrip::read_svg(p))
-            .collect::<Result<Vec<_>>>()
-            .and_then(|sources| import_svg(&app, &sources));
+        if paths.is_empty() || paths.len() > 16 {
+            report(&app, "Open between 1 and 16 SVG files.".into());
+            return;
+        }
+        let result = (|| {
+            let mut sources = Vec::new();
+            let mut bytes = 0;
+            for path in paths {
+                let source = roundtrip::read_svg(&path)?;
+                bytes += source.len();
+                if bytes > 64 * 1024 * 1024 {
+                    return Err("SVG selection exceeds 64 MB.".into());
+                }
+                sources.push(source);
+            }
+            import_svg(&app, &sources)
+        })();
         if let Err(error) = result {
             report(&app, error);
         }
@@ -155,9 +173,13 @@ fn shortcuts(value: &Value) -> Result<Vec<(Shortcut, String)>> {
     Ok(keys)
 }
 pub fn apply_keys(app: &tauri::AppHandle, value: &Value) -> Result<()> {
-    let next = shortcuts(value)?;
+    set_keys(app, shortcuts(value)?)
+}
+fn set_keys(app: &tauri::AppHandle, next: Vec<(Shortcut, String)>) -> Result<()> {
     let state = app.state::<Resident>();
-    let mut current = state.keys.lock().unwrap();
+    // Native registration can wait for the main loop. Do not hold the lock that
+    // the main-loop hotkey callback needs while waiting for it.
+    let current = state.keys.lock().unwrap().clone();
     let mut added = vec![];
     for (key, _) in &next {
         if current.iter().any(|(old, _)| old == key) {
@@ -173,13 +195,46 @@ pub fn apply_keys(app: &tauri::AppHandle, value: &Value) -> Result<()> {
         }
         added.push(*key);
     }
+    let mut removed = vec![];
     for (key, _) in current.iter() {
         if !next.iter().any(|(new, _)| new == key) {
-            app.global_shortcut().unregister(*key).map_err(err)?;
+            if let Err(error) = app.global_shortcut().unregister(*key) {
+                for key in removed {
+                    let _ = app.global_shortcut().register(key);
+                }
+                for key in added {
+                    let _ = app.global_shortcut().unregister(key);
+                }
+                return Err(err(error));
+            }
+            removed.push(*key);
         }
     }
-    *current = next;
+    *state.keys.lock().unwrap() = next;
     Ok(())
+}
+pub fn save_keys(
+    app: &tauri::AppHandle,
+    settings: &crate::settings::SettingsFiles,
+    value: &Value,
+    revision: &str,
+) -> Result<String> {
+    crate::settings::validate("keybindings.json", value)?;
+    let snapshot = settings.snapshot("keybindings.json", true)?;
+    if string(&snapshot, "revision") != revision {
+        return Err("Settings changed on disk. Reload the file before saving.".into());
+    }
+    let before = app.state::<Resident>().keys.lock().unwrap().clone();
+    apply_keys(app, value)?;
+    match settings.save("keybindings.json", value, revision) {
+        Ok(revision) => Ok(revision),
+        Err(error) => {
+            if let Err(rollback) = set_keys(app, before) {
+                return Err(format!("{error}\nCould not restore shortcuts: {rollback}"));
+            }
+            Err(error)
+        }
+    }
 }
 pub fn hotkey(
     app: &tauri::AppHandle,
@@ -197,6 +252,9 @@ pub fn hotkey(
         .iter()
         .find(|(key, _)| key == shortcut)
         .map(|(_, name)| name.clone());
+    if command.is_none() {
+        return;
+    }
     let app = app.clone();
     let cloned = app.clone();
     let _ = app.run_on_main_thread(move || {
@@ -209,6 +267,28 @@ pub fn hotkey(
             report(&cloned, error);
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn shortcut_overrides_disable_and_legacy_conflicts_match_editor_settings() {
+        let mut value = json!({"schemaVersion":1,"kind":"mathlidelux.keybindings","bindings":{}});
+        assert_eq!(shortcuts(&value).unwrap().len(), 2);
+        value["bindings"]["globalInstant"] =
+            json!({"key":"","command":true,"control":true,"option":true,"shift":false});
+        assert_eq!(shortcuts(&value).unwrap().len(), 1);
+        value["bindings"]
+            .as_object_mut()
+            .unwrap()
+            .remove("globalInstant");
+        value["bindings"]["open"] =
+            json!({"key":"n","command":true,"control":true,"option":true,"shift":false});
+        let keys = shortcuts(&value).unwrap();
+        assert_eq!(keys.len(), 1);
+        assert_eq!(keys[0].1, "globalInstantClipboard");
+    }
 }
 pub fn install(app: &tauri::AppHandle) -> tauri::Result<()> {
     use tauri::{

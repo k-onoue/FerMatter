@@ -310,13 +310,28 @@ fn dispatch(
         }
         "settings" => {
             let _guard = store.writes.lock().unwrap();
+            if string(&v, "file") == "keybindings.json" {
+                return Ok(json!(resident::save_keys(
+                    app,
+                    &runtime.settings,
+                    &v["value"],
+                    string(&v, "revision")
+                )?));
+            }
             Ok(json!(runtime.settings.save(
                 string(&v, "file"),
                 &v["value"],
                 string(&v, "revision")
             )?))
         }
-        "reload_settings" => runtime.settings.snapshot(string(&v, "file"), true),
+        "reload_settings" => {
+            let _guard = store.writes.lock().unwrap();
+            let snapshot = runtime.settings.snapshot(string(&v, "file"), true)?;
+            if string(&v, "file") == "keybindings.json" {
+                resident::apply_keys(app, &snapshot["value"])?;
+            }
+            Ok(snapshot)
+        }
         "export_settings" => {
             settings::validate(string(&v, "file"), &v["value"])?;
             json_write(Path::new(string(&v, "path")), &v["value"])?;
