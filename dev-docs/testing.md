@@ -14,6 +14,7 @@
 ## App checks
 
 - `check.sh`: TypeScript/Vite production build, frontend tests, Rust tests, four synthetic real-compiler checks.
+- TypeScript rejects unused imports, locals, and parameters. Keep the main/Instant appearance hook and command modules shared instead of copying handlers.
 - Real compiler checks run by default; `MATHLIDELUX_COMPILER_TESTS=0` explicitly skips them.
 - Missing compilers fail the default run. A skipped run is not a release pass.
 - Run `cargo clippy --manifest-path desktop-app/src-tauri/Cargo.toml --lib -- -D warnings` with the same Rust environment.

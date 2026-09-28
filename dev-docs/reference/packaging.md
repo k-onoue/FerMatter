@@ -19,6 +19,7 @@
 - Existing outputs are preserved unless `--overwrite` is supplied.
 - DMG: app, Applications shortcut, README, LICENSE, NOTICE.
 - PKG: only `/Applications/Mathlidelux.app`; no install scripts, services, dependencies or automatic launch.
+- Both packages require a project-folder choice when the user first opens the app. Demos and future projects use that per-user location; the installer never writes personal project data as root.
 - TeX/Typst/converters remain external. Python and development SDKs are not required to run the app.
 - User projects/support data are outside the payload and survive replacement/removal.
 - Verification checks signatures, a read-only mounted DMG, expanded PKG contents, disabled relocation, absence of installer scripts and hashes.

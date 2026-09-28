@@ -1,3 +1,5 @@
+import { LibraryNavigation } from "./LibraryNavigation";
+import { VariantEditor } from "./VariantEditor";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -7,8 +9,6 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import {
   ArrowLeft,
-  ChevronDown,
-  ChevronRight,
   ClipboardCopy,
   Code2,
   Download,
@@ -23,18 +23,19 @@ import {
   Search,
   Settings2,
   SunMoon,
-  Tag,
   X,
   TriangleAlert,
   Zap,
 } from "lucide-react";
 import { rpc, uid, projectName } from "./api";
-import { CodeEditor, configureTheme, setProjectCompletions } from "./editor";
+import { setProjectCompletions } from "./editor";
 import { SourceWorkspace } from "./SourceWorkspace";
 import { PdfPane } from "./PdfPane";
 import { OutputSizeOptions } from "./OutputSizeOptions";
 import { ImagePreview, Modal, Prompt, ContextMenu, type Ask } from "./ui";
-import { Settings, defaults, palette } from "./settings";
+import { Settings } from "./settings";
+import { defaults } from "./appearance";
+import { useAppearance } from "./useAppearance";
 import { commandForEvent, validateBindings } from "./shortcuts";
 import { stepZoom } from "./scrollZoom";
 import { useControlScroll } from "./useControlScroll";
@@ -127,9 +128,7 @@ export default function App() {
   const [context, setContext] = useState<{
     x: number;
     y: number;
-    card?: Card;
-    project?: Project;
-    open?: boolean;
+    card: Card;
   } | null>(null);
   const [marquee, setMarquee] = useState<{
     x: number;
@@ -151,7 +150,7 @@ export default function App() {
     settings.appearance === "system"
       ? systemDark
       : settings.appearance === "dark";
-  const colors = palette(theme, dark);
+  useAppearance(theme, dark, settings.opacity);
   const ask: Ask = (title, value = "", label = "Name") =>
     new Promise((resolve) => setPrompt({ title, value, label, resolve }));
   function report(e: unknown) {
@@ -203,18 +202,6 @@ export default function App() {
     q.addEventListener("change", change);
     return () => q.removeEventListener("change", change);
   }, []);
-  useEffect(() => {
-    configureTheme(colors, dark);
-    document.documentElement.dataset.appearance = dark ? "dark" : "light";
-    for (const [k, v] of Object.entries(colors))
-      document.documentElement.style.setProperty("--" + k, v);
-    document.documentElement.style.setProperty(
-      "--opacity",
-      String(settings.opacity),
-    );
-    // Keep WebKit's page canvas transparent; color-scheme on the root paints
-    // an opaque default canvas even when the body background is transparent.
-  }, [theme, dark, settings.opacity]);
   useEffect(() => {
     let gone = false;
     let cleanup: (() => void) | undefined;
@@ -959,88 +946,15 @@ export default function App() {
               style={{ display: mode === "source" ? "flex" : "none" }}
             />
             {mode === "library" && (
-              <div className="library-navigation">
-                <button
-                  className={`nav-row ${filter === "all" ? "selected" : ""}`}
-                  onClick={() => setFilter("all")}
-                >
-                  <Grid2X2 size={16} />
-                  <span>All equations</span>
-                  <small>{project.cards.length}</small>
-                </button>
-                <div className="nav-heading">Outline</div>
-                {project.outline
-                  ?.filter(
-                    (h) => !h.path.slice(0, -1).some((id) => collapsed.has(id)),
-                  )
-                  .map((h) => (
-                    <div
-                      key={h.id}
-                      className={`outline-row ${filter === h.id ? "selected" : ""}`}
-                      style={{ paddingLeft: 8 + (h.path.length - 1) * 13 }}
-                    >
-                      <button
-                        title="Collapse section"
-                        className="disclosure"
-                        onClick={() =>
-                          setCollapsed((old) => {
-                            const next = new Set(old);
-                            next.has(h.id) ? next.delete(h.id) : next.add(h.id);
-                            return next;
-                          })
-                        }
-                      >
-                        {project.outline.some(
-                          (n) => n.path.includes(h.id) && n.id !== h.id,
-                        ) ? (
-                          collapsed.has(h.id) ? (
-                            <ChevronRight size={12} />
-                          ) : (
-                            <ChevronDown size={12} />
-                          )
-                        ) : null}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setFilter(h.id);
-                          setPdfTarget(h.id);
-                        }}
-                      >
-                        {h.title}
-                      </button>
-                      <small>
-                        {
-                          project.cards.filter((c) =>
-                            c.outlinePath?.includes(h.id),
-                          ).length
-                        }
-                      </small>
-                    </div>
-                  ))}
-                <div className="nav-heading">
-                  Labels
-                  <button title="New label" onClick={() => void label()}>
-                    <Plus size={15} />
-                  </button>
-                </div>
-                <button
-                  className={`nav-row ${filter === "unlabeled" ? "selected" : ""}`}
-                  onClick={() => setFilter("unlabeled")}
-                >
-                  <Tag size={15} />
-                  <span>Unlabeled</span>
-                </button>
-                {project.sections?.map((s) => (
-                  <button
-                    className={`nav-row ${filter === s.id ? "selected" : ""}`}
-                    key={s.id}
-                    onClick={() => setFilter(s.id)}
-                  >
-                    <Tag size={15} />
-                    <span>{s.name}</span>
-                  </button>
-                ))}
-              </div>
+              <LibraryNavigation
+                project={project}
+                filter={filter}
+                setFilter={setFilter}
+                collapsed={collapsed}
+                setCollapsed={setCollapsed}
+                onOutline={setPdfTarget}
+                onNewLabel={() => void label()}
+              />
             )}
             <footer>
               <button onClick={() => setShowProjectSettings(true)}>
@@ -1597,91 +1511,31 @@ export default function App() {
         </Modal>
       )}
       {editing && project && (
-        <Modal title="Edit Variant" onClose={closeEditor} wide>
-          <div className="variant-title">
-            <input
-              aria-label="Variant name"
-              value={editing.name}
-              onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-            />
-            <select
-              aria-label="Equation type"
-              value={editing.kind}
-              onChange={(e) =>
-                setEditing({ ...editing, kind: e.target.value as Card["kind"] })
-              }
-            >
-              <option value="inline">Inline</option>
-              <option value="block">Block</option>
-              <option value="figure">Figure</option>
-            </select>
-          </div>
-          <div className="variant-preview">
-            {editBusy && <LoaderCircle size={15} className="spin" />}
-            <ImagePreview
-              card={editPreview || editing}
-              onDrag={(card) =>
-                void rpc<string>("preview_export", {
-                  project: project.id,
-                  card,
-                  format: project.exportFormat || "svg",
-                  fontSize: editing.exportFontSize ?? project.exportFontSize,
-                })
-                  .then((path) =>
-                    startDrag({
-                      item: [path],
-                      icon: card.pngPath!,
-                      mode: "copy",
-                    }),
-                  )
-                  .catch(report)
-              }
-            />
-            {editPreview?.error && (
-              <pre className="error-box">{editPreview.error}</pre>
-            )}
-          </div>
-          <div className="variant-editor">
-            <CodeEditor
-              project={project.id}
-              path={
-                "library/" +
-                editing.id +
-                (project.format === "typst" ? ".typ" : ".tex")
-              }
-              value={editing.tex}
-              format={project.format}
-              onChange={(tex) => setEditing({ ...editing, tex })}
-              onSave={() => void saveVariant()}
-            />
-          </div>
-          <footer>
-            <label>
-              Output size{" "}
-              <select
-                value={editing.exportFontSize ?? -1}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    exportFontSize:
-                      +e.target.value < 0 ? undefined : +e.target.value,
-                  })
-                }
-              >
-                <OutputSizeOptions
-                  value={editing.exportFontSize ?? -1}
-                  sourceSizes={[editing.sourceFontSize]}
-                  projectSize={project.exportFontSize || 0}
-                />
-              </select>
-            </label>
-            <span className="spacer" />
-            <button onClick={closeEditor}>Cancel</button>
-            <button className="primary" onClick={() => void saveVariant()}>
-              Save Variant
-            </button>
-          </footer>
-        </Modal>
+        <VariantEditor
+          project={project}
+          editing={editing}
+          setEditing={setEditing}
+          editPreview={editPreview}
+          editBusy={editBusy}
+          onClose={closeEditor}
+          onSave={() => void saveVariant()}
+          onDrag={(card) =>
+            void rpc<string>("preview_export", {
+              project: project.id,
+              card,
+              format: project.exportFormat || "svg",
+              fontSize: editing.exportFontSize ?? project.exportFontSize,
+            })
+              .then((path) =>
+                startDrag({
+                  item: [path],
+                  icon: card.pngPath!,
+                  mode: "copy",
+                }),
+              )
+              .catch(report)
+          }
+        />
       )}
       {newProject && (
         <NewProjectDialog
@@ -1714,79 +1568,49 @@ export default function App() {
           x={context.x}
           y={context.y}
           onClose={() => setContext(null)}
-          items={
-            context.open
-              ? [
-                  { label: "Open Folder…", action: () => void openProject() },
-                  {
-                    label: "Open Main File…",
-                    action: () => void openProject("file"),
+          items={[
+            {
+              label: "Edit Variant",
+              action: () => editCard(context.card),
+            },
+            {
+              label: "Open Source",
+              disabled: !context.card.file,
+              action: () => showSource(context.card!),
+            },
+            { label: "Copy Image", action: () => void copyImages() },
+            {
+              label: "Export Image…",
+              action: () => void exportImage(),
+            },
+            ...(project?.sections?.map((section) => ({
+              label: "Label: " + section.name,
+              action: () =>
+                void persist({
+                  ...project!,
+                  sectionAssignments: {
+                    ...project!.sectionAssignments,
+                    ...Object.fromEntries(
+                      [...selected].map((id) => [id, section.id]),
+                    ),
                   },
+                }),
+            })) || []),
+            ...(context.card.origin === "custom"
+              ? [
                   {
-                    label: "Import ZIP…",
-                    action: () => void openProject("zip"),
+                    label: "Delete Variant",
+                    action: () =>
+                      void persist({
+                        ...project!,
+                        cards: project!.cards.filter(
+                          (c) => c.id !== context.card!.id,
+                        ),
+                      }),
                   },
                 ]
-              : context.project
-                ? [
-                    {
-                      label: "Open Project",
-                      action: () => void openRecent(context.project!),
-                    },
-                    {
-                      label: "Reveal in Finder",
-                      action: () =>
-                        void rpc("reveal", {
-                          project: context.project!.id,
-                        }).catch(report),
-                    },
-                  ]
-                : context.card
-                  ? [
-                      {
-                        label: "Edit Variant",
-                        action: () => editCard(context.card),
-                      },
-                      {
-                        label: "Open Source",
-                        disabled: !context.card.file,
-                        action: () => showSource(context.card!),
-                      },
-                      { label: "Copy Image", action: () => void copyImages() },
-                      {
-                        label: "Export Image…",
-                        action: () => void exportImage(),
-                      },
-                      ...(project?.sections?.map((section) => ({
-                        label: "Label: " + section.name,
-                        action: () =>
-                          void persist({
-                            ...project!,
-                            sectionAssignments: {
-                              ...project!.sectionAssignments,
-                              ...Object.fromEntries(
-                                [...selected].map((id) => [id, section.id]),
-                              ),
-                            },
-                          }),
-                      })) || []),
-                      ...(context.card.origin === "custom"
-                        ? [
-                            {
-                              label: "Delete Variant",
-                              action: () =>
-                                void persist({
-                                  ...project!,
-                                  cards: project!.cards.filter(
-                                    (c) => c.id !== context.card!.id,
-                                  ),
-                                }),
-                            },
-                          ]
-                        : []),
-                    ]
-                  : []
-          }
+              : []),
+          ]}
         />
       )}
     </div>
