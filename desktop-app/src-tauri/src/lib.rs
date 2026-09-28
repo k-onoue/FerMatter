@@ -762,11 +762,9 @@ pub fn run() {
             ),
             #[cfg(target_os = "macos")]
             tauri::RunEvent::Reopen { .. } => resident::show_projects(app),
-            tauri::RunEvent::ExitRequested { api, .. } => {
-                if !lifecycle::exiting(app) {
-                    api.prevent_exit();
-                    lifecycle::request_quit(app);
-                }
+            tauri::RunEvent::ExitRequested { api, .. } if !lifecycle::exiting(app) => {
+                api.prevent_exit();
+                lifecycle::request_quit(app);
             }
             _ => {}
         });
