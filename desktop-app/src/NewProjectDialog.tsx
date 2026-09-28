@@ -19,6 +19,7 @@ export function NewProjectDialog({
   onClose,
   onError,
   ask,
+  defaultDirectory,
 }: {
   configuration: TemplateConfiguration;
   onConfiguration: (value: TemplateConfiguration) => void;
@@ -26,6 +27,7 @@ export function NewProjectDialog({
   onClose: () => void;
   onError: (error: string) => void;
   ask: Ask;
+  defaultDirectory: string;
 }) {
   const [name, setName] = useState("Untitled");
   const [id, setID] = useState(configuration.defaultID);
@@ -35,6 +37,7 @@ export function NewProjectDialog({
   const [templateDraft, setTemplateDraft] = useState("");
   const [compiler, setCompiler] = useState("pdflatex");
   const [creating, setCreating] = useState(false);
+  const [directory, setDirectory] = useState("");
   const templates = [...builtinTemplates, ...configuration.custom];
   const template = templates.find((t) => t.id === id) || builtinTemplates[0];
   const fail = (e: unknown) => onError(String(e));
@@ -77,6 +80,7 @@ export function NewProjectDialog({
           format: template.format,
           text: content,
           engine: template.compiler,
+          directory,
         }),
       );
     } catch (e) {
@@ -107,6 +111,28 @@ export function NewProjectDialog({
             </option>
           ))}
         </select>
+      </div>
+      <div className="project-folder-row">
+        <span>Location</span>
+        <span className="folder-path" title={directory || defaultDirectory}>
+          {directory || defaultDirectory}
+        </span>
+        <button
+          onClick={() =>
+            void open({
+              directory: true,
+              multiple: false,
+              defaultPath: directory || defaultDirectory,
+            })
+              .then((path) => {
+                if (typeof path === "string") setDirectory(path);
+              })
+              .catch(fail)
+          }
+        >
+          Choose…
+        </button>
+        {directory && <button onClick={() => setDirectory("")}>Default</button>}
       </div>
       <div className="template-options">
         {editing && template.format === "latex" ? (

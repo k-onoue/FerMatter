@@ -151,6 +151,12 @@ pub fn validate(name: &str, v: &Value) -> Result<()> {
         "theme.json" => theme(v),
         "keybindings.json" => keybindings(v),
         "preferences.json" => {
+            if let Some(path) = v.get("projectDirectory") {
+                crate::project_location::validate_path(
+                    path.as_str()
+                        .ok_or("Project folder must be a path string.")?,
+                )?;
+            }
             if let Some(view) = v.get("projectView") {
                 if !matches!(view.as_str(), Some("grid" | "list")) {
                     return Err("Project view must be grid or list.".into());

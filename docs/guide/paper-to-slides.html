@@ -40,8 +40,22 @@
 <li>Install the <a href="requirements.html">tools for your project format</a>.</li>
 <li>Try the <a href="../downloads/demo-paper.zip">LaTeX sample</a> or <a href="../downloads/demo-typst.zip">Typst sample</a>.</li>
 <li>Opening/rendering a project leaves its manuscript source unchanged.</li>
-<li>Folders open in place; ZIPs open as an extracted copy.</li>
+<li><strong>Open Project</strong> opens folders in place; ZIPs are extracted into the default project folder.</li>
+<li>Drop folders or ZIPs from Finder onto <strong>Projects</strong> to import them into <strong>Settings → Projects → Default project folder</strong>. Originals stay unchanged; existing destination folders are never overwritten.</li>
+<li>Dropping a folder already directly inside the default folder opens that copy without duplicating it.</li>
 <li><strong>Load File…</strong> belongs to <a href="new-project.html">New Project</a>; it reads one file's text only.</li>
+</ul>
+<h2 id="manage-projects">Manage projects</h2>
+<ul>
+<li>Click the lightning icon on a project card or list row to open its Instant Mode.</li>
+<li>Click to select; double-click, press <code>Return</code>, or click the arrow to open.</li>
+<li><code>⌘</code>-click toggles selection; <code>Shift</code>-click selects a range; drag empty space to select an area. <code>⌘A</code> selects the visible results; <code>Esc</code> clears the selection.</li>
+<li>Arrow keys move selection; hold <code>Shift</code> to extend it. Search, grid/list view, and zoom remain available.</li>
+<li><strong>Duplicate</strong> (<code>⌘D</code>) copies selected projects into the default folder, including Library variants, labels, saved Source drafts, and Instant history. Copies get unique names.</li>
+<li><strong>Delete…</strong> (<code>⌘⌫</code>) asks for confirmation with folder paths, then moves the actual source folders to Finder Trash. This also applies to projects opened outside the default folder.</li>
+<li><code>⌘Z</code> / <code>⇧⌘Z</code>, toolbar buttons, or the context menu undo/redo creation, imports, duplication and deletion. Any action moving folders to Trash asks for confirmation.</li>
+<li>Undo history survives app restarts. Restoring refuses to overwrite existing folders; emptying Trash or moving files in Finder may make an operation unavailable. Close a project’s Instant window before deleting/restoring it.</li>
+<li>Import limits: folders up to 30,000 entries / 1 GB; ZIPs up to 10,000 entries / 512 MB. Linked/special files are rejected; use <strong>Open Project</strong> for folders containing links.</li>
 </ul>
 <h2 id="if-it-does-not-render">If it does not render</h2>
 <ul>

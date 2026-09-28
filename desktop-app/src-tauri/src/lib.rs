@@ -4,6 +4,9 @@ mod files;
 mod instant;
 mod instant_settings;
 mod native;
+mod project_drop;
+mod project_history;
+mod project_location;
 mod scan;
 mod settings;
 mod storage;
@@ -183,18 +186,25 @@ fn dispatch(
                 .filter_map(|p| json_read(&p.path()).ok())
                 .collect();
             Ok(
-                json!({"projects":store.recent()?,"settings":runtime.settings.load("preferences.json")?,"theme":runtime.settings.load("theme.json")?,"keybindings":runtime.settings.load("keybindings.json")?,"themes":themes,"templates":json_read(&store.home.join("templates.json")).unwrap_or(json!({})),"storage":store.home}),
+                json!({"projects":store.recent()?,"settings":runtime.settings.load("preferences.json")?,"defaultProjectDirectory":project_location::default_directory()?,"theme":runtime.settings.load("theme.json")?,"keybindings":runtime.settings.load("keybindings.json")?,"themes":themes,"templates":json_read(&store.home.join("templates.json")).unwrap_or(json!({})),"storage":store.home}),
             )
         }
         "open_project" => {
-            let mut path = PathBuf::from(string(&v, "path"));
-            if path.extension().is_some_and(|e| e == "zip") {
-                path = storage::import_zip(
+            let path = PathBuf::from(string(&v, "path"));
+            if path.is_file()
+                && path
+                    .extension()
+                    .is_some_and(|e| e.eq_ignore_ascii_case("zip"))
+            {
+                let _guard = store.writes.lock().unwrap();
+                let mut history = project_history::History::load(store)?;
+                let imported = storage::import_zip(
                     &path,
-                    &dirs::document_dir()
-                        .ok_or("Documents folder is unavailable")?
-                        .join("Mathlidelux"),
-                )?
+                    &project_location::directory(&runtime.settings.load("preferences.json")?, "")?,
+                )?;
+                let project = project_history::open_created(store, &imported, None)?;
+                history.record_created(store, vec![imported], "Import Projects")?;
+                return Ok(project);
             }
             let (root, main) = if path.is_file() {
                 (
@@ -208,27 +218,12 @@ fn dispatch(
             store.open(&root, main.as_deref())
         }
         "new_project" => {
-            let name = string(&v, "name").trim();
-            if name.is_empty() || name.contains(['/', ':', '\0']) || name == "." || name == ".." {
-                return Err("Choose a valid project name.".into());
-            }
-            let parent = dirs::document_dir()
-                .ok_or("Documents folder is unavailable")?
-                .join("Mathlidelux");
-            fs::create_dir_all(&parent).map_err(err)?;
-            let target = parent.join(name);
-            if target.exists() {
-                return Err("A project with that name already exists.".into());
-            }
-            let temp = tempfile::tempdir_in(&parent).map_err(err)?;
+            let _guard = store.writes.lock().unwrap();
+            let mut history = project_history::History::load(store)?;
+            let target = project_location::create(&runtime.settings.load("preferences.json")?, &v)?;
             let typst = string(&v, "format") == "typst";
             let main = if typst { "main.typ" } else { "main.tex" };
-            fs::write(temp.path().join(main), string(&v, "text")).map_err(err)?;
-            if !typst {
-                fs::write(temp.path().join("latexmkrc"), "$pdf_mode = 1;\n").map_err(err)?
-            }
-            rename_no_replace(temp.path(), &target)?;
-            let mut project = store.open(&target, Some(main))?;
+            let mut project = project_history::open_created(store, &target, Some(main))?;
             if !typst {
                 let engine = string(&v, "engine");
                 if ["pdflatex", "xelatex", "lualatex"].contains(&engine) {
@@ -236,7 +231,99 @@ fn dispatch(
                 }
                 store.save(string(&project, "id"), &project)?;
             }
+            history.record_created(store, vec![target], "New Project")?;
             Ok(project)
+        }
+        "dropped_project_paths" => project_drop::paths(&v["names"]),
+        "project_history" => Ok(project_history::History::load(store)?.status()),
+        "project_action" => {
+            let _guard = store.writes.lock().unwrap();
+            let mut history = project_history::History::load(store)?;
+            let action = string(&v, "action");
+            let mut errors = Vec::new();
+            let mut created = Vec::new();
+            let parent =
+                project_location::directory(&runtime.settings.load("preferences.json")?, "")?;
+            let ensure_closed = |roots: &[PathBuf]| -> Result<()> {
+                for root in roots {
+                    if store.home.starts_with(root) || store.legacy.starts_with(root) {
+                        return Err("This folder contains application data and cannot be deleted as a project.".into());
+                    }
+                    if app
+                        .webview_windows()
+                        .keys()
+                        .filter_map(|label| label.strip_prefix("instant-"))
+                        .any(|ident| {
+                            store
+                                .root(ident)
+                                .is_ok_and(|source| source.starts_with(root))
+                        })
+                    {
+                        return Err(
+                            "Close the project's Instant window before deleting or restoring it."
+                                .into(),
+                        );
+                    }
+                }
+                Ok(())
+            };
+            match action {
+                "import" => {
+                    let paths = v["paths"]
+                        .as_array()
+                        .ok_or("Drop project folders or ZIPs.")?;
+                    if paths.len() > 1000 {
+                        return Err("Import up to 1,000 projects at a time.".into());
+                    }
+                    for path in paths {
+                        let path = Path::new(path.as_str().ok_or("Invalid path")?);
+                        match project_location::import(path, &parent).and_then(|root| {
+                            if path.canonicalize().ok().as_ref() == Some(&root) {
+                                store.open(&root, None)?;
+                            } else {
+                                project_history::open_created(store, &root, None)?;
+                            }
+                            Ok(root)
+                        }) {
+                            Ok(root) => {
+                                if path.canonicalize().ok().as_ref() != Some(&root) {
+                                    created.push(root);
+                                }
+                            }
+                            Err(error) => errors.push(format!("{}: {error}", path.display())),
+                        }
+                    }
+                    history.record_created(store, created.clone(), "Import Projects")?;
+                }
+                "duplicate" => {
+                    for root in project_history::roots(store, &v["ids"])? {
+                        match project_history::duplicate(store, &root, &parent) {
+                            Ok(copy) => created.push(copy),
+                            Err(error) => errors.push(format!("{}: {error}", root.display())),
+                        }
+                    }
+                    history.record_created(store, created.clone(), "Duplicate Projects")?;
+                }
+                "delete" => {
+                    let roots = project_history::roots(store, &v["ids"])?;
+                    ensure_closed(&roots)?;
+                    if let Err(error) = history.delete(store, roots, native::trash_project) {
+                        errors.push(error);
+                    }
+                }
+                "undo" | "redo" => {
+                    ensure_closed(&history.affected(action == "redo"))?;
+                    if let Err(error) =
+                        history.travel(store, action == "redo", native::trash_project)
+                    {
+                        errors.push(error);
+                    }
+                }
+                _ => return Err("Unknown project action.".into()),
+            }
+            Ok(
+                json!({"projects":store.recent()?,"history":history.status(),"created":created,"errors":errors}),
+            )
         }
         "save_project" => {
             let _guard = store.writes.lock().unwrap();
@@ -656,6 +743,7 @@ pub fn run() {
                 // The CSS background controls translucency. A native material here
                 // leaves an opaque tint behind it and defeats the opacity slider.
                 window.set_background_color(Some(tauri::utils::config::Color(0, 0, 0, 0)))?;
+                project_drop::install(&window)?;
             }
             Ok(())
         })
@@ -668,6 +756,10 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if matches!(event, tauri::WindowEvent::Destroyed) {
+                #[cfg(target_os = "macos")]
+                if window.label() == "main" {
+                    project_drop::clear();
+                }
                 let runtime = window.state::<Arc<Runtime>>();
                 close_jobs(&runtime, window.label());
             }

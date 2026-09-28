@@ -9,6 +9,7 @@
 
 | Area | Location under `desktop-app/` |
 | --- | --- |
+| Project selection, imports, duplication and undo | `src/ProjectsPage.tsx`, `src/projectSelection.ts`, `src-tauri/src/project_location.rs`, `src-tauri/src/project_history.rs` |
 | Workflows, selection, Library variants | `src/App.tsx`, `src/variants.ts` |
 | Shared Monaco models, coloring, completion | `src/editor.tsx` |
 | Source buffers, file tree, tabs and split panes | `src/SourceWorkspace.tsx`, `src/panes.ts` |
@@ -52,3 +53,5 @@
 - Extraction is literal/static, not full TeX/Typst execution: [user limits](../user-docs/limits.md).
 - TeX, `latexmkrc`, and project code are executable input; temporary copies are not an OS sandbox.
 - [Testing](testing.md), [reviewing](reviewing.md), [historical validation](history/validation-2026-09.md).
+
+- Finder drops keep WebKit HTML drag handling enabled for Source tabs and artwork. `project_drop` captures file URLs from the actual `NSDraggingInfo` pasteboard before WebKit handles the drop. The DOM drop consumes this one-use, short-lived capture after matching filenames. Do not globally enable Tauri native drop interception on macOS.

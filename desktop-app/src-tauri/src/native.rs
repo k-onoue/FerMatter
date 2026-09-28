@@ -2,6 +2,46 @@
 #![allow(unexpected_cfgs)]
 use crate::files::*;
 use std::path::PathBuf;
+
+#[cfg(target_os = "macos")]
+pub fn trash_project(path: &std::path::Path) -> Result<PathBuf> {
+    use objc::{class, msg_send, runtime::Object, sel, sel_impl};
+    use std::ffi::CStr;
+    unsafe {
+        let pool: *mut Object = msg_send![class!(NSAutoreleasePool), new];
+        let text = path.to_string_lossy();
+        let value: *mut Object = msg_send![class!(NSString), alloc];
+        let value: *mut Object =
+            msg_send![value,initWithBytes:text.as_ptr() length:text.len() encoding:4usize];
+        let url: *mut Object = msg_send![class!(NSURL), fileURLWithPath:value];
+        let _: () = msg_send![value, release];
+        let manager: *mut Object = msg_send![class!(NSFileManager), defaultManager];
+        let mut result: *mut Object = std::ptr::null_mut();
+        let mut error: *mut Object = std::ptr::null_mut();
+        let success: bool =
+            msg_send![manager,trashItemAtURL:url resultingItemURL:&mut result error:&mut error];
+        let output = if success && !result.is_null() {
+            let path: *mut Object = msg_send![result, path];
+            let bytes: *const std::os::raw::c_char = msg_send![path, UTF8String];
+            Ok(PathBuf::from(
+                CStr::from_ptr(bytes).to_string_lossy().into_owned(),
+            ))
+        } else if !error.is_null() {
+            let message: *mut Object = msg_send![error, localizedDescription];
+            let bytes: *const std::os::raw::c_char = msg_send![message, UTF8String];
+            Err(CStr::from_ptr(bytes).to_string_lossy().into_owned())
+        } else {
+            Err("Unable to move the project to Trash.".into())
+        };
+        let _: () = msg_send![pool, drain];
+        output
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn trash_project(_: &std::path::Path) -> Result<PathBuf> {
+    Err("Recoverable project deletion is currently supported on macOS.".into())
+}
 #[cfg(target_os = "macos")]
 pub fn clipboard(paths: &[PathBuf]) -> Result<()> {
     clipboard_to(paths, None)

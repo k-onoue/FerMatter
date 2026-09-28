@@ -81,6 +81,7 @@ input[type="range"] {
   accent-color: var(--accent);
   border: 0;
   background: transparent;
+  padding: 0;
 }
 pre {
   font:
@@ -203,6 +204,78 @@ small,
   padding: 24px 36px 50px;
   overflow: auto;
 }
+.project-actions,
+.project-folder-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.project-folder-row {
+  margin: 12px 24px;
+}
+.project-folder-row .folder-path {
+  flex: 1;
+}
+.folder-path {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--comment);
+  font-size: 13px;
+}
+.project-card.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.project-card {
+  cursor: default;
+  user-select: none;
+}
+.project-card:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.project-drop-overlay {
+  position: fixed;
+  inset: 50px 20px 20px;
+  z-index: 15;
+  border: 2px dashed var(--accent);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--windowBackground) 96%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  pointer-events: none;
+}
+.project-drop-overlay span {
+  max-width: 80%;
+  overflow-wrap: anywhere;
+}
+.delete-project-details {
+  padding: 10px 24px;
+}
+.delete-project-details ul {
+  padding: 0;
+  max-height: 250px;
+  overflow: auto;
+  list-style: none;
+}
+.delete-project-details li {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 14px 0;
+}
+.delete-project-details li span {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  color: var(--comment);
+}
+button.danger {
+  color: white;
+  background: #c63535;
+}
 .projects-heading {
   display: flex;
   align-items: center;
@@ -250,11 +323,14 @@ small,
 .project-card:hover {
   background: color-mix(in srgb, var(--surfaceBackground) 95%, transparent);
 }
-.project-card > .equation-image {
+.project-card .equation-image {
   height: 154px;
   margin-bottom: 10px;
   background: transparent;
   flex: none;
+}
+.project-card-content {
+  display: contents;
 }
 .project-name {
   display: flex;
@@ -276,6 +352,12 @@ small,
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+}
+.project-card-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
 }
 .project-name svg {
   flex-shrink: 0;
@@ -300,7 +382,7 @@ small,
 }
 .project-list .project-card {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) 76px 80px 18px;
+  grid-template-columns: 72px minmax(0, 1fr) 76px 80px 70px;
   grid-template-rows: 1fr 1fr;
   gap: 4px 16px;
   padding: 12px 16px;
@@ -315,7 +397,7 @@ small,
 .project-list .project-card:hover {
   background: color-mix(in srgb, var(--text) 5%, transparent);
 }
-.project-list .project-card > .equation-image {
+.project-list .project-card .equation-image {
   grid-column: 1;
   grid-row: 1 / 3;
   height: 60px;
@@ -334,7 +416,7 @@ small,
   align-self: end;
   font-size: 15px;
 }
-.project-list .project-name svg {
+.project-list .project-card-actions {
   grid-column: 5;
   grid-row: 1 / 3;
   align-self: center;

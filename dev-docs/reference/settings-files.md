@@ -8,7 +8,7 @@ Import and Export. Shortcuts can be reset; choose Default to reset the theme.
 - `keybindings.json` contains shortcut overrides. Recording or clearing a shortcut
   saves the file immediately.
 - `theme.json` contains the active theme, including both light and dark palettes.
-- `preferences.json` stores appearance, auto-save and window preferences. `projectView` is `grid` (default) or `list`; older files without it keep the grid view.
+- `preferences.json` stores appearance, auto-save and window preferences. `projectView` is `grid` (default) or `list`; older files without it keep the grid view. Optional `projectDirectory` is an absolute path; missing/empty uses Documents/Mathlidelux. **Settings → Projects** changes it without moving existing projects.
 - `instant.json` stores reusable global Instant defaults; edit through the settings of Instant opened from Projects, or the revealed JSON file. Drafts/history are separate.
 
 Edit JSON opens the built-in editor. For external edits, save the file and choose

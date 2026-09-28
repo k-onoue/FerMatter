@@ -7,7 +7,6 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import {
   ArrowLeft,
-  ArrowUpRight,
   ChevronDown,
   ChevronRight,
   ClipboardCopy,
@@ -16,7 +15,6 @@ import {
   FileText,
   FolderOpen,
   Grid2X2,
-  List,
   LoaderCircle,
   PanelLeftClose,
   Pin,
@@ -52,7 +50,7 @@ import type {
   SourceTarget,
 } from "./types";
 import { targetAtSource, targetsAtLine } from "./navigation";
-import icon from "../src-tauri/icons/icon.png";
+import { ProjectsPage } from "./ProjectsPage";
 const initialPreferences: Preferences = {
   appearance: "dark",
   autoSave: true,
@@ -93,11 +91,8 @@ export default function App() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [windowZoom, setWindowZoom] = useState(1);
-  const [projectsZoom, setProjectsZoom] = useState(1);
+  const [defaultProjectDirectory, setDefaultProjectDirectory] = useState("");
   const [canvasZoom, setCanvasZoom] = useState(1);
-  const projectsScroll = useControlScroll((steps) =>
-    setProjectsZoom((zoom) => stepZoom(zoom, steps)),
-  );
   const canvasScroll = useControlScroll((steps) =>
     setCanvasZoom((zoom) => stepZoom(zoom, steps)),
   );
@@ -166,6 +161,7 @@ export default function App() {
   useEffect(() => {
     void rpc<{
       projects: Project[];
+      defaultProjectDirectory: string;
       settings: Preferences;
       themes: Theme[];
       theme: Theme | null;
@@ -174,6 +170,7 @@ export default function App() {
     }>("startup")
       .then((data) => {
         setProjects(data.projects);
+        setDefaultProjectDirectory(data.defaultProjectDirectory);
         setSettings({ ...initialPreferences, ...data.settings });
         if (data.settings.pinned === true) {
           void getCurrentWindow()
@@ -752,6 +749,7 @@ export default function App() {
         event.key.toLowerCase() === "c" &&
         !typing &&
         mode === "library" &&
+        project &&
         selected.size > 0
       ) {
         event.preventDefault();
@@ -764,7 +762,7 @@ export default function App() {
         setShowSettings(true);
         return;
       }
-      if (!command) return;
+      if (!command || (!project && command === "duplicate")) return;
       if (
         typing &&
         [
@@ -885,150 +883,23 @@ export default function App() {
           <span>Opening…</span>
         </div>
       ) : !project ? (
-        <main className="projects-page" ref={projectsScroll}>
-          <div className="brand">
-            <img src={icon} />
-            <strong>Mathlidelux</strong>
-            <span className="spacer" />
-            <button
-              title="Appearance"
-              onClick={() =>
-                void updateSettings({
-                  ...settings,
-                  appearance: dark ? "light" : "dark",
-                })
-              }
-            >
-              <SunMoon size={19} />
-            </button>
-            <button title="Settings" onClick={() => setShowSettings(true)}>
-              <Settings2 size={19} />
-            </button>
-          </div>
-          <header className="projects-heading">
-            <h1>Projects</h1>
-            <button
-              className="soft"
-              title="New Instant (⇧⌘K)"
-              onClick={() => void execute("instant")}
-            >
-              <Zap size={17} />
-              Instant
-            </button>
-            <span className="spacer" />
-            <button
-              className="zoom-level"
-              title="Reset project zoom (Ctrl + scroll to zoom)"
-              aria-label={`Project zoom ${Math.round(projectsZoom * 100)}%. Reset to 100%`}
-              onClick={() => setProjectsZoom(1)}
-            >
-              {Math.round(projectsZoom * 100)}%
-            </button>
-            <div
-              className="segmented project-view-switch"
-              role="group"
-              aria-label="Project view"
-            >
-              <button
-                title="Grid view"
-                aria-label="Grid view"
-                aria-pressed={settings.projectView === "grid"}
-                className={settings.projectView === "grid" ? "active" : ""}
-                onClick={() =>
-                  void updateSettings({ ...settings, projectView: "grid" })
-                }
-              >
-                <Grid2X2 size={17} />
-              </button>
-              <button
-                title="List view"
-                aria-label="List view"
-                aria-pressed={settings.projectView === "list"}
-                className={settings.projectView === "list" ? "active" : ""}
-                onClick={() =>
-                  void updateSettings({ ...settings, projectView: "list" })
-                }
-              >
-                <List size={17} />
-              </button>
-            </div>
-            <div className="search">
-              <Search size={16} />
-              <input
-                placeholder="Search projects"
-                aria-label="Search projects"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <button className="soft" onClick={() => void openProject()}>
-              <FolderOpen size={17} />
-              Open Project
-            </button>
-            <button
-              title="Open file or ZIP"
-              onClick={(e) =>
-                setContext({ x: e.clientX, y: e.clientY, open: true })
-              }
-            >
-              <ChevronDown size={15} />
-            </button>
-            <button className="primary" onClick={() => setNewProject(true)}>
-              <Plus size={17} />
-              New Project
-            </button>
-          </header>
-          <div
-            className={`project-grid ${settings.projectView === "list" ? "project-list" : ""}`}
-            style={{ zoom: projectsZoom }}
-          >
-            {projects
-              .filter((p) =>
-                projectName(p.root)
-                  .toLowerCase()
-                  .includes(search.toLowerCase()),
-              )
-              .map((p) => (
-                <button
-                  className="project-card"
-                  key={p.id}
-                  aria-label={`Open ${projectName(p.root)}`}
-                  onClick={() => void openRecent(p)}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    setContext({ x: e.clientX, y: e.clientY, project: p });
-                  }}
-                >
-                  <ImagePreview
-                    card={p.cards?.find((c) => c.status === "ready")}
-                  />
-                  <div className="project-name">
-                    <h2>{projectName(p.root)}</h2>
-                    <ArrowUpRight size={18} />
-                  </div>
-                  <p className="project-location" title={p.root}>
-                    {p.root}
-                  </p>
-                  <p className="project-details">
-                    <span className="project-format">
-                      {p.format === "typst" ? "Typst" : "LaTeX"}
-                    </span>
-                    <span className="project-detail-separator"> · </span>
-                    <span className="project-count">
-                      {p.cards?.length || 0} items
-                    </span>
-                  </p>
-                </button>
-              ))}
-            <button
-              className="new-project-card"
-              onClick={() => setNewProject(true)}
-            >
-              <Plus size={30} />
-              New Project
-            </button>
-          </div>
-        </main>
+        <ProjectsPage
+          projects={projects}
+          onProjects={setProjects}
+          settings={settings}
+          onSettings={(s) => void updateSettings(s)}
+          onOpen={(p) => void openRecent(p)}
+          onOpenDialog={(type) => void openProject(type)}
+          onNew={() => setNewProject(true)}
+          onSettingsDialog={() => setShowSettings(true)}
+          onInstant={() => void execute("instant")}
+          onError={setError}
+          onNotice={setNotice}
+          defaultDirectory={
+            settings.projectDirectory || defaultProjectDirectory
+          }
+          blocked={showSettings || newProject || !!prompt}
+        />
       ) : (
         <div className="workspace">
           <aside className="sidebar">
@@ -1632,6 +1503,7 @@ export default function App() {
       {showSettings && (
         <Settings
           settings={settings}
+          defaultProjectDirectory={defaultProjectDirectory}
           themes={themes}
           theme={theme}
           keys={keys}
@@ -1785,6 +1657,9 @@ export default function App() {
       {newProject && (
         <NewProjectDialog
           configuration={templates}
+          defaultDirectory={
+            settings.projectDirectory || defaultProjectDirectory
+          }
           onConfiguration={setTemplates}
           onCreated={(p) => {
             setNewProject(false);
