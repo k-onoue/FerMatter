@@ -60,8 +60,27 @@
 - Session files are app-managed. Keep them for backup/recovery; use the UI to edit drafts and history.
 - Each scope has its own `Instant/Cache/` and `Instant/Exports/`; these contain generated artwork.
 
+## Edit an exported SVG
+
+- Export or copy **SVG** from Library, Source/PDF previews, or Instant to include editable source and output settings.
+- Choose **Open SVG** or **Edit from Clipboard** in Instant or the Mathlidelux menu-bar menu. Dropping an SVG into the app also restores it.
+- In Finder, use **Open With → Mathlidelux**, or drop the SVG onto the Dock icon.
+- A uniquely matching registered project opens its own Instant. Missing or ambiguous projects open the standalone Instant.
+- The current draft is kept in History. Imported source waits for **Render** (`⌘Enter`); opening a file does not execute its code.
+- SVG source includes the equation and template/preamble. Review it before sharing; the complete manuscript and app storage paths are not embedded.
+- Project-specific Typst definitions, imported files, packages and fonts may still require the original project. Standalone fallback cannot recreate missing dependencies.
+- Other applications may strip SVG metadata when pasting or copying it. Keep the original SVG or use Instant History if the copied artwork has no editable source. SVGs exported by older versions have no restoration metadata.
+
+## Open Instant while another app is active
+
+- Keep Mathlidelux running and use its menu-bar menu.
+- **Instant from Anywhere**: `⌃⌥⌘N`. **Edit SVG from Clipboard**: `⌃⌥⌘V`.
+- Change or disable either shortcut in **Settings → Shortcuts** or `keybindings.json`. If another app owns a shortcut, choose a different binding.
+- Closing the main window keeps the app available. **Quit Mathlidelux** (`⌘Q`) ends the app after saving recoverable work.
+- Login autostart is not enabled automatically.
+
 ## Current scope
 
 - One global window and one local window per project, separate from the project workspace.
-- Source and history are local to Mathlidelux; exported images do not yet include editable source metadata.
-- LaTeXiT library import, LinkBack, global shortcuts, and macOS Services are not included.
+- Editable restoration metadata is included in SVG only. PDF, PNG and JPEG remain ordinary image exports.
+- LaTeXiT library import, LinkBack, and macOS Services are not included. Native background entry points are currently tested on macOS only.

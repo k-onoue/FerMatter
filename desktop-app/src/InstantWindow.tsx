@@ -1,12 +1,15 @@
 import { registerWindowFlush } from "./persistence";
 import { installWindowPersistence } from "./windowPersistence";
 import { useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { dropSVG, openSVG } from "./svgImport";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { save } from "@tauri-apps/plugin-dialog";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import {
   ClipboardCopy,
+  ClipboardPaste,
   Download,
   History,
   LoaderCircle,
@@ -90,6 +93,10 @@ export default function InstantWindow() {
   const saveError = useRef(""),
     sequence = useRef(0);
   const replacement = useRef(0);
+  const importFlight = useRef<Promise<void> | null>(null);
+  const drainImports = useRef<() => Promise<void>>(async () => {
+    throw new Error("Wait for Instant to finish loading before closing it.");
+  });
   draftRef.current = draft;
   const report = (e: unknown) => {
     if (String(e) !== "Cancelled") setError(String(e));
@@ -119,6 +126,7 @@ export default function InstantWindow() {
     }
   }
   const refresh = () => {
+    if (draftRef.current?.requiresRender) patch({ requiresRender: false });
     void refreshContext().then(() => setRetry((value) => value + 1));
   };
   const newEquation = () => {
@@ -202,10 +210,61 @@ export default function InstantWindow() {
     const before = draftRef.current;
     const ticket = ++replacement.current;
     if (before?.source.trim()) await remember(before);
-    if (replacement.current !== ticket || draftRef.current !== before) return;
+    if (replacement.current !== ticket || draftRef.current !== before)
+      return false;
     change(value);
     setCompileError("");
+    return true;
   }
+
+  const replaceRef = useRef(replace);
+  replaceRef.current = replace;
+  useEffect(() => {
+    if (!draft) return;
+    let stopped = false;
+    const consume = (): Promise<void> => {
+      if (importFlight.current) return importFlight.current;
+      const operation = (async () => {
+        if (stopped)
+          throw new Error("Instant is closing. Reopen the SVG to restore it.");
+        let item = await rpc<{ token: string; draft: InstantDraft } | null>(
+          "instant_import_pending",
+        );
+        while (item && !stopped) {
+          if (!(await replaceRef.current(item.draft)))
+            throw new Error(
+              "SVG is waiting. Finish typing, then refocus Instant to restore it.",
+            );
+          await queue.current;
+          if (saveError.current) throw new Error(saveError.current);
+          setRendered(null);
+          setNotice("Source restored. Press Render to preview.");
+          item = await rpc("instant_import_pending", { token: item.token });
+        }
+      })();
+      importFlight.current = operation;
+      void operation
+        .finally(() => {
+          if (importFlight.current === operation) importFlight.current = null;
+        })
+        .catch(() => {});
+      return operation;
+    };
+    drainImports.current = consume;
+    const event = listen(
+      "instant-import-pending",
+      () => void consume().catch(report),
+    );
+    const focus = getCurrentWindow().onFocusChanged(({ payload }) => {
+      if (payload) void consume().catch(report);
+    });
+    void event.then(() => consume()).catch(report);
+    return () => {
+      stopped = true;
+      void event.then((stop) => stop());
+      void focus.then((stop) => stop());
+    };
+  }, [!!draft]);
 
   useEffect(() => {
     let gone = false;
@@ -276,6 +335,7 @@ export default function InstantWindow() {
 
   useEffect(() => {
     const unregister = registerWindowFlush("instant", async () => {
+      await drainImports.current();
       if (draftRef.current) persist(draftRef.current);
       await Promise.all([queue.current, configurationDocument.flush()]);
       if (saveError.current) throw new Error(saveError.current);
@@ -316,7 +376,7 @@ export default function InstantWindow() {
   useEffect(() => {
     const ticket = ++sequence.current;
     setCompileError("");
-    if (!draft?.source.trim()) {
+    if (!draft?.source.trim() || draft.requiresRender) {
       setRendered(null);
       setBusy(false);
       return;
@@ -456,6 +516,7 @@ export default function InstantWindow() {
   return (
     <div
       className="app instant-app"
+      onDropCapture={(event) => dropSVG(event, report)}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => event.preventDefault()}
     >
@@ -475,6 +536,20 @@ export default function InstantWindow() {
         </span>
       </div>
       <header className="instant-toolbar">
+        <button
+          aria-label="Open SVG"
+          title="Open SVG"
+          onClick={() => void openSVG().catch(report)}
+        >
+          <FolderOpen size={18} />
+        </button>
+        <button
+          aria-label="Edit from Clipboard"
+          title="Edit from Clipboard"
+          onClick={() => void rpc("instant_clipboard").catch(report)}
+        >
+          <ClipboardPaste size={18} />
+        </button>
         <button
           aria-label="New equation"
           title="New equation (⌘N)"
@@ -767,7 +842,9 @@ export default function InstantWindow() {
                     <span className="instant-empty">Preview</span>
                   )}
                   <div className="instant-status" role="status">
-                    {busy ? (
+                    {draft.requiresRender ? (
+                      <button onClick={refresh}>Render</button>
+                    ) : busy ? (
                       <>
                         <LoaderCircle size={14} className="spin" />
                         Rendering…

@@ -2,6 +2,8 @@ import { builtinTemplates, type ProjectTemplate } from "./templates";
 import type { Card } from "./types";
 
 export interface InstantDraft {
+  requiresRender?: boolean;
+  restorationProject?: { uuid: string; name?: string } | null;
   source: string;
   template: ProjectTemplate;
   kind: Card["kind"];

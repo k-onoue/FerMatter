@@ -321,11 +321,13 @@ pub fn duplicate(store: &Storage, source: &Path, parent: &Path) -> Result<PathBu
             .to_string_lossy()
     );
     let target = project_location::copy_folder(source, parent, &name)?;
+    crate::roundtrip::reset_identity(&target)?;
     state.write(store, &target)?;
     Ok(target)
 }
 
 pub fn copy_state(store: &Storage, source: &Path, target: &Path) -> Result<()> {
+    crate::roundtrip::inherit_identity(source, target)?;
     CopyState::read(store, source)?.write(store, target)
 }
 struct CopyState {

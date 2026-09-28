@@ -17,6 +17,7 @@
 ## Reference
 
 - [Storage and compatibility](reference/storage.md).
+- [SVG restoration and resident Instant](reference/svg-recipes.md).
 - [Settings-file schemas](reference/settings-files.md).
 - [Update contract](reference/updates.md).
 - [Prototype packaging](reference/packaging.md).

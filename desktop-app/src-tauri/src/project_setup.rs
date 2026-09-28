@@ -99,7 +99,7 @@ fn same_sources(a: &Path, b: &Path) -> bool {
             }
             let mut paths = entries(root)?
                 .into_iter()
-                .filter(|(_, _, dir)| !dir)
+                .filter(|(name, _, dir)| !dir && name != ".mathlidelux-project.json")
                 .map(|(name, _, _)| name)
                 .collect::<Vec<_>>();
             paths.sort();

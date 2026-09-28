@@ -249,6 +249,7 @@ pub fn fingerprint_checked(root: &Path, check: &dyn Fn() -> Result<()>) -> Resul
     let mut size = 0;
     for (name, path, dir) in entries_checked(root, check)? {
         if dir
+            || name == ".mathlidelux-project.json"
             || matches!(
                 path.extension().and_then(|s| s.to_str()),
                 Some("aux" | "log" | "out" | "toc" | "fls" | "fdb_latexmk" | "synctex")

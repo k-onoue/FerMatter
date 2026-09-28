@@ -52,7 +52,19 @@
       "../resources/themes/": "themes/",
       "../public/vendor/JAVASCRIPT-LICENSES.txt": "licenses/JAVASCRIPT-LICENSES.txt",
       "../public/vendor/RUST-LICENSES.txt": "licenses/RUST-LICENSES.txt"
-    }
+    },
+    "fileAssociations": [
+      {
+        "ext": [
+          "svg"
+        ],
+        "name": "SVG image",
+        "description": "Editable Mathlidelux SVG",
+        "mimeType": "image/svg+xml",
+        "role": "Editor",
+        "rank": "Alternate"
+      }
+    ]
   },
   "mainBinaryName": "Mathlidelux"
 }

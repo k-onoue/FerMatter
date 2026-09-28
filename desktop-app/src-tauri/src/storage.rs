@@ -111,6 +111,9 @@ impl Storage {
             .or_else(|| candidates.first().cloned())
             .ok_or("No LaTeX or Typst entry file found.")?;
         safe(&root, &main)?;
+        // Portable identity is additive; read-only projects remain usable. A
+        // malformed identity is kept and reported if source-bearing SVG is exported.
+        let _ = crate::roundtrip::project_uuid(&root, true);
         p["id"] = json!(ident);
         p["root"] = json!(root);
         p.as_object_mut()

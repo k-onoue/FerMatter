@@ -24,7 +24,10 @@ pub fn image_file(card: &Value, format: &str, point_size: f64, folder: &Path) ->
     }
     let base = folder.join(format!(
         "{}-{}",
-        id(&format!("export-2|{svg}|{scale}|{format}")),
+        id(&format!(
+            "export-3|{svg}|{scale}|{format}|{}",
+            card["restoreMetadata"]
+        )),
         format
     ));
     fs::create_dir_all(folder).map_err(err)?;
@@ -55,7 +58,12 @@ pub fn image_file(card: &Value, format: &str, point_size: f64, folder: &Path) ->
     });
     let scaled = format!("{}{}", header, &svg[root_end..]);
     if format == "svg" {
-        atomic(&dest, scaled.as_bytes())?;
+        let svg = if card["restoreMetadata"].is_null() {
+            scaled
+        } else {
+            crate::roundtrip::embed(&scaled, &card["restoreMetadata"])?
+        };
+        atomic(&dest, svg.as_bytes())?;
     } else {
         let options = resvg::usvg::Options::default();
         let tree = resvg::usvg::Tree::from_data(scaled.as_bytes(), &options).map_err(err)?;
