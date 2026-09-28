@@ -101,6 +101,9 @@ beforeEach(() => {
     outline: [],
     sections: [],
     sectionAssignments: {},
+    customOrder: [],
+    exportFontSize: 0,
+    exportFormat: "svg",
     candidates: ["main.typ"],
   } as Project;
   saved = [];
