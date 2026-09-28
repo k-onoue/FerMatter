@@ -3,6 +3,13 @@
 - Start with [paper to slides](paper-to-slides.md): choose an equation, copy it, and paste it into your presentation.
 - Development prototype for Apple Silicon Mac; [requirements](requirements.md).
 
+## First launch
+
+- Choose a project folder, then **Continue**. This step is required once, including when upgrading from an older prototype.
+- New projects, ZIP imports, dropped folders, and duplicates use this location. Change it later in **Settings → Projects**.
+- Four editable demos are added under **Demos**: LaTeX, Typst, TikZ, and CeTZ. An existing Demos folder is kept; a numbered folder is used instead.
+- Recognized, unchanged sample sources move to their new copies in Projects, retaining Library edits, Source drafts, and Instant history. Original files and modified projects stay intact.
+
 ## Make your first slide
 
 1. [Bring an equation from your paper](paper-to-slides.md).
@@ -23,6 +30,6 @@
 
 ## Try a sample
 
-- Download [LaTeX](../docs/downloads/demo-paper.zip), [Typst](../docs/downloads/demo-typst.zip), [TikZ](../docs/downloads/demo-tikz.zip), or [CeTZ](../docs/downloads/demo-cetz.zip).
-- Choose **Open file or ZIP** and select the ZIP; no template selection needed.
+- Open one of the demos added during setup. Compiling requires the [tools for its format](requirements.md).
+- Additional copies: download [LaTeX](../docs/downloads/demo-paper.zip), [Typst](../docs/downloads/demo-typst.zip), [TikZ](../docs/downloads/demo-tikz.zip), or [CeTZ](../docs/downloads/demo-cetz.zip), then choose **Open file or ZIP**.
 - All samples use synthetic material.

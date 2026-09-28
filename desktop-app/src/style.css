@@ -162,6 +162,44 @@ small,
 .primary:hover {
   background: color-mix(in srgb, var(--accent) 85%, white);
 }
+.project-setup {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+}
+.project-setup section {
+  width: min(100%, 540px);
+  padding: 36px;
+  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--surfaceBackground) 72%, transparent);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+}
+.setup-icon {
+  width: 64px;
+  height: 64px;
+}
+.project-setup p {
+  line-height: 1.6;
+}
+.setup-demos {
+  color: var(--comment);
+}
+.setup-path {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.setup-error {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
 .soft {
   background: color-mix(in srgb, var(--text) 6%, transparent);
   color: var(--accent);

@@ -13,7 +13,8 @@
 
 ## Project location
 
-- **Settings → Projects → Default project folder** sets the location for new projects, dropped folders/ZIPs, and duplicates. The initial default is `~/Documents/Mathlidelux`.
+- First launch requires choosing a project folder; `~/Documents/Mathlidelux` is the suggested location. All four demos are placed under its **Demos** subfolder.
+- **Settings → Projects → Default project folder** changes the location for future new projects, dropped folders/ZIPs, and duplicates.
 - **New Project → Location → Choose…** overrides the folder for this project only; **Default** returns to the saved default.
 - Existing projects retain their saved locations; opening a folder uses it in place.
 - **Reveal in Finder** on a project opens its source folder.

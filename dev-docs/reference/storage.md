@@ -20,6 +20,7 @@
 | `SourceDrafts/` | Recoverable source buffers |
 | `MigratedSwiftDrafts/` | Original Swift draft backups and import markers |
 | `templates.json` | User templates |
+| `Setup.json` | Required first-launch folder selection, demo destinations, and resumable setup journal |
 | `Instant/session.json` | Project-free draft and deduplicated source/template history |
 | `Instant/Cache/`, `Instant/Exports/` | Instant render artifacts and prepared drag/copy files |
 | `Projects/<project-id>/Instant/` | Per-project Instant draft/history and artifacts; independent of global Instant |
@@ -32,6 +33,15 @@
 - `ProjectHistory.json` preserves undo/redo groups across launches. Deletion uses Finder Trash and records resulting paths; source folder identity checks and no-replace moves protect external replacements. `ProjectHistoryData/` retains metadata, variants, Source drafts and Instant sessions for restoration, including when a new project reuses a deleted project’s path.
 - Duplicates retain independent project JSON and saved drafts/Instant history; rendered artifacts can be reused from the retained original metadata cache.
 - Existing legacy `Sources/` and `Imports/` folders remain valid and are not moved/deleted.
+
+## First-launch project folder
+
+- The app requires a native folder-picker choice before Projects or Instant can open; this runs on first launch after DMG/PKG installation, including older prototype upgrades.
+- Save the chosen folder in `preferences.json.projectDirectory`; stage the four publication-checked demo ZIPs under it and publish a unique `Demos` directory without overwriting existing files.
+- `Setup.json` journals publication before metadata/settings writes. Resume interrupted setup using the ownership token in `Demos/.mathlidelux-demos.json`; commit completion last. Corrupt setup records are kept and reported.
+- Existing projects matching a built-in demo name and source contents receive independent copied metadata, variants, drafts, and Instant sessions. Changed sources and projects with symlinks are not migrated.
+- Mark matching originals with `demoRelocatedTo` to show the new copies in Projects; preserve original source files, metadata, and cached artifacts. Explicitly opening the original restores it to the list.
+- Completed setup never recreates deleted demos or repeats the folder picker. Changing the default folder later does not relocate existing projects.
 
 ## Import from Swift and previews
 
