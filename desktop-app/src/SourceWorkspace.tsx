@@ -119,6 +119,19 @@ export function SourceWorkspace({
   const [activePane, setActivePane] = useState(first.current.id);
   const [expanded, setExpanded] = useState(new Set<string>());
   const [treeMode, setTreeMode] = useState<"files" | "outline">("files");
+  const [compactNavigation, setCompactNavigation] = useState(false);
+  const navigationElement = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = navigationElement.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.height > 0)
+        setCompactNavigation(entry.contentRect.height < 360);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
   const [query, setQuery] = useState("");
   const [menu, setMenu] = useState<{
     x: number;
@@ -585,106 +598,128 @@ export function SourceWorkspace({
     });
   })();
   const sidebar = (
-    <>
-      <div className="tree-tools">
+    <div
+      ref={navigationElement}
+      className={`source-navigation tree-mode-${treeMode} ${compactNavigation ? "compact" : ""}`}
+    >
+      <div
+        className="tree-tools compact-tree-tabs"
+        role="tablist"
+        aria-label="Source navigation"
+      >
         <button
+          role="tab"
+          aria-selected={treeMode === "files"}
           className={treeMode === "files" ? "active" : ""}
           onClick={() => setTreeMode("files")}
         >
           Files
         </button>
         <button
+          role="tab"
+          aria-selected={treeMode === "outline"}
           className={treeMode === "outline" ? "active" : ""}
           onClick={() => setTreeMode("outline")}
         >
           Outline
         </button>
-        <span className="spacer" />
-        <button
-          title="New file"
-          onClick={() => void operation("create_file", "", true)}
-        >
-          <Plus size={15} />
-        </button>
       </div>
-      {treeMode === "files" ? (
-        <>
-          <div className="tree-search">
-            <Search size={14} />
-            <input
-              aria-label="Filter files"
-              placeholder="Filter files"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-          <div
-            className="file-tree"
-            onContextMenu={(e) => {
-              if (e.target === e.currentTarget) {
-                e.preventDefault();
-                setMenu({
-                  x: e.clientX,
-                  y: e.clientY,
-                  path: "",
-                  directory: true,
-                });
-              }
-            }}
+      <section
+        className="source-navigation-panel source-files"
+        aria-label="Files"
+      >
+        <header className="tree-panel-heading">
+          <strong>Files</strong>
+          <span className="spacer" />
+          <button
+            title="New file"
+            onClick={() => void operation("create_file", "", true)}
           >
-            {tree
-              .filter((e) =>
-                query
-                  ? e.path.toLowerCase().includes(query.toLowerCase())
-                  : e.path
-                      .split("/")
-                      .slice(0, -1)
-                      .every((_, i, a) =>
-                        expanded.has(a.slice(0, i + 1).join("/")),
-                      ),
-              )
-              .map((entry) => (
-                <button
-                  key={entry.path}
-                  className={`tree-row ${currentPath === entry.path ? "selected" : ""}`}
-                  style={{
-                    paddingLeft: 12 + entry.path.split("/").length * 12,
-                  }}
-                  title={entry.path}
-                  onClick={() => {
-                    if (entry.directory)
-                      setExpanded((old) => {
-                        const n = new Set(old);
-                        n.has(entry.path)
-                          ? n.delete(entry.path)
-                          : n.add(entry.path);
-                        return n;
-                      });
-                    else void open(entry.path);
-                  }}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    setMenu({ x: e.clientX, y: e.clientY, ...entry });
-                  }}
-                >
-                  {entry.directory ? (
-                    expanded.has(entry.path) ? (
-                      <ChevronDown size={13} />
-                    ) : (
-                      <ChevronRight size={13} />
-                    )
+            <Plus size={15} />
+          </button>
+        </header>
+        <div className="tree-search">
+          <Search size={14} />
+          <input
+            aria-label="Filter files"
+            placeholder="Filter files"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        <div
+          className="file-tree"
+          onContextMenu={(e) => {
+            if (e.target === e.currentTarget) {
+              e.preventDefault();
+              setMenu({
+                x: e.clientX,
+                y: e.clientY,
+                path: "",
+                directory: true,
+              });
+            }
+          }}
+        >
+          {tree
+            .filter((e) =>
+              query
+                ? e.path.toLowerCase().includes(query.toLowerCase())
+                : e.path
+                    .split("/")
+                    .slice(0, -1)
+                    .every((_, i, a) =>
+                      expanded.has(a.slice(0, i + 1).join("/")),
+                    ),
+            )
+            .map((entry) => (
+              <button
+                key={entry.path}
+                className={`tree-row ${currentPath === entry.path ? "selected" : ""}`}
+                style={{
+                  paddingLeft: 12 + entry.path.split("/").length * 12,
+                }}
+                title={entry.path}
+                onClick={() => {
+                  if (entry.directory)
+                    setExpanded((old) => {
+                      const n = new Set(old);
+                      n.has(entry.path)
+                        ? n.delete(entry.path)
+                        : n.add(entry.path);
+                      return n;
+                    });
+                  else void open(entry.path);
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setMenu({ x: e.clientX, y: e.clientY, ...entry });
+                }}
+              >
+                {entry.directory ? (
+                  expanded.has(entry.path) ? (
+                    <ChevronDown size={13} />
                   ) : (
-                    <File size={13} />
-                  )}
-                  <span>{entry.path.split("/").at(-1)}</span>
-                  {buffers[entry.path]?.dirty && (
-                    <span className="dirty-dot">●</span>
-                  )}
-                </button>
-              ))}
-          </div>
-        </>
-      ) : (
+                    <ChevronRight size={13} />
+                  )
+                ) : (
+                  <File size={13} />
+                )}
+                <span>{entry.path.split("/").at(-1)}</span>
+                {buffers[entry.path]?.dirty && (
+                  <span className="dirty-dot">●</span>
+                )}
+              </button>
+            ))}
+        </div>
+      </section>
+      <section
+        className="source-navigation-panel source-outline"
+        aria-label="Outline"
+      >
+        <header className="tree-panel-heading">
+          <strong>Outline</strong>
+        </header>
         <div className="file-tree">
           {headings.map((h) => (
             <button
@@ -704,8 +739,8 @@ export function SourceWorkspace({
           ))}
           {!headings.length && <div className="muted padded">No headings</div>}
         </div>
-      )}
-    </>
+      </section>
+    </div>
   );
   const host = document.getElementById("source-sidebar");
   return (
