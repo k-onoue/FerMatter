@@ -72,13 +72,18 @@
 
 ## Cache reclamation
 
-- At startup, reclaim only recognized render/export files and UUID document-snapshot directories inside current application storage; never traverse cache symlinks.
-- Keep saved project artifact references, the last copied image paths recorded in `ClipboardArtifacts.json`, and artifacts younger than 24 hours.
-- Remove other artifacts older than 30 days; above a 2 GiB target, remove the oldest eligible artifacts first. Protected/recent data can exceed the target.
-- `CacheMaintenance.json` records reclaimed/retained bytes and whether protected data exceeds the target. Invalid saved metadata cancels cleanup rather than guessing its references.
-- Drafts, variants/project JSON, SourceDrafts, Instant sessions/history, project undo data, original project folders and legacy storage are never eviction targets.
-- No live-session eviction: visible PDFs and ongoing drags remain untouched. Full live leases and a hard per-session quota remain tracked in [issue #39](https://github.com/k-onoue/mathlidelux/issues/39).
-- Regenerate unreferenced previews from source/history when requested after cleanup.
+- Reclaim only recognized render/export files and UUID document snapshots inside current application storage; never follow cache symlinks.
+- Published cache budget: **2 GiB** across projects and Instant. Stage images privately and admit completed images/documents before exposing them. If protected data fills the budget, reject new output with a recoverable error; keep saved work and existing output files.
+- Existing installations may already exceed the budget with protected files. Preserve them and refuse growth until enough eligible data can be reclaimed.
+- Protect active requests, frontend-owned preview state, visible PDFs, native drags through their completion callback, and the last successful image clipboard. Closing a window releases its leases; the clipboard survives app restarts. Backend results have only a five-minute handoff lease and cannot replace a newer request’s lease. Closing PDF discards its cached document state; reopening rebuilds it.
+- Protect artifact references in `project.json`, `.last-valid-project.json`, and project Undo metadata backups. Invalid metadata cancels cleanup rather than guessing its references.
+- Clipboard mutation and reference publication are serialized; persist conservative old/new references before changing the system clipboard. Failed copies preserve the previous clipboard references.
+- Start a **five-minute grace** when an artifact is used or released. Remove other artifacts older than 30 days; under budget pressure, remove oldest eligible artifacts first. Idle maintenance runs once a minute and during new output admission.
+- Startup uses a **24-hour grace** and also reclaims abandoned UUID document directories and `.artifact-*` publication staging files.
+- `CacheMaintenance.json` records reclaimed/retained bytes. SourceDrafts, variants/project JSON, Instant sessions/history, project Undo data, original project folders and legacy storage are never eviction targets.
+- Unreferenced image previews regenerate from source/history after reclamation. A live document retains its matching source/navigation snapshot until released.
+- Compiler work in progress is separate from published cache admission: at most two jobs, source snapshots up to 1 GiB each (Typst document work retains a second navigation copy), generated images/PDFs up to 100 MiB. External compilers are not an OS resource sandbox; interrupted working directories are reclaimed on a later startup.
+- See [tests](../testing.md) and [issue #39](https://github.com/k-onoue/mathlidelux/issues/39).
 
 ## Closing and Source moves
 

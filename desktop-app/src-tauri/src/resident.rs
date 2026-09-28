@@ -292,27 +292,6 @@ pub fn hotkey(
     });
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn shortcut_overrides_disable_and_legacy_conflicts_match_editor_settings() {
-        let mut value = json!({"schemaVersion":1,"kind":"mathlidelux.keybindings","bindings":{}});
-        assert_eq!(shortcuts(&value).unwrap().len(), 2);
-        value["bindings"]["globalInstant"] =
-            json!({"key":"","command":true,"control":true,"option":true,"shift":false});
-        assert_eq!(shortcuts(&value).unwrap().len(), 1);
-        value["bindings"]
-            .as_object_mut()
-            .unwrap()
-            .remove("globalInstant");
-        value["bindings"]["open"] =
-            json!({"key":"n","command":true,"control":true,"option":true,"shift":false});
-        let keys = shortcuts(&value).unwrap();
-        assert_eq!(keys.len(), 1);
-        assert_eq!(keys[0].1, "globalInstantClipboard");
-    }
-}
 pub fn install(app: &tauri::AppHandle) -> tauri::Result<()> {
     use tauri::{
         menu::{Menu, MenuItem, PredefinedMenuItem},
@@ -373,4 +352,26 @@ pub fn install(app: &tauri::AppHandle) -> tauri::Result<()> {
         })
         .build(app)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn shortcut_overrides_disable_and_legacy_conflicts_match_editor_settings() {
+        let mut value = json!({"schemaVersion":1,"kind":"mathlidelux.keybindings","bindings":{}});
+        assert_eq!(shortcuts(&value).unwrap().len(), 2);
+        value["bindings"]["globalInstant"] =
+            json!({"key":"","command":true,"control":true,"option":true,"shift":false});
+        assert_eq!(shortcuts(&value).unwrap().len(), 1);
+        value["bindings"]
+            .as_object_mut()
+            .unwrap()
+            .remove("globalInstant");
+        value["bindings"]["open"] =
+            json!({"key":"n","command":true,"control":true,"option":true,"shift":false});
+        let keys = shortcuts(&value).unwrap();
+        assert_eq!(keys.len(), 1);
+        assert_eq!(keys[0].1, "globalInstantClipboard");
+    }
 }

@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Bound published image/PDF caches with active-view, drag and clipboard leases; reclaim retired snapshots without deleting saved work.
+
 ### Added
 
 - Fresh-input release verification, recorded dependency audits and an explicit signed/notarized packaging path with validation manifests.

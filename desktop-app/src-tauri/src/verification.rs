@@ -7,6 +7,7 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
     // A retained run directory gives inspection artifacts without ever reusing an
     // older fixture or render cache. Failures retain their workspace as evidence.
     let output = fresh_workspace(&report_folder)?;
+    let _cache = crate::cache::Cache::new(&output);
     let expected: Value =
         serde_json::from_str(include_str!("../../tests/fixtures/extraction.json")).map_err(err)?;
     let mut results = vec![];
@@ -70,6 +71,31 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
                     .collect::<Vec<_>>()
                     .join("\n")
             ));
+        }
+        // Reclaimed synthetic images must be regenerable, including when the
+        // source card still carries its old cached paths.
+        if name == "demo-typst" {
+            let card = cards[0].clone();
+            for key in ["svgPath", "pngPath", "pdfPath"] {
+                fs::remove_file(string(&card, key)).map_err(err)?;
+            }
+            let mut regenerated = Value::Null;
+            compiler::render(&root, main, "project", &[card], &cache, &c, |event| {
+                regenerated = event
+            })?;
+            if regenerated["status"] != "ready" {
+                return Err(format!("Cache regeneration failed: {regenerated}"));
+            }
+            for key in ["svgPath", "pngPath", "pdfPath"] {
+                if regular_file(Path::new(string(&regenerated, key)))?
+                    .metadata()
+                    .map_err(err)?
+                    .len()
+                    == 0
+                {
+                    return Err("Regenerated artifact is empty".into());
+                }
+            }
         }
         let document = compiler::document(
             &root,

@@ -310,6 +310,49 @@ pub fn render(
     mut emit: impl FnMut(Value),
 ) -> Result<()> {
     let _permit = WorkPermit::acquire(c)?;
+    let lease = crate::cache::Lease::new(cache, &Value::Null);
+    let staging = tempfile::tempdir().map_err(err)?;
+    let mut deliver = |mut event: Value| {
+        if string(&event, "status") == "ready" {
+            let paths: Vec<_> = ["svgPath", "pngPath", "pdfPath"]
+                .iter()
+                .map(|key| {
+                    let source = PathBuf::from(string(&event, key));
+                    let dest = cache.join(source.file_name().unwrap());
+                    (source, dest)
+                })
+                .collect();
+            match crate::cache::publish_checked(&paths, &|| c.check()) {
+                Ok(()) => {
+                    for (key, (_, dest)) in ["svgPath", "pngPath", "pdfPath"].iter().zip(&paths) {
+                        event[*key] = json!(dest);
+                    }
+                    lease.add(&event);
+                }
+                Err(error) => {
+                    event = json!({"id":event["id"],"status":"failed","error":error});
+                }
+            }
+            for (source, _) in paths {
+                if source.starts_with(staging.path()) {
+                    let _ = fs::remove_file(source);
+                }
+            }
+        } else {
+            // Diagnostics are in the response. Do not accumulate intermediate
+            // images or logs for failed cards in a large render batch.
+            let log = Path::new(string(&event, "logPath"));
+            if log.starts_with(staging.path()) {
+                for ext in ["svg", "png", "pdf", "log"] {
+                    let _ = fs::remove_file(log.with_extension(ext));
+                }
+            }
+            event.as_object_mut().unwrap().remove("logPath");
+        }
+        if c.check().is_ok() {
+            emit(event);
+        }
+    };
     fs::create_dir_all(cache).map_err(err)?;
     let stamp = fingerprint_checked(root, &|| c.check())?;
     let typst = main.ends_with(".typ");
@@ -331,14 +374,20 @@ pub fn render(
         }
         let key = id(&cache_key);
         let base = cache.join(key);
+        let paths = json!([
+            base.with_extension("svg"),
+            base.with_extension("png"),
+            base.with_extension("pdf")
+        ]);
+        lease.add(&paths);
         if let Some(e) = cache_hit(card, &base) {
-            emit(e)
+            deliver(e)
         } else {
-            pending.push((card.clone(), base))
+            pending.push((card.clone(), staging.path().join(base.file_name().unwrap())))
         }
     }
     if pending.is_empty() {
-        return Ok(());
+        return c.check();
     }
     let temp = tempfile::tempdir().map_err(err)?;
     let stage = temp.path().join("source");
@@ -351,12 +400,12 @@ pub fn render(
             c.check()?;
             let result = render_typst(&stage, main, &card, &base, c);
             match result {
-                Ok(e) => emit(e),
+                Ok(e) => deliver(e),
                 Err(e) => {
                     c.check()?;
                     let log = base.with_extension("log");
                     fs::write(&log, &e).map_err(err)?;
-                    emit(json!({"id":card["id"],"status":"failed","error":e,"logPath":log}));
+                    deliver(json!({"id":card["id"],"status":"failed","error":e,"logPath":log}));
                 }
             }
         }
@@ -368,10 +417,10 @@ pub fn render(
             .start();
         let preamble = &source[..begin];
         for group in pending.chunks(32) {
-            render_tex_group(&stage, &output, engine, preamble, group, c, &mut emit)?
+            render_tex_group(&stage, &output, engine, preamble, group, c, &mut deliver)?
         }
     }
-    Ok(())
+    c.check()
 }
 fn render_typst(
     stage: &Path,
@@ -441,7 +490,7 @@ fn render_typst(
             .first()
             .filter(|s| s.is_finite() && **s > 0.)
             .ok_or("Could not measure font size")?;
-        let svg = fs::read_to_string(base.with_extension("svg"))
+        let svg = String::from_utf8(read_bounded(&base.with_extension("svg"), ARTIFACT_LIMIT)?)
             .map_err(err)?
             .replacen(
                 "<svg ",
@@ -467,6 +516,9 @@ fn render_tex_group(
     emit: &mut impl FnMut(Value),
 ) -> Result<()> {
     c.check()?;
+    let parent_output = output;
+    let temporary = tempfile::tempdir_in(parent_output).map_err(err)?;
+    let output = temporary.path();
     let job = format!("mathlidelux-{}", uuid::Uuid::new_v4());
     let result = (|| -> Result<f64> {
         let figures = group.iter().any(|(v, _)| string(v, "kind") == "figure");
@@ -494,7 +546,11 @@ fn render_tex_group(
         if pages != Some(group.len()) {
             return Err("Rendered page count does not match equation count.".into());
         }
-        let log = fs::read_to_string(output.join(format!("{job}.log"))).map_err(err)?;
+        let log = String::from_utf8(read_bounded(
+            &output.join(format!("{job}.log")),
+            8 * 1024 * 1024,
+        )?)
+        .map_err(err)?;
         let size = scan::re(r"SLIDEMATHFONT:([0-9.]+)")
             .captures(&log)
             .and_then(|v| v[1].parse::<f64>().ok())
@@ -534,12 +590,30 @@ fn render_tex_group(
         }
         Ok(size)
     })();
+    let _ = fs::remove_file(stage.join(format!("{job}.tex")));
+    drop(temporary);
     if let Err(e) = result {
         c.check()?;
         if group.len() > 1 {
             let half = group.len() / 2;
-            render_tex_group(stage, output, engine, preamble, &group[..half], c, emit)?;
-            render_tex_group(stage, output, engine, preamble, &group[half..], c, emit)?
+            render_tex_group(
+                stage,
+                parent_output,
+                engine,
+                preamble,
+                &group[..half],
+                c,
+                emit,
+            )?;
+            render_tex_group(
+                stage,
+                parent_output,
+                engine,
+                preamble,
+                &group[half..],
+                c,
+                emit,
+            )?
         } else {
             let (card, base) = &group[0];
             let log = base.with_extension("log");
@@ -559,6 +633,7 @@ pub fn document(
 ) -> Result<Value> {
     let _permit = WorkPermit::acquire(c)?;
     let dest = cache.join(format!("document-{}", uuid::Uuid::new_v4()));
+    let work = crate::cache::DocumentWork::new(&dest);
     let stage = dest.join("Source");
     let out = dest.join("Output");
     fs::create_dir_all(&out).map_err(err)?;
@@ -589,6 +664,11 @@ pub fn document(
             ensure_pdf(&pdf, &stage, c)?;
             (pdf, vec![])
         };
+        c.check()?;
+        if regular_file(&pdf)?.metadata().map_err(err)?.len() > ARTIFACT_LIMIT {
+            return Err("Compiled PDF exceeds the 100 MiB limit.".into());
+        }
+        work.commit()?;
         Ok(
             json!({"pdfPath":pdf,"sourceRoot":stage,"renderRoot":render_root,"main":main,"engine":engine,"format":if main.ends_with(".typ"){"typst"}else{"latex"},"anchors":anchors,"targets":targets}),
         )

@@ -15,7 +15,7 @@ import {
   RefreshCw,
   TriangleAlert,
 } from "lucide-react";
-import { startDrag } from "@crabnebula/tauri-plugin-drag";
+import { startDrag, useCardArtifacts } from "./artifactLease";
 import { CodeEditor, setProjectCompletions } from "./editor";
 import {
   SnapshotWriter,
@@ -156,6 +156,7 @@ export function SourceWorkspace({
   } | null>(null);
   const [preview, setPreview] = useState<Card | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
+  useCardArtifacts(preview);
   const [caret, setCaret] = useState<{
     file: string;
     offset: number;

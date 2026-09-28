@@ -2,6 +2,7 @@ use crate::{compiler, files::*, scan};
 use serde_json::Value;
 use std::{
     fs,
+    io::Read,
     path::{Path, PathBuf},
     sync::Mutex,
 };
@@ -11,6 +12,7 @@ pub fn image_file(card: &Value, format: &str, point_size: f64, folder: &Path) ->
     if !["svg", "png", "jpeg", "pdf"].contains(&format) {
         return Err("Unsupported image format.".into());
     }
+    let _source_lease = crate::cache::Lease::new(folder, card);
     let source = Path::new(string(card, "svgPath"));
     let svg = String::from_utf8(read_bounded(source, ARTIFACT_LIMIT)?).map_err(err)?;
     let original = card["sourceFontSize"].as_f64().unwrap_or(11.);
@@ -32,17 +34,27 @@ pub fn image_file(card: &Value, format: &str, point_size: f64, folder: &Path) ->
     ));
     fs::create_dir_all(folder).map_err(err)?;
     let dest = base.with_extension(if format == "jpeg" { "jpg" } else { format });
+    let _lease = crate::cache::Lease::new(folder, &serde_json::json!(dest));
     if dest.is_file() {
         return Ok(dest);
     }
+    let final_dest = dest;
+    let staging = tempfile::tempdir().map_err(err)?;
+    let base = staging.path().join(base.file_name().unwrap());
+    let dest = base.with_extension(if format == "jpeg" { "jpg" } else { format });
     if format == "pdf" {
         let source = Path::new(string(card, "pdfPath"));
         if (scale - 1.).abs() < 0.0001 {
-            fs::copy(source, &dest).map_err(err)?;
+            let mut input = regular_file(source)?.take(ARTIFACT_LIMIT + 1);
+            let mut output = fs::File::create(&dest).map_err(err)?;
+            if std::io::copy(&mut input, &mut output).map_err(err)? > ARTIFACT_LIMIT {
+                return Err("Export PDF exceeds the 100 MiB limit.".into());
+            }
         } else {
             scale_pdf(source, &dest, scale as f32)?;
         }
-        return Ok(dest);
+        crate::cache::publish(&[(dest, final_dest.clone())])?;
+        return Ok(final_dest);
     }
     let root_start = svg.find("<svg").ok_or("Invalid SVG")?;
     let root_end = root_start + svg[root_start..].find('>').ok_or("Invalid SVG")?;
@@ -93,7 +105,8 @@ pub fn image_file(card: &Value, format: &str, point_size: f64, folder: &Path) ->
             rgb.save(&dest).map_err(err)?;
         }
     }
-    Ok(dest)
+    crate::cache::publish(&[(dest, final_dest.clone())])?;
+    Ok(final_dest)
 }
 
 fn scale_pdf(source: &Path, dest: &Path, scale: f32) -> Result<()> {

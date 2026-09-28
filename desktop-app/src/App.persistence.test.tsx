@@ -288,3 +288,51 @@ it("an older project-open response cannot replace the most recently requested pr
   expect(screen.queryByText("Older project card")).toBeNull();
   expect(document.documentElement.inert).toBe(false);
 });
+
+it("closing PDF during a pending project flush never starts the obsolete compile", async () => {
+  await openProject();
+  edit("pending variant");
+  let finish!: () => void;
+  delaySave = () =>
+    new Promise((resolve) => {
+      finish = resolve;
+    });
+  fireEvent.click(screen.getByRole("button", { name: "Save test variant" }));
+  await waitFor(() => expect(finish).toBeDefined());
+  fireEvent.click(screen.getByTitle("Toggle PDF"));
+  fireEvent.click(screen.getByTitle("Toggle PDF"));
+  await act(async () => {
+    delaySave = undefined;
+    finish();
+  });
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("textbox", { name: "Variant source" }),
+    ).toBeNull(),
+  );
+  expect(rpc.mock.calls.filter(([op]) => op === "document")).toHaveLength(0);
+});
+it("reopening a closed PDF rebuilds instead of reusing a released snapshot", async () => {
+  const base = rpc.getMockImplementation()!;
+  rpc.mockImplementation((operation, ...args) =>
+    operation === "document"
+      ? Promise.resolve({
+          pdfPath: "/synthetic/result.pdf",
+          sourceRoot: "/synthetic/source",
+          format: "typst",
+          anchors: [],
+          targets: [],
+        })
+      : base(operation, ...args),
+  );
+  await openProject();
+  fireEvent.click(screen.getByTitle("Toggle PDF"));
+  await waitFor(() =>
+    expect(rpc.mock.calls.filter(([op]) => op === "document")).toHaveLength(1),
+  );
+  fireEvent.click(screen.getByTitle("Toggle PDF"));
+  fireEvent.click(screen.getByTitle("Toggle PDF"));
+  await waitFor(() =>
+    expect(rpc.mock.calls.filter(([op]) => op === "document")).toHaveLength(2),
+  );
+});

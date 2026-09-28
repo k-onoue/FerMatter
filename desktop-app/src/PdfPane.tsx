@@ -11,6 +11,7 @@ import {
   Maximize,
 } from "lucide-react";
 import { asset, rpc } from "./api";
+import { retainArtifacts } from "./artifactLease";
 import type { DocumentPDF, Anchor, Project } from "./types";
 import { anchorAtPoint } from "./navigation";
 import { stepZoom } from "./scrollZoom";
@@ -36,6 +37,14 @@ export function PdfPane({
   onSource: (file: string, line: number) => void;
   target?: string;
 }) {
+  useEffect(() => {
+    if (!document) return;
+    const lease = retainArtifacts([document.pdfPath, document.sourceRoot]);
+    void lease.acquired.catch(console.error);
+    return () => {
+      void lease.release().catch(console.error);
+    };
+  }, [document?.pdfPath, document?.sourceRoot]);
   const [pdf, setPdf] = useState<pdfjs.PDFDocumentProxy | null>(null);
   const [page, setPage] = useState(1);
   const [{ zoom, fit }, setView] = useState({ zoom: 1, fit: true });
