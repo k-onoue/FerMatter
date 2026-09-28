@@ -103,11 +103,19 @@ fn clipboard_to(paths: &[PathBuf], name: Option<&str>) -> Result<()> {
     if paths.is_empty() {
         return Err("No images selected.".into());
     }
-    let bytes = paths
-        .iter()
-        .map(std::fs::read)
-        .collect::<std::io::Result<Vec<_>>>()
-        .map_err(err)?;
+    for path in paths {
+        let file = regular_file(path)?;
+        if file.metadata().map_err(err)?.len() > ARTIFACT_LIMIT {
+            return Err("Image exceeds the 100 MB clipboard limit.".into());
+        }
+    }
+    // Multiple-image paste uses file URLs only. Do not retain a second copy of
+    // every image in memory before calling AppKit on the main thread.
+    let bytes = if paths.len() == 1 {
+        read_bounded(&paths[0], ARTIFACT_LIMIT)?
+    } else {
+        Vec::new()
+    };
     unsafe {
         let pool: *mut Object = msg_send![class!(NSAutoreleasePool), new];
         let array: *mut Object = msg_send![class!(NSMutableArray), array];
@@ -120,7 +128,6 @@ fn clipboard_to(paths: &[PathBuf], name: Option<&str>) -> Result<()> {
             let _: bool = msg_send![item,setString:absolute forType:ns("public.file-url")];
             let _: () = msg_send![filenames, addObject:ns(&path.to_string_lossy())];
             if paths.len() == 1 {
-                let bytes = &bytes[0];
                 let data: *mut Object =
                     msg_send![class!(NSData),dataWithBytes:bytes.as_ptr() length:bytes.len()];
                 let kind = match path.extension().and_then(|s| s.to_str()).unwrap_or("") {

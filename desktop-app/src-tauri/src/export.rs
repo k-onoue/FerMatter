@@ -3,13 +3,16 @@ use serde_json::Value;
 use std::{
     fs,
     path::{Path, PathBuf},
+    sync::Mutex,
 };
+static EXPORT: Mutex<()> = Mutex::new(());
 pub fn image_file(card: &Value, format: &str, point_size: f64, folder: &Path) -> Result<PathBuf> {
+    let _permit = EXPORT.lock().unwrap();
     if !["svg", "png", "jpeg", "pdf"].contains(&format) {
         return Err("Unsupported image format.".into());
     }
     let source = Path::new(string(card, "svgPath"));
-    let svg = fs::read_to_string(source).map_err(err)?;
+    let svg = String::from_utf8(read_bounded(source, ARTIFACT_LIMIT)?).map_err(err)?;
     let original = card["sourceFontSize"].as_f64().unwrap_or(11.);
     let scale = if point_size > 0. {
         point_size / original
@@ -61,7 +64,13 @@ pub fn image_file(card: &Value, format: &str, point_size: f64, folder: &Path) ->
         let png = base.with_extension("png");
         compiler::raster(scaled.as_bytes(), &png, width)?;
         if format == "jpeg" {
-            let rgba = image::open(&png).map_err(err)?.to_rgba8();
+            let mut reader = image::ImageReader::open(&png).map_err(err)?;
+            let mut limits = image::Limits::default();
+            limits.max_image_width = Some(16000);
+            limits.max_image_height = Some(16000);
+            limits.max_alloc = Some(64 * 1024 * 1024);
+            reader.limits(limits);
+            let rgba = reader.decode().map_err(err)?.to_rgba8();
             let mut rgb = image::RgbImage::new(rgba.width(), rgba.height());
             for (x, y, p) in rgba.enumerate_pixels() {
                 let a = p.0[3] as f32 / 255.;
@@ -81,7 +90,7 @@ pub fn image_file(card: &Value, format: &str, point_size: f64, folder: &Path) ->
 
 fn scale_pdf(source: &Path, dest: &Path, scale: f32) -> Result<()> {
     use lopdf::{Dictionary, Document, Object, Stream};
-    let mut document = Document::load(source).map_err(err)?;
+    let mut document = Document::load_mem(&read_bounded(source, ARTIFACT_LIMIT)?).map_err(err)?;
     for (_, page_id) in document.get_pages() {
         let mut ancestor = page_id;
         let bounds = loop {

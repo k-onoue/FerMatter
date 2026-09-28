@@ -7,7 +7,7 @@ use std::{
     process::Stdio,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
+        Arc, Condvar, LazyLock, Mutex,
     },
     time::{Duration, Instant},
 };
@@ -33,6 +33,34 @@ impl Cancellation {
         } else {
             Ok(())
         }
+    }
+}
+// Bound expensive compiler snapshots/raster buffers across all windows. Waiting
+// requests observe cancellation before entering I/O, so obsolete caret jobs do not queue work.
+static WORK: LazyLock<(Mutex<usize>, Condvar)> = LazyLock::new(|| (Mutex::new(0), Condvar::new()));
+struct WorkPermit;
+impl WorkPermit {
+    fn acquire(cancel: &Cancellation) -> Result<Self> {
+        let (lock, changed) = &*WORK;
+        let mut active = lock.lock().unwrap();
+        loop {
+            cancel.check()?;
+            if *active < 2 {
+                *active += 1;
+                return Ok(Self);
+            }
+            active = changed
+                .wait_timeout(active, Duration::from_millis(25))
+                .unwrap()
+                .0;
+        }
+    }
+}
+impl Drop for WorkPermit {
+    fn drop(&mut self) {
+        let (lock, changed) = &*WORK;
+        *lock.lock().unwrap() -= 1;
+        changed.notify_one();
     }
 }
 fn terminate_group(id: u32) {
@@ -75,7 +103,13 @@ pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) ->
     };
     let start = Instant::now();
     let status = loop {
-        if cancel.check().is_err() || start.elapsed() > Duration::from_secs(180) {
+        let log_size = log.metadata().map(|m| m.len());
+        let oversized_log = log_size.as_ref().is_ok_and(|size| *size > 8 * 1024 * 1024);
+        if cancel.check().is_err()
+            || log_size.is_err()
+            || oversized_log
+            || start.elapsed() > Duration::from_secs(180)
+        {
             #[cfg(unix)]
             unsafe {
                 libc::kill(-(child.id() as i32), libc::SIGKILL);
@@ -84,12 +118,23 @@ pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) ->
             let _ = child.wait();
             return Err(if cancel.check().is_err() {
                 "Cancelled".into()
+            } else if let Err(error) = log_size {
+                format!("Unable to monitor compiler output: {error}")
+            } else if oversized_log {
+                format!("{program} exceeded the 8 MB output limit.")
             } else {
                 format!("{program} timed out after 180 seconds.")
             });
         }
-        if let Some(status) = child.try_wait().map_err(err)? {
-            break status;
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) => {}
+            Err(error) => {
+                terminate_group(child.id());
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(err(error));
+            }
         }
         std::thread::sleep(Duration::from_millis(25));
     };
@@ -98,7 +143,12 @@ pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) ->
     use std::io::{Seek, SeekFrom};
     log.seek(SeekFrom::Start(0)).map_err(err)?;
     let mut bytes = vec![];
-    log.read_to_end(&mut bytes).map_err(err)?;
+    log.take(8 * 1024 * 1024 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(err)?;
+    if bytes.len() > 8 * 1024 * 1024 {
+        return Err("Compiler output exceeds 8 MB.".into());
+    }
     let output = String::from_utf8_lossy(&bytes).into_owned();
     if !status.success() {
         return Err(output
@@ -223,8 +273,11 @@ pub fn raster(svg: &[u8], png: &Path, width: u32) -> Result<()> {
     let scale = width as f32 / size.width().max(size.height());
     let w = (size.width() * scale).ceil().max(1.) as u32;
     let h = (size.height() * scale).ceil().max(1.) as u32;
-    if w > 16000 || h > 16000 {
-        return Err("Image exceeds 16,000 pixels.".into());
+    if w > 16000 || h > 16000 || u64::from(w) * u64::from(h) > 16_000_000 {
+        return Err(
+            "Image exceeds 16,000 pixels per side or 16 megapixels. Choose a smaller export size."
+                .into(),
+        );
     }
     let mut pixmap = resvg::tiny_skia::Pixmap::new(w, h).ok_or("Image is too large")?;
     resvg::render(
@@ -239,7 +292,8 @@ fn cache_hit(card: &Value, base: &Path) -> Option<Value> {
         .iter()
         .all(|e| base.with_extension(e).is_file())
     {
-        let s = fs::read_to_string(base.with_extension("svg")).ok()?;
+        let s = String::from_utf8(read_bounded(&base.with_extension("svg"), ARTIFACT_LIMIT).ok()?)
+            .ok()?;
         let c = scan::re(r#"data-(?:tex|typst)-font-size="([0-9.]+)"#).captures(&s)?;
         Some(ready(card, base, c[1].parse().ok()?))
     } else {
@@ -255,8 +309,9 @@ pub fn render(
     c: &Cancellation,
     mut emit: impl FnMut(Value),
 ) -> Result<()> {
+    let _permit = WorkPermit::acquire(c)?;
     fs::create_dir_all(cache).map_err(err)?;
-    let stamp = fingerprint(root)?;
+    let stamp = fingerprint_checked(root, &|| c.check())?;
     let typst = main.ends_with(".typ");
     let version = if typst {
         run("typst", &args(&["--version"]), root, c)?
@@ -287,7 +342,7 @@ pub fn render(
     }
     let temp = tempfile::tempdir().map_err(err)?;
     let stage = temp.path().join("source");
-    snapshot(root, &stage, &Value::Null)?;
+    snapshot_checked(root, &stage, &Value::Null, &|| c.check())?;
     let stage = stage.canonicalize().map_err(err)?;
     let output = temp.path().join("output");
     fs::create_dir_all(&output).map_err(err)?;
@@ -326,7 +381,7 @@ fn render_typst(
     c: &Cancellation,
 ) -> Result<Value> {
     let original = read(&safe(stage, main)?)?;
-    let default_offset = scan::tokens(&original)
+    let default_offset = scan::tokens_checked(&original, &|| c.check())?
         .iter()
         .find(|t| matches!(t.kind, "math" | "figure" | "include"))
         .map(|t| original[..t.start].chars().count())
@@ -470,11 +525,9 @@ fn render_tex_group(
                 stage,
                 c,
             )?;
-            let text = fs::read_to_string(&svg).map_err(err)?.replacen(
-                "<svg ",
-                &format!("<svg data-tex-font-size=\"{size}\" "),
-                1,
-            );
+            let text = String::from_utf8(read_bounded(&svg, ARTIFACT_LIMIT)?)
+                .map_err(err)?
+                .replacen("<svg ", &format!("<svg data-tex-font-size=\"{size}\" "), 1);
             raster(text.as_bytes(), &base.with_extension("png"), 900)?;
             fs::write(svg, text).map_err(err)?;
             emit(ready(card, base, size));
@@ -504,18 +557,19 @@ pub fn document(
     drafts: &Value,
     c: &Cancellation,
 ) -> Result<Value> {
+    let _permit = WorkPermit::acquire(c)?;
     let dest = cache.join(format!("document-{}", uuid::Uuid::new_v4()));
     let stage = dest.join("Source");
     let out = dest.join("Output");
     fs::create_dir_all(&out).map_err(err)?;
     let result = (|| {
-        snapshot(root, &stage, drafts)?;
-        let targets = scan::extract(&stage, main, None)?["cards"].clone();
+        snapshot_checked(root, &stage, drafts, &|| c.check())?;
+        let targets = scan::extract_checked(&stage, main, None, &|| c.check())?["cards"].clone();
         // Typst navigation inserts metadata into its build sources. Keep an
         // untouched snapshot for exporting the artwork visible in this PDF.
         let render_root = if main.ends_with(".typ") {
             let original = dest.join("Original");
-            snapshot(&stage, &original, &Value::Null)?;
+            snapshot_checked(&stage, &original, &Value::Null, &|| c.check())?;
             original
         } else {
             stage.clone()
@@ -630,7 +684,7 @@ fn typst_document(
     out: &Path,
     c: &Cancellation,
 ) -> Result<(PathBuf, Vec<Value>)> {
-    let scan = scan::extract(stage, main, None)?;
+    let scan = scan::extract_checked(stage, main, None, &|| c.check())?;
     let mut changes: std::collections::BTreeMap<String, std::collections::BTreeMap<usize, String>> =
         Default::default();
     let mut targets: std::collections::HashMap<String, Vec<Value>> = Default::default();
@@ -812,6 +866,22 @@ pub fn navigate(document: &Value, request: &Value, c: &Cancellation) -> Result<V
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn oversized_raster_is_rejected_before_pixel_allocation() {
+        let temp = tempfile::tempdir().unwrap();
+        let svg = br#"<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"/>"#;
+        assert!(super::raster(svg, &temp.path().join("large.png"), 16000)
+            .unwrap_err()
+            .contains("16 megapixels"));
+        assert!(!temp.path().join("large.png").exists());
+    }
+    #[test]
+    fn queued_work_stops_when_cancelled() {
+        let c = super::Cancellation::default();
+        c.cancel();
+        assert!(super::WorkPermit::acquire(&c).is_err());
+    }
+
     use super::*;
     #[test]
     fn cancellation_kills_process_group() {

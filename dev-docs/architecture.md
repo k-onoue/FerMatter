@@ -54,6 +54,8 @@
 
 ## Limits and validation
 
+- Hashing and snapshots stream 64 KiB chunks, enforce a 1 GiB project budget and check cancellation between chunks; special files are rejected. Editor reads are limited to 10 MB, artifact reads to 100 MiB and scans to 100 MiB of included text.
+- At most two render/document compiler jobs run at once; superseded waiting requests observe cancellation. Compiler output is limited to 8 MiB. Export rasterization is serialized and capped at 16 megapixels / 16,000 pixels per side. These bounds do not sandbox external compiler processes.
 - Extraction is literal/static, not full TeX/Typst execution: [user limits](../user-docs/limits.md).
 - TeX, `latexmkrc`, and project code are executable input; temporary copies are not an OS sandbox.
 - [Testing](testing.md), [reviewing](reviewing.md), [historical validation](history/validation-2026-09.md).

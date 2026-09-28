@@ -35,6 +35,8 @@
 ### Changed
 
 - Protect settings against stale-window overwrites and preserve rapid preference changes with ordered saves and explicit reload after conflicts.
+- Stream large project snapshots and hashes with cancellation, bound image allocations and avoid loading every selected image when copying multiple items.
+- Reclaim eligible old render/export/PDF caches at startup while preserving saved work and clipboard references.
 
 - Align slider thumbs with track endpoints at minimum and maximum values.
 
@@ -59,3 +61,7 @@
 - Obsolete web UI prototype; retain the native app and product site.
 
 [Unreleased]: https://github.com/k-onoue/mathlidelux/commits/main/
+
+### Security
+
+- Update the PDF parser to reject excessive object nesting instead of aborting the process (RUSTSEC-2026-0187).

@@ -196,7 +196,7 @@ pub fn render_project(
     let root = store.root(project)?;
     let temp = tempfile::tempdir().map_err(err)?;
     let stage = temp.path().join("source");
-    snapshot(&root, &stage, &Value::Null)?;
+    snapshot_checked(&root, &stage, &Value::Null, &|| cancel.check())?;
     let main = string(&p, "main");
     let color = &string(draft, "color")[1..];
     let mut card = json!({"id":"instant","name":"Instant","tex":draft["source"],"kind":draft["kind"],"origin":"custom","sourceOrder":0,"instantColor":color});
