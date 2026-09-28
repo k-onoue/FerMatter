@@ -10,6 +10,7 @@
 
 ### Added
 
+- Independent Control-scroll zoom for Projects, the Library canvas and the PDF pane, with percentage/reset controls for Projects and Library.
 - Window-wide zoom with Command +/− and Command 0, customizable shortcuts, and separate Control-Command PDF zoom controls.
 - Grid/list switching on Projects, with the selected view remembered and folder paths shown beneath project names.
 - Desktop implementation in Rust and TypeScript, with a Python-free backend, shared Monaco editors, equation/figure exports and PDF navigation.
