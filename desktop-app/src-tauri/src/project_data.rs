@@ -69,6 +69,56 @@ fn optional_numbers(value: &Value, fields: &[&str]) -> Result<()> {
     }
     Ok(())
 }
+fn normalize_card(card: &mut Value, index: usize) -> Result<()> {
+    if !card.is_object() {
+        return Err("Each project card must be an object.".into());
+    }
+    optional_strings(
+        card,
+        &[
+            "id", "name", "tex", "kind", "origin", "status", "file", "svgPath", "pngPath",
+            "pdfPath", "error", "parentID",
+        ],
+    )?;
+    optional_numbers(
+        card,
+        &[
+            "line",
+            "endLine",
+            "sourceOffset",
+            "sourceEnd",
+            "startUTF16",
+            "endUTF16",
+            "sourceOrder",
+            "sourceFontSize",
+            "exportFontSize",
+        ],
+    )?;
+    if !card["tex"].is_string() {
+        return Err("Each project card needs source text.".into());
+    }
+    if card.get("id").is_none() {
+        // Old unversioned cards occasionally omitted IDs. Derive a stable ID;
+        // keep every original field and source byte, including private variants.
+        card["id"] = json!(format!("legacy-{}", id(&format!("{index}:{}", card))));
+    }
+    if string(card, "id").is_empty() {
+        return Err("Project card IDs must be nonempty.".into());
+    }
+    if card.get("outlinePath").is_some_and(|v| !strings(v)) {
+        return Err("Card outline paths must be string arrays.".into());
+    }
+    if let Some(context) = card.get("typstContext") {
+        if !context.as_array().is_some_and(|items| {
+            items
+                .iter()
+                .all(|v| v.is_object() && v["file"].is_string() && v["offset"].as_u64().is_some())
+        }) {
+            return Err("Invalid Typst source context.".into());
+        }
+    }
+    Ok(())
+}
 pub fn normalize(mut value: Value) -> Result<Value> {
     if !value.is_object() {
         return Err("Project metadata must be a JSON object.".into());
@@ -106,54 +156,19 @@ pub fn normalize(mut value: Value) -> Result<Value> {
         .ok_or("Project cards must be an array.")?;
     let mut ids = HashSet::new();
     for (index, card) in cards.iter_mut().enumerate() {
-        if !card.is_object() {
-            return Err("Each project card must be an object.".into());
-        }
-        optional_strings(
-            card,
-            &[
-                "id", "name", "tex", "kind", "origin", "status", "file", "svgPath", "pngPath",
-                "pdfPath", "error", "parentID",
-            ],
-        )?;
-        optional_numbers(
-            card,
-            &[
-                "line",
-                "endLine",
-                "sourceOffset",
-                "sourceEnd",
-                "startUTF16",
-                "endUTF16",
-                "sourceOrder",
-                "sourceFontSize",
-                "exportFontSize",
-            ],
-        )?;
-        if !card["tex"].is_string() {
-            return Err("Each project card needs source text.".into());
-        }
-        if card.get("id").is_none() {
-            // Old unversioned cards occasionally omitted IDs. Derive a stable ID;
-            // keep every original field and source byte, including private variants.
-            card["id"] = json!(format!("legacy-{}", id(&format!("{index}:{}", card))));
-        }
-        if string(card, "id").is_empty() || !ids.insert(string(card, "id").to_owned()) {
-            return Err("Project card IDs must be nonempty and unique.".into());
-        }
-        if card.get("outlinePath").is_some_and(|v| !strings(v)) {
-            return Err("Card outline paths must be string arrays.".into());
-        }
-        if let Some(context) = card.get("typstContext") {
-            if !context.as_array().is_some_and(|items| {
-                items.iter().all(|v| {
-                    v.is_object() && v["file"].is_string() && v["offset"].as_u64().is_some()
-                })
-            }) {
-                return Err("Invalid Typst source context.".into());
-            }
+        normalize_card(card, index)?;
+        if !ids.insert(string(card, "id").to_owned()) {
+            return Err("Project card IDs must be unique.".into());
         }
     }
+    if let Some(draft) = value
+        .get_mut("libraryDraft")
+        .filter(|draft| !draft.is_null())
+    {
+        // The editor draft can share an ID with the stored variant it is editing.
+        normalize_card(draft, 0)?;
+    }
+
     for key in [
         "outline",
         "sections",
@@ -342,6 +357,26 @@ mod tests {
         let mut p = project();
         p["sectionAssignments"] = json!([]);
         assert!(normalize(p).is_err());
+    }
+    #[test]
+    fn library_editor_draft_is_validated_without_losing_unknown_fields() {
+        let mut p = project();
+        p["libraryDraft"] = p["cards"][0].clone();
+        p["libraryDraft"]["tex"] = json!("unfinished +");
+        let validated = normalize(p.clone()).unwrap();
+        assert_eq!(validated["libraryDraft"], p["libraryDraft"]);
+        p["libraryDraft"] = Value::Null;
+        assert!(normalize(p.clone()).unwrap()["libraryDraft"].is_null());
+        for draft in [
+            json!("PRIVATE_SOURCE_SENTINEL"),
+            json!({"id":"draft", "tex":["PRIVATE_SOURCE_SENTINEL"]}),
+            json!({"id":"draft", "tex":"x", "name":[]}),
+        ] {
+            p["libraryDraft"] = draft;
+            assert!(!normalize(p.clone())
+                .unwrap_err()
+                .contains("PRIVATE_SOURCE_SENTINEL"));
+        }
     }
     #[test]
     fn bounds_metadata_before_reading_it() {
