@@ -92,8 +92,8 @@ impl Storage {
         let ident = self.register(root)?;
         let root = self.root(&ident)?;
         let dir = self.project_dir(&ident)?;
-        let mut p = if dir.join("project.json").exists()
-            || project_data::backup(&dir.join("project.json")).exists()
+        let mut p = if project_data::present(&dir.join("project.json"))
+            || project_data::present(&project_data::backup(&dir.join("project.json")))
         {
             project_data::read(&dir.join("project.json"))?
         } else {
@@ -138,7 +138,7 @@ impl Storage {
     fn legacy_project(&self, ident: &str, root: &Path) -> Result<Option<Value>> {
         let projects = self.legacy.join("Projects");
         let exact = projects.join(ident).join("project.json");
-        if exact.exists() {
+        if project_data::present(&exact) {
             return project_data::read(&exact).map(Some);
         }
         let Ok(entries) = fs::read_dir(projects) else {
@@ -171,7 +171,9 @@ impl Storage {
             }
             for entry in fs::read_dir(folder).map_err(err)?.flatten() {
                 let path = entry.path().join("project.json");
-                if !path.exists() && !project_data::backup(&path).exists() {
+                if !project_data::present(&path)
+                    && !project_data::present(&project_data::backup(&path))
+                {
                     continue;
                 }
                 if let Err(message) = project_data::read(&path) {

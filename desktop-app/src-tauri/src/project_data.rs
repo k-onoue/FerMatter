@@ -218,6 +218,13 @@ pub fn normalize(mut value: Value) -> Result<Value> {
     value["schemaVersion"] = json!(1);
     Ok(value)
 }
+pub fn present(path: &Path) -> bool {
+    // A dangling link or unreadable entry is not a missing project. Keep it for
+    // recovery instead of treating it as permission to create empty metadata.
+    !path
+        .symlink_metadata()
+        .is_err_and(|e| e.kind() == std::io::ErrorKind::NotFound)
+}
 pub fn backup(path: &Path) -> std::path::PathBuf {
     path.with_file_name(".last-valid-project.json")
 }
@@ -229,9 +236,9 @@ pub fn write(path: &Path, value: &Value) -> Result<()> {
     }
     // Never let a normal save turn corrupted or future-version metadata into an
     // empty/new project. Explicit recovery first retains the rejected original.
-    if path.exists() {
+    if present(path) {
         read(path)?;
-    } else if backup(path).exists() {
+    } else if present(&backup(path)) {
         return Err(format!(
             "Project metadata is missing. Restore its backup before saving. File: {}.",
             path.display()
@@ -377,6 +384,18 @@ mod tests {
                 .unwrap_err()
                 .contains("PRIVATE_SOURCE_SENTINEL"));
         }
+    }
+    #[cfg(unix)]
+    #[test]
+    fn dangling_metadata_links_are_not_treated_as_new_projects() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("project.json");
+        let missing = dir.path().join("missing.json");
+        std::os::unix::fs::symlink(&missing, &path).unwrap();
+        assert!(present(&path));
+        assert!(write(&path, &project()).is_err());
+        assert_eq!(fs::read_link(&path).unwrap(), missing);
+        assert!(!backup(&path).exists());
     }
     #[test]
     fn bounds_metadata_before_reading_it() {
