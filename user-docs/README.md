@@ -22,5 +22,5 @@
 ## Try a sample
 
 - Download [LaTeX](../docs/downloads/demo-paper.zip), [Typst](../docs/downloads/demo-typst.zip), [TikZ](../docs/downloads/demo-tikz.zip), or [CeTZ](../docs/downloads/demo-cetz.zip).
-- Choose **Open Project** and select the ZIP; no template selection needed.
+- Choose **Open file or ZIP** and select the ZIP; no template selection needed.
 - All samples use synthetic material.

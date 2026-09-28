@@ -21,7 +21,7 @@
 
 ## Try a sample
 
-- Choose **Open Project** and select a folder/ZIP; existing projects need no template.
+- Choose **Open Project** for a folder or **Open file or ZIP** for an archive; existing projects need no template.
 - Samples: [LaTeX](examples/demo-paper/), [Typst](examples/demo-typst/), [TikZ](examples/demo-tikz/), [CeTZ](examples/demo-cetz/).
 - Pasted equations: **New Project** → choose a template → paste → **Create Project**.
 - Library variants leave manuscript source unchanged; **Source** mode edits real project files.
