@@ -1,12 +1,12 @@
 import { registerWindowFlush } from "./persistence";
 import { installWindowPersistence } from "./windowPersistence";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { dropSVG, openSVG } from "./svgImport";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { save } from "@tauri-apps/plugin-dialog";
-import { prepareDrag, useCardArtifacts } from "./artifactLease";
+import { useCardArtifacts } from "./artifactLease";
 import {
   ClipboardCopy,
   ClipboardPaste,
@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { asset, rpc, projectName } from "./api";
 import { CodeEditor, setProjectCompletions } from "./editor";
+import { InstantPreview } from "./InstantPreview";
 import { ColorPicker } from "./ColorPicker";
 import { defaults } from "./appearance";
 import type { SettingsSnapshot } from "./settingsPersistence";
@@ -39,6 +40,7 @@ import {
   instantRevision,
   readyInstant,
   type InstantDraft,
+  type RenderedInstant,
   type InstantHistory,
   type InstantSession,
   type InstantConfiguration,
@@ -51,7 +53,6 @@ import "./instant.css";
 const projectID =
   new URLSearchParams(location.hash.split("?")[1]).get("project") || "";
 const pendingKey = instantPendingKey(projectID);
-type Rendered = { card: Card; path: string; revision: string; image: string };
 export default function InstantWindow() {
   const [draft, setDraft] = useState<InstantDraft | null>(null);
   const [history, setHistory] = useState<InstantHistory[]>([]);
@@ -69,7 +70,7 @@ export default function InstantWindow() {
   const contextSequence = useRef(0);
   const templateChoices: ProjectTemplate[] =
     configuration?.templates || builtinTemplates;
-  const [rendered, setRendered] = useState<Rendered | null>(null);
+  const [rendered, setRendered] = useState<RenderedInstant | null>(null);
   const [busy, setBusy] = useState(false),
     [outputBusy, setOutputBusy] = useState(false);
   const [compileError, setCompileError] = useState("");
@@ -101,56 +102,14 @@ export default function InstantWindow() {
   });
   draftRef.current = draft;
   useCardArtifacts(rendered?.card, rendered?.path);
-  const report = (e: unknown) => {
+  const report = useCallback((e: unknown) => {
     if (String(e) !== "Cancelled") setError(String(e));
-  };
+  }, []);
   const wallpaper = useDesktopBackground();
   const current =
     draft && !contextBusy && !contextError
       ? readyInstant(draft, rendered, projectContext?.revision)
       : null;
-  const [dragGeneration, setDragGeneration] = useState(0);
-  const [preparedDrag, setPreparedDrag] = useState<{
-    result: Rendered;
-    start: () => Promise<void>;
-  } | null>(null);
-  const dragPointer = useRef<{
-    id: number;
-    x: number;
-    y: number;
-    start: () => Promise<void>;
-  } | null>(null);
-  const beginDrag =
-    preparedDrag?.result === current ? preparedDrag?.start : null;
-  useEffect(() => {
-    setPreparedDrag(null);
-    if (!current?.card.pngPath) return;
-    let stopped = false;
-    const prepared = prepareDrag(
-      { item: [current.path], icon: current.card.pngPath, mode: "copy" },
-      () => {
-        if (!stopped) setDragGeneration((value) => value + 1);
-      },
-    );
-    void prepared.acquired
-      .then(() => {
-        if (!stopped)
-          setPreparedDrag({ result: current, start: prepared.start });
-      })
-      .catch(report);
-    return () => {
-      stopped = true;
-      prepared.dispose();
-    };
-  }, [current, dragGeneration]);
-
-  function releaseDragPointer(element: HTMLImageElement) {
-    const pointer = dragPointer.current;
-    dragPointer.current = null;
-    if (pointer && element.hasPointerCapture?.(pointer.id))
-      element.releasePointerCapture(pointer.id);
-  }
-
   async function refreshContext() {
     if (!projectID) return;
     const ticket = ++contextSequence.current;
@@ -495,13 +454,6 @@ export default function InstantWindow() {
     } finally {
       setOutputBusy(false);
     }
-  }
-  function drag() {
-    if (!beginDrag || !draft) return;
-    const started = beginDrag();
-    setPreparedDrag(null);
-    void started.catch(report);
-    void remember(draft).catch(report);
   }
   function togglePin() {
     void getCurrentWindow()
@@ -873,79 +825,16 @@ export default function InstantWindow() {
                     onSave={() => persist(draft)}
                   />
                 </section>
-                <section
-                  className={`instant-preview ${draft.color.toLowerCase() === "#ffffff" ? "white-ink" : ""}`}
-                  aria-label="Equation preview"
-                  tabIndex={0}
-                >
-                  {rendered ? (
-                    <img
-                      src={rendered.image}
-                      alt="Rendered equation"
-                      draggable={false}
-                      style={{ cursor: beginDrag ? "grab" : undefined }}
-                      onDragStart={(event) => event.preventDefault()}
-                      onPointerDown={(event) => {
-                        if (event.button !== 0 || !beginDrag) return;
-                        event.preventDefault();
-                        dragPointer.current = {
-                          id: event.pointerId,
-                          x: event.clientX,
-                          y: event.clientY,
-                          start: beginDrag,
-                        };
-                        event.currentTarget.setPointerCapture(event.pointerId);
-                      }}
-                      onPointerMove={(event) => {
-                        const pointer = dragPointer.current;
-                        if (!pointer || pointer.id !== event.pointerId) return;
-                        if (
-                          !(event.buttons & 1) ||
-                          pointer.start !== beginDrag
-                        ) {
-                          releaseDragPointer(event.currentTarget);
-                          return;
-                        }
-                        if (
-                          Math.hypot(
-                            event.clientX - pointer.x,
-                            event.clientY - pointer.y,
-                          ) < 5
-                        )
-                          return;
-                        releaseDragPointer(event.currentTarget);
-                        drag();
-                      }}
-                      onPointerUp={(event) =>
-                        releaseDragPointer(event.currentTarget)
-                      }
-                      onPointerCancel={(event) =>
-                        releaseDragPointer(event.currentTarget)
-                      }
-                      onLostPointerCapture={() => {
-                        dragPointer.current = null;
-                      }}
-                    />
-                  ) : (
-                    <span className="instant-empty">Preview</span>
-                  )}
-                  <div className="instant-status" role="status">
-                    {draft.requiresRender ? (
-                      <button onClick={refresh}>Render</button>
-                    ) : busy ? (
-                      <>
-                        <LoaderCircle size={14} className="spin" />
-                        Rendering…
-                      </>
-                    ) : compileError ? (
-                      "Needs correction"
-                    ) : !current && draft.source.trim() ? (
-                      "Preparing…"
-                    ) : (
-                      ""
-                    )}
-                  </div>
-                </section>
+                <InstantPreview
+                  rendered={rendered}
+                  current={current}
+                  draft={draft}
+                  busy={busy}
+                  compileError={compileError}
+                  onRender={refresh}
+                  onDragStarted={() => void remember(draft).catch(report)}
+                  onError={report}
+                />
               </div>
               {compileError && (
                 <details className="instant-error">

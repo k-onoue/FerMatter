@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, LoaderCircle, TriangleAlert } from "lucide-react";
 import { asset } from "./api";
+import { cardOutputColor, isBrightColor } from "./outputColor";
 import type { Card } from "./types";
 export function ImagePreview({
   card,
@@ -12,14 +13,8 @@ export function ImagePreview({
   onDrag?: (card: Card) => void;
 }) {
   const [src, setSrc] = useState("");
-  const color = typeof card?.instantColor === "string" ? card.instantColor : "";
-  const colored = /^[0-9a-f]{6}$/i.test(color);
-  const bright =
-    colored &&
-    0.2126 * parseInt(color.slice(0, 2), 16) +
-      0.7152 * parseInt(color.slice(2, 4), 16) +
-      0.0722 * parseInt(color.slice(4, 6), 16) >
-      220;
+  const color = cardOutputColor(card?.instantColor);
+  const bright = color && isBrightColor(color);
   useEffect(() => {
     let active = true;
     setSrc("");
@@ -33,7 +28,7 @@ export function ImagePreview({
   }, [card?.svgPath]);
   return (
     <div
-      className={`equation-image ${card?.kind === "figure" ? "figure" : "math"} ${colored ? "colored" : ""} ${bright ? "bright-ink" : ""} ${className}`}
+      className={`equation-image ${card?.kind === "figure" ? "figure" : "math"} ${color ? "colored" : ""} ${bright ? "bright-ink" : ""} ${className}`}
       draggable={!!onDrag && !!src}
       onDragStart={(e) => {
         e.preventDefault();

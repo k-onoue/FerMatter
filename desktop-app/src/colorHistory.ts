@@ -1,17 +1,12 @@
+import { isHexColor } from "./outputColor";
+
 const storageKey = "mathlidelux.color-history.v1";
 const limit = 16;
 
 function validColors(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return [
-    ...new Set(
-      value
-        .filter(
-          (color): color is string =>
-            typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color),
-        )
-        .map((color) => color.toLowerCase()),
-    ),
+    ...new Set(value.filter(isHexColor).map((color) => color.toLowerCase())),
   ].slice(0, limit);
 }
 

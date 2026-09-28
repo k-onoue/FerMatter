@@ -4,6 +4,7 @@ import { CodeEditor } from "./editor";
 import { OutputSizeOptions } from "./OutputSizeOptions";
 import { ColorPicker } from "./ColorPicker";
 import { savedVariant } from "./variants";
+import { cardOutputColor } from "./outputColor";
 import type { Card, Project } from "./types";
 export function VariantEditor({
   project,
@@ -27,11 +28,7 @@ export function VariantEditor({
   onRender: () => void;
 }) {
   const preview = savedVariant(editing, editPreview);
-  const color =
-    typeof editing.instantColor === "string" &&
-    /^[0-9a-f]{6}$/i.test(editing.instantColor)
-      ? "#" + editing.instantColor
-      : "#000000";
+  const color = cardOutputColor(editing.instantColor) ?? "#000000";
   return (
     <Modal title="Edit Variant" onClose={onClose} wide>
       <div className="variant-title">
