@@ -56,6 +56,7 @@ export function Settings({
   onKeys,
   onClose,
   onError,
+  defaultProjectDirectory,
 }: {
   settings: Preferences;
   themes: Theme[];
@@ -66,6 +67,7 @@ export function Settings({
   onKeys: (k: Keybindings) => void;
   onClose: () => void;
   onError: (e: string) => void;
+  defaultProjectDirectory: string;
 }) {
   const [tab, setTab] = useState("Appearance");
   const [record, setRecord] = useState("");
@@ -124,7 +126,7 @@ export function Settings({
   return (
     <Modal title="Settings" onClose={onClose} wide>
       <div className="settings-tabs">
-        {["Appearance", "Editor", "Shortcuts", "Tools"].map((t) => (
+        {["Appearance", "Projects", "Editor", "Shortcuts", "Tools"].map((t) => (
           <button
             key={t}
             className={tab === t ? "active" : ""}
@@ -135,6 +137,40 @@ export function Settings({
         ))}
       </div>
       <div className="settings-content">
+        {tab === "Projects" && (
+          <>
+            <div className="setting-row">
+              <span>Default project folder</span>
+              <button
+                onClick={() =>
+                  void open({
+                    directory: true,
+                    multiple: false,
+                    defaultPath:
+                      settings.projectDirectory || defaultProjectDirectory,
+                  })
+                    .then((path) => {
+                      if (typeof path === "string")
+                        update({ projectDirectory: path });
+                    })
+                    .catch((e) => onError(String(e)))
+                }
+              >
+                Choose…
+              </button>
+              <button
+                title="Use Documents/Mathlidelux"
+                disabled={!settings.projectDirectory}
+                onClick={() => update({ projectDirectory: "" })}
+              >
+                <RotateCcw size={16} />
+              </button>
+            </div>
+            <p className="folder-path">
+              {settings.projectDirectory || defaultProjectDirectory}
+            </p>
+          </>
+        )}
         {tab === "Appearance" && (
           <>
             <label className="setting-row">

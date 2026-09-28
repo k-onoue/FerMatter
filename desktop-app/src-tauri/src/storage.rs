@@ -275,24 +275,24 @@ pub fn import_zip(archive: &Path, parent: &Path) -> Result<PathBuf> {
             dest.write_all(&bytes).map_err(err)?;
         }
     }
-    let final_dir = parent.join(format!(
-        "{}-{}",
-        archive.file_stem().unwrap_or_default().to_string_lossy(),
-        &uuid::Uuid::new_v4().to_string()[..8]
-    ));
-    rename_no_replace(temp.path(), &final_dir)?;
-    let children: Vec<_> = fs::read_dir(&final_dir)
+    let children: Vec<_> = fs::read_dir(temp.path())
         .map_err(err)?
         .flatten()
-        .filter(|e| {
-            !e.file_name().to_string_lossy().starts_with('.') && e.file_name() != "__MACOSX"
-        })
+        .filter(|e| e.file_name() != ".DS_Store" && e.file_name() != "__MACOSX")
         .collect();
-    Ok(if children.len() == 1 && children[0].path().is_dir() {
+    let root = if children.len() == 1 && children[0].path().is_dir() {
         children[0].path()
     } else {
-        final_dir
-    })
+        temp.path().to_owned()
+    };
+    if scan::candidates(&root)?.is_empty() {
+        return Err("No LaTeX or Typst entry file found.".into());
+    }
+    crate::project_location::publish(
+        &root,
+        parent,
+        &archive.file_stem().unwrap_or_default().to_string_lossy(),
+    )
 }
 #[cfg(test)]
 mod tests {

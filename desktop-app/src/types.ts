@@ -88,6 +88,7 @@ export interface Preferences {
   theme: string;
   pdfWidth: number;
   projectView: "grid" | "list";
+  projectDirectory?: string;
   [key: string]: unknown;
 }
 export interface Binding {

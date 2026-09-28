@@ -10,8 +10,22 @@
 - Install the [tools for your project format](requirements.md).
 - Try the [LaTeX sample](../docs/downloads/demo-paper.zip) or [Typst sample](../docs/downloads/demo-typst.zip).
 - Opening/rendering a project leaves its manuscript source unchanged.
-- Folders open in place; ZIPs open as an extracted copy.
+- **Open Project** opens folders in place; ZIPs are extracted into the default project folder.
+- Drop folders or ZIPs from Finder onto **Projects** to import them into **Settings → Projects → Default project folder**. Originals stay unchanged; existing destination folders are never overwritten.
+- Dropping a folder already directly inside the default folder opens that copy without duplicating it.
 - **Load File…** belongs to [New Project](new-project.md); it reads one file's text only.
+
+## Manage projects
+
+- Click the lightning icon on a project card or list row to open its Instant Mode.
+- Click to select; double-click, press `Return`, or click the arrow to open.
+- `⌘`-click toggles selection; `Shift`-click selects a range; drag empty space to select an area. `⌘A` selects the visible results; `Esc` clears the selection.
+- Arrow keys move selection; hold `Shift` to extend it. Search, grid/list view, and zoom remain available.
+- **Duplicate** (`⌘D`) copies selected projects into the default folder, including Library variants, labels, saved Source drafts, and Instant history. Copies get unique names.
+- **Delete…** (`⌘⌫`) asks for confirmation with folder paths, then moves the actual source folders to Finder Trash. This also applies to projects opened outside the default folder.
+- `⌘Z` / `⇧⌘Z`, toolbar buttons, or the context menu undo/redo creation, imports, duplication and deletion. Any action moving folders to Trash asks for confirmation.
+- Undo history survives app restarts. Restoring refuses to overwrite existing folders; emptying Trash or moving files in Finder may make an operation unavailable. Close a project’s Instant window before deleting/restoring it.
+- Import limits: folders up to 30,000 entries / 1 GB; ZIPs up to 10,000 entries / 512 MB. Linked/special files are rejected; use **Open Project** for folders containing links.
 
 ## If it does not render
 

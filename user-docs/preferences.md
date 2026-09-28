@@ -3,6 +3,7 @@
 - Open **Settings** using the gear button or `⌘,`.
 - **Shortcuts**: record a shortcut, reset one assignment, or restore defaults; changes persist.
 - Duplicate assignments and reserved macOS/text-editing shortcuts are rejected.
+- **Projects → Default project folder**: choose where to create/import/duplicate projects; existing projects stay in place.
 - **Editor → Save files**: choose After changes or Manually (`⌘S`).
 - **New Project → Edit Template**: customize the setup for [new projects](new-project.md).
 

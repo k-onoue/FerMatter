@@ -3,7 +3,7 @@
 1. Choose **New Project** (`⇧⌘N`) and enter a name.
 2. Choose **LaTeX**, **Typst**, **LaTeX + TikZ**, or **Typst + CeTZ**.
 3. Paste your text; choose Auto, One per line, or Source.
-4. Choose **Create Project**; the source folder is created in Documents/Mathlidelux.
+4. Choose **Create Project**; the source folder is created in the selected location.
 
 | Input mode | Content |
 | --- | --- |
@@ -13,7 +13,8 @@
 
 ## Project location
 
-- New projects are created in `~/Documents/Mathlidelux`.
+- **Settings → Projects → Default project folder** sets the location for new projects, dropped folders/ZIPs, and duplicates. The initial default is `~/Documents/Mathlidelux`.
+- **New Project → Location → Choose…** overrides the folder for this project only; **Default** returns to the saved default.
 - Existing projects retain their saved locations; opening a folder uses it in place.
 - **Reveal in Finder** on a project opens its source folder.
 
