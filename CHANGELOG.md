@@ -37,6 +37,9 @@
 - Protect settings against stale-window overwrites and preserve rapid preference changes with ordered saves and explicit reload after conflicts.
 - Stream large project snapshots and hashes with cancellation, bound image allocations and avoid loading every selected image when copying multiple items.
 - Reclaim eligible old render/export/PDF caches at startup while preserving saved work and clipboard references.
+- Preserve Source and Library drafts before closing or switching projects; failed saves remain retryable. Quit waits for all editor windows.
+- Keep recent Library edits when rescans or renders finish late. Source moves retain drafts, main-file settings and shared editor Undo; unsaved files cannot be moved to Trash.
+- Release closed project and transient variant editor models without discarding shared split-pane Undo history.
 
 - Align slider thumbs with track endpoints at minimum and maximum values.
 

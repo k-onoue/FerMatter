@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { CodeEditor, setProjectCompletions } from "./editor";
+import { SnapshotWriter, registerWindowFlush } from "./persistence";
+import { flushSourceBuffers, dirtySourceBuffers } from "./sourcePersistence";
 import { rpc, uid } from "./api";
 import { ImagePreview, ContextMenu, type Ask } from "./ui";
 import type { Project, Buffer, TreeEntry, Card } from "./types";
@@ -94,6 +96,8 @@ export function SourceWorkspace({
   ask,
   navigate,
   onSaved,
+  beforeMutation,
+  onProjectChanged,
   onCursor,
 }: {
   project: Project;
@@ -109,10 +113,12 @@ export function SourceWorkspace({
     endUTF16?: number;
   };
   onSaved: () => void;
+  beforeMutation: () => Promise<void>;
+  onProjectChanged: (patch: Pick<Project, "main" | "candidates">) => void;
   onCursor: (file: string, offset: number, line: number) => void;
 }) {
   const [tree, setTree] = useState<TreeEntry[]>([]);
-  const [buffers, setBuffers] = useState<Record<string, Buffer>>({});
+  const [buffers, setBufferState] = useState<Record<string, Buffer>>({});
   const [draftsLoaded, setDraftsLoaded] = useState(false);
   const draftsHydrated = useRef(false);
   const first = useRef(leaf());
@@ -162,6 +168,31 @@ export function SourceWorkspace({
   const [previewSize, setPreviewSize] = useState(0);
   const refs = useRef({ buffers, layout, activePane });
   refs.current = { buffers, layout, activePane };
+  const updateBuffers = useCallback(
+    (
+      update:
+        | Record<string, Buffer>
+        | ((current: Record<string, Buffer>) => Record<string, Buffer>),
+    ) => {
+      const next =
+        typeof update === "function" ? update(refs.current.buffers) : update;
+      refs.current.buffers = next;
+      setBufferState(next);
+    },
+    [],
+  );
+  const draftWriter = useRef(
+    new SnapshotWriter<Record<string, Buffer>>((value) =>
+      rpc("save_drafts", { project: project.id, value }),
+    ),
+  );
+  const mutating = useRef(false);
+  const mutationDone = useRef<Promise<void> | null>(null);
+  const [mutationBusy, setMutationBusy] = useState(false);
+  const autoSaveRef = useRef(autoSave);
+  autoSaveRef.current = autoSave;
+  const saveDrafts = () =>
+    draftWriter.current.save(dirtySourceBuffers(refs.current.buffers));
   const completionSources = useRef<string[]>([]);
   const savedCallback = useRef(onSaved);
   savedCallback.current = onSaved;
@@ -184,19 +215,21 @@ export function SourceWorkspace({
   );
   const save = useCallback(
     async (path: string) => {
+      if (mutating.current) return;
       if (pending.current.has(path)) return pending.current.get(path);
       const buffer = refs.current.buffers[path];
       if (!buffer?.dirty) return;
       const promise = rpc<Buffer>("save_file", { project: project.id, buffer })
         .then((saved) => {
           if (!mounted.current) return;
-          setBuffers((current) => {
+          updateBuffers((current) => {
             const now = current[path];
             if (!now) return current;
             return {
               ...current,
               [path]: {
                 ...saved,
+                modelKey: now.modelKey,
                 text: now.text,
                 dirty: now.text !== buffer.text,
                 error: undefined,
@@ -207,13 +240,15 @@ export function SourceWorkspace({
         })
         .catch((e) => {
           if (mounted.current)
-            setBuffers((current) => ({
+            updateBuffers((current) => ({
               ...current,
               [path]: { ...current[path], error: String(e) },
             }));
           onError(String(e));
+          throw e;
         })
         .finally(() => pending.current.delete(path));
+      void promise.catch(() => {});
       pending.current.set(path, promise);
       return promise;
     },
@@ -231,7 +266,9 @@ export function SourceWorkspace({
             path,
           });
           if (!mounted.current) return false;
-          setBuffers((b) => (b[path] ? b : { ...b, [path]: buffer }));
+          updateBuffers((b) =>
+            b[path] ? b : { ...b, [path]: { ...buffer, modelKey: uid() } },
+          );
         }
         if (fileOpens.current.get(target) !== sequence) return false;
         setLayout((current) =>
@@ -266,11 +303,16 @@ export function SourceWorkspace({
         const recovered = Object.fromEntries(
           Object.entries(drafts).map(([k, v]) => [
             k,
-            { ...v, dirty: true, recovered: true },
+            {
+              ...v,
+              modelKey: v.modelKey || uid(),
+              dirty: true,
+              recovered: true,
+            },
           ]),
         );
         refs.current.buffers = recovered;
-        setBuffers(recovered);
+        updateBuffers(recovered);
         if (warnings.length) onError(warnings.join("\n"));
         draftsHydrated.current = true;
         setDraftsLoaded(true);
@@ -282,13 +324,6 @@ export function SourceWorkspace({
       mounted.current = false;
       ticket.current++;
       void rpc("cancel", { key: `${project.id}:caret` });
-      if (draftsHydrated.current)
-        void rpc("save_drafts", {
-          project: project.id,
-          value: Object.fromEntries(
-            Object.entries(refs.current.buffers).filter(([, b]) => b.dirty),
-          ),
-        });
     };
   }, [project.id]);
   useEffect(() => {
@@ -306,16 +341,12 @@ export function SourceWorkspace({
     if (!draftsLoaded) return;
     onDrafts(sources);
     const timer = setTimeout(() => {
-      void rpc("save_drafts", {
-        project: project.id,
-        value: Object.fromEntries(
-          Object.entries(buffers).filter(([, b]) => b.dirty),
-        ),
-      }).catch(fail);
+      if (mutating.current) return;
+      void saveDrafts().catch(fail);
       if (autoSave)
-        Object.values(buffers)
+        Object.values(refs.current.buffers)
           .filter((b) => b.dirty && !b.recovered && !b.error)
-          .forEach((b) => void save(b.path));
+          .forEach((b) => void save(b.path).catch(() => {}));
     }, 700);
     setProjectCompletions(project.id, [
       ...completionSources.current,
@@ -323,6 +354,26 @@ export function SourceWorkspace({
     ]);
     return () => clearTimeout(timer);
   }, [buffers, autoSave, draftsLoaded]);
+  const flushRef = useRef(async () => {});
+  flushRef.current = async () => {
+    if (!draftsHydrated.current) return;
+    await flushSourceBuffers({
+      pending: () => [...pending.current.values()],
+      buffers: () => refs.current.buffers,
+      saveDrafts: (value) => draftWriter.current.save(value),
+      save,
+      autoSave: autoSaveRef.current && !mutating.current,
+    });
+    await draftWriter.current.flush();
+  };
+  useEffect(
+    () =>
+      registerWindowFlush("source", async () => {
+        await mutationDone.current;
+        await flushRef.current();
+      }),
+    [],
+  );
   useEffect(() => {
     let stopped = false;
     const sourceFiles = tree.filter(
@@ -416,7 +467,9 @@ export function SourceWorkspace({
         leaves(current.layout).find((p) => p.id === current.activePane) ||
         leaves(current.layout)[0];
       if (command === "saveEquation")
-        Object.keys(current.buffers).forEach((p) => void save(p));
+        Object.keys(current.buffers).forEach(
+          (p) => void save(p).catch(() => {}),
+        );
       if (command === "nextSourceTab" || command === "previousSourceTab") {
         const i = pane.tabs.indexOf(pane.active);
         const path =
@@ -433,7 +486,8 @@ export function SourceWorkspace({
     return () => window.removeEventListener("source-command", handler);
   }, [save, open]);
   const change = (path: string, text: string) =>
-    setBuffers((current) => {
+    !mutating.current &&
+    updateBuffers((current) => {
       const b = current[path];
       if (!b || b.text === text) return current;
       return {
@@ -441,6 +495,68 @@ export function SourceWorkspace({
         [path]: { ...b, text, dirty: true, recovered: false, error: undefined },
       };
     });
+  async function fileOperation(request: {
+    project: string;
+    action: string;
+    path: string;
+    destination?: string;
+  }) {
+    if (mutating.current)
+      throw new Error("Wait for the current file operation.");
+    mutating.current = true;
+    let release!: () => void;
+    mutationDone.current = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    document.documentElement.inert = true;
+    setMutationBusy(true);
+    try {
+      await flushRef.current();
+      await beforeMutation();
+      if (
+        request.action === "trash" &&
+        Object.values(refs.current.buffers).some(
+          (b) =>
+            b.dirty &&
+            (b.path === request.path || b.path.startsWith(request.path + "/")),
+        )
+      )
+        throw new Error(
+          "Save or reload the unsaved files before moving them to Trash. Your drafts have been kept.",
+        );
+      const patch = await rpc<Pick<Project, "main" | "candidates">>(
+        "file_operation",
+        request,
+      );
+      onProjectChanged(patch);
+      if (
+        (request.action === "rename" || request.action === "move") &&
+        request.destination
+      )
+        remap(request.path, request.destination);
+      if (request.action === "trash") {
+        updateBuffers((current) =>
+          Object.fromEntries(
+            Object.entries(current).filter(
+              ([path]) =>
+                path !== request.path && !path.startsWith(request.path + "/"),
+            ),
+          ),
+        );
+        for (const pane of leaves(refs.current.layout))
+          for (const tab of pane.tabs)
+            if (tab === request.path || tab.startsWith(request.path + "/"))
+              closeTab(pane.id, tab);
+      }
+      await saveDrafts();
+    } finally {
+      mutating.current = false;
+      document.documentElement.inert = false;
+      mutationDone.current = null;
+      release();
+      setMutationBusy(false);
+    }
+  }
   async function operation(action: string, path: string, directory: boolean) {
     try {
       if (action === "reveal") {
@@ -467,7 +583,7 @@ export function SourceWorkspace({
         );
         if (!name) return;
         destination = [parent, name].filter(Boolean).join("/");
-        await rpc("file_operation", {
+        await fileOperation({
           project: project.id,
           action,
           path: destination,
@@ -481,14 +597,13 @@ export function SourceWorkspace({
         destination = [parent, clipboard.path.split("/").at(-1)]
           .filter(Boolean)
           .join("/");
-        await rpc("file_operation", {
+        await fileOperation({
           project: project.id,
           action: clipboard.cut ? "move" : "copy",
           path: clipboard.path,
           destination,
         });
         if (clipboard.cut) {
-          remap(clipboard.path, destination);
           setClipboard(null);
         }
       } else if (action === "rename" || action === "duplicate") {
@@ -499,26 +614,14 @@ export function SourceWorkspace({
         );
         if (!name || name === path) return;
         destination = name;
-        await rpc("file_operation", {
+        await fileOperation({
           project: project.id,
           action: action === "duplicate" ? "copy" : "rename",
           path,
           destination,
         });
-        if (action === "rename") remap(path, destination);
       } else if (action === "trash") {
-        await rpc("file_operation", { project: project.id, action, path });
-        setBuffers((current) =>
-          Object.fromEntries(
-            Object.entries(current).filter(
-              ([name]) => name !== path && !name.startsWith(path + "/"),
-            ),
-          ),
-        );
-        for (const pane of leaves(refs.current.layout))
-          for (const tab of pane.tabs)
-            if (tab === path || tab.startsWith(path + "/"))
-              closeTab(pane.id, tab);
+        await fileOperation({ project: project.id, action, path });
       } else if (action === "reload") {
         const b = await rpc<Buffer>("read_file", { project: project.id, path });
         if (refs.current.buffers[path]?.dirty) {
@@ -529,8 +632,12 @@ export function SourceWorkspace({
           );
           if (answer !== "Reload") return;
         }
-        setBuffers((bs) => ({ ...bs, [path]: b }));
+        updateBuffers((bs) => ({
+          ...bs,
+          [path]: { ...b, modelKey: bs[path]?.modelKey || uid() },
+        }));
       }
+      await saveDrafts();
       if (!["reload", "copy-path", "copy", "cut", "reveal"].includes(action))
         savedCallback.current();
       void refresh();
@@ -541,11 +648,11 @@ export function SourceWorkspace({
   function remap(from: string, to: string) {
     const rename = (p: string) =>
       p === from || p.startsWith(from + "/") ? to + p.slice(from.length) : p;
-    setBuffers((bs) =>
+    updateBuffers((bs) =>
       Object.fromEntries(
         Object.entries(bs).map(([p, b]) => [
           rename(p),
-          { ...b, path: rename(p) },
+          { ...b, path: rename(p), modelKey: b.modelKey || p },
         ]),
       ),
     );
@@ -898,8 +1005,11 @@ export function SourceWorkspace({
               )}
               {p.active && buffers[p.active] ? (
                 <CodeEditor
+                  retainModel
+                  readOnly={mutationBusy}
                   project={project.id}
                   path={p.active}
+                  modelKey={buffers[p.active].modelKey || p.active}
                   value={buffers[p.active].text}
                   pane={p.id}
                   format={
@@ -915,7 +1025,7 @@ export function SourceWorkspace({
                     onCursor(p.active, offset, line);
                   }}
                   onFocus={() => setActivePane(p.id)}
-                  onSave={() => void save(p.active)}
+                  onSave={() => void save(p.active).catch(() => {})}
                   reveal={reveal?.file === p.active ? reveal : undefined}
                 />
               ) : (

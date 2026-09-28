@@ -4,6 +4,7 @@ mod export;
 mod files;
 mod instant;
 mod instant_settings;
+mod lifecycle;
 mod native;
 mod project_commands;
 mod project_drop;
@@ -60,6 +61,15 @@ async fn request(
     operation: String,
     mut payload: Value,
 ) -> Result<Value> {
+    if operation == "window_flush_complete" {
+        lifecycle::complete(
+            &app,
+            window.label(),
+            payload["token"].as_u64().unwrap_or(0),
+            string(&payload, "error"),
+        )?;
+        return Ok(Value::Null);
+    }
     let runtime = state.inner().clone();
     payload["window"] = json!(window.label());
     if operation != "desktop_background" {
@@ -122,6 +132,9 @@ fn dispatch(
 ) -> Result<Value> {
     let store = &runtime.store;
     let ident = string(&v, "project");
+    if !ident.is_empty() {
+        source_commands::recover_pending(store, ident)?;
+    }
     match op {
         "instant_session" => instant::session(store, &v),
         "instant_context" => instant::context(store, ident),
@@ -601,6 +614,7 @@ pub fn run() {
                 tools: Mutex::new(Arc::new(tools)),
                 tools_revision: Mutex::new(string(&tools_snapshot, "revision").to_owned()),
             }));
+            app.manage(lifecycle::Lifecycle::default());
             let menu = tauri::menu::Menu::default(app.handle())?;
             for item in menu.items()? {
                 if let Some(submenu) = item.as_submenu() {
@@ -632,6 +646,7 @@ pub fn run() {
             if event.id().as_ref() == "instant" {
                 let runtime = app.state::<Arc<Runtime>>();
                 if project_setup::required(&runtime.store).unwrap_or(true) {
+                    lifecycle::cancel_close(app, "main");
                     if let Some(window) = app.get_webview_window("main") {
                         let _ = window.show();
                         let _ = window.set_focus();
@@ -644,6 +659,10 @@ pub fn run() {
             }
         })
         .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                lifecycle::request_close(window.app_handle(), window.label());
+            }
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 #[cfg(target_os = "macos")]
                 if window.label() == "main" {
@@ -654,8 +673,16 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![request])
-        .run(tauri::generate_context!())
-        .expect("Unable to start Mathlidelux");
+        .build(tauri::generate_context!())
+        .expect("Unable to start Mathlidelux")
+        .run(|app, event| {
+            if let tauri::RunEvent::ExitRequested { api, .. } = event {
+                if !lifecycle::exiting(app) {
+                    api.prevent_exit();
+                    lifecycle::request_quit(app);
+                }
+            }
+        });
 }
 
 #[cfg(test)]

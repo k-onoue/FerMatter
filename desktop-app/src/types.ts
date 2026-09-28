@@ -50,6 +50,7 @@ export interface Project {
   [key: string]: unknown;
 }
 export interface Buffer {
+  modelKey?: string;
   path: string;
   text: string;
   revision: string;

@@ -13,6 +13,7 @@
 | Location under the current metadata directory | Contents |
 | --- | --- |
 | `Projects/<project-id>/project.json` | Cards, labels, outline, export settings and compatible unknown fields |
+| `Projects/<project-id>/SourceMutation.json` | Temporary recovery journal for interrupted Source rename/move |
 | `Projects/<project-id>/Cache/` | Rendered images, previews and logs |
 | `Projects/<project-id>/Exports/` | Images at selected export sizes |
 | `Projects/<project-id>/Documents/` | Compiled PDFs and navigation snapshots |
@@ -77,3 +78,11 @@
 - Drafts, variants/project JSON, SourceDrafts, Instant sessions/history, project undo data, original project folders and legacy storage are never eviction targets.
 - No live-session eviction: visible PDFs and ongoing drags remain untouched. Full live leases and a hard per-session quota remain tracked in [issue #39](https://github.com/k-onoue/mathlidelux/issues/39).
 - Regenerate unreferenced previews from source/history when requested after cleanup.
+
+## Closing and Source moves
+
+- Close/switch flushes pending Source saves, recovery drafts and Library metadata. Manual save mode keeps source files untouched.
+- Uncommitted Library editing is retained as `libraryDraft` in project metadata and reopened with the project. Cancel explicitly discards that editor draft.
+- Main-window close hides the app after saving; Quit waits for all open editor windows. Save failures or a missing flush response cancel closing.
+- Rename/move waits for active saves, journals old/new metadata and recovery paths, then updates the file, drafts and main-file selection. The next project request completes or rolls back interrupted work.
+- Source Trash refuses files/folders containing unsaved drafts; save or explicitly reload those files first.

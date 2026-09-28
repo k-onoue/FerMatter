@@ -1,3 +1,5 @@
+import { registerWindowFlush } from "./persistence";
+import { installWindowPersistence } from "./windowPersistence";
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -273,25 +275,23 @@ export default function InstantWindow() {
   }, []);
 
   useEffect(() => {
+    const unregister = registerWindowFlush("instant", async () => {
+      if (draftRef.current) persist(draftRef.current);
+      await Promise.all([queue.current, configurationDocument.flush()]);
+      if (saveError.current) throw new Error(saveError.current);
+    });
     let gone = false;
     let cleanup: (() => void) | undefined;
-    void getCurrentWindow()
-      .onCloseRequested(async (event) => {
-        await queue.current;
-        if (saveError.current) {
-          event.preventDefault();
-          report(saveError.current);
-          return;
-        }
-      })
-      .then((fn) => {
-        if (gone) fn();
-        else cleanup = fn;
+    void installWindowPersistence(report)
+      .then((stop) => {
+        if (gone) stop();
+        else cleanup = stop;
       })
       .catch(report);
     return () => {
       gone = true;
       cleanup?.();
+      unregister();
     };
   }, []);
 
