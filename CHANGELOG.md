@@ -11,6 +11,7 @@
 ### Added
 
 - Fresh-input release verification, recorded dependency audits and an explicit signed/notarized packaging path with validation manifests.
+- Editable source recipes in SVG exports, project-aware Instant restoration, macOS Open With/Dock import, a menu-bar entry and configurable global Instant shortcuts.
 
 - Editable compiler and conversion-tool paths in Settings and first-launch setup, with automatic detection, executable checks, and recoverable file-managed configuration.
 

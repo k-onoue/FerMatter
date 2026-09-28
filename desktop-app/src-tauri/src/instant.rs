@@ -123,6 +123,9 @@ pub fn source(draft: &Value) -> Result<(String, String, Value)> {
 }
 
 pub fn render(home: &Path, draft: &Value, cancel: &compiler::Cancellation) -> Result<Value> {
+    if draft["requiresRender"] == true {
+        return Err("Press Render to compile imported source.".into());
+    }
     let (main, content, mut card) = source(draft)?;
     if string(draft, "source").trim().is_empty() {
         return Err("Enter an equation or drawing.".into());
@@ -146,6 +149,7 @@ pub fn render(home: &Path, draft: &Value, cancel: &compiler::Cancellation) -> Re
     if card["status"] != "ready" {
         return Err(string(&card, "error").into());
     }
+    card["restoreMetadata"] = crate::roundtrip::recipe(draft, draft["restorationProject"].clone());
     let path = export::image_file(
         &card,
         string(draft, "exportFormat"),
@@ -188,6 +192,9 @@ pub fn render_project(
     cancel: &compiler::Cancellation,
 ) -> Result<Value> {
     validate(draft)?;
+    if draft["requiresRender"] == true {
+        return Err("Press Render to compile imported source.".into());
+    }
     let p = store.load(project)?;
     if draft["template"]["format"] != p["format"] {
         return Err("The project format changed. Start a new equation.".into());
@@ -258,6 +265,10 @@ pub fn render_project(
     if card["status"] != "ready" {
         return Err(string(&card, "error").into());
     }
+    let mut portable = draft.clone();
+    portable["template"] = crate::roundtrip::fallback_template(&p, &root);
+    card["restoreMetadata"] =
+        crate::roundtrip::recipe(&portable, crate::roundtrip::reference(store, &p)?);
     let path = export::image_file(
         &card,
         string(draft, "exportFormat"),

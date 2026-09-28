@@ -1,3 +1,4 @@
+import { dropSVG } from "./svgImport";
 import { LibraryNavigation } from "./LibraryNavigation";
 import { VariantEditor } from "./VariantEditor";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -998,6 +999,7 @@ export default function App() {
     <div
       className="app"
       onDragOver={(event) => event.preventDefault()}
+      onDropCapture={(event) => dropSVG(event, report)}
       onDrop={(event) => event.preventDefault()}
     >
       {desktopBackground && (

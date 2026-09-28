@@ -6,12 +6,15 @@ mod instant;
 mod instant_settings;
 mod lifecycle;
 mod native;
+mod native_import;
 mod project_commands;
 mod project_data;
 mod project_drop;
 mod project_history;
 mod project_location;
 mod project_setup;
+mod resident;
+mod roundtrip;
 mod scan;
 mod settings;
 mod source_commands;
@@ -75,6 +78,28 @@ async fn request(
     payload["window"] = json!(window.label());
     if operation != "desktop_background" {
         payload["key"] = json!(format!("{}::{}", window.label(), string(&payload, "key")));
+    }
+    if operation == "instant_import_pending" {
+        return resident::incoming(&app, window.label(), string(&payload, "token"));
+    }
+    if operation == "import_svg" {
+        let sources = if let Some(svg) = payload["svg"].as_str() {
+            vec![svg.to_owned()]
+        } else {
+            vec![roundtrip::read_svg(Path::new(string(&payload, "path")))?]
+        };
+        resident::import_svg(&app, &sources)?;
+        return Ok(Value::Null);
+    }
+    if operation == "instant_clipboard" {
+        let (tx, rx) = std::sync::mpsc::sync_channel(1);
+        let handle = app.clone();
+        app.run_on_main_thread(move || {
+            let _ = tx.send(resident::from_clipboard(&handle));
+        })
+        .map_err(err)?;
+        rx.recv().map_err(err)??;
+        return Ok(Value::Null);
     }
     if operation == "instant_open" {
         if lifecycle::quitting(&app) {
@@ -342,8 +367,12 @@ fn dispatch(
                     .as_f64()
                     .or(p["exportFontSize"].as_f64())
                     .unwrap_or(0.);
+                let mut card = card.clone();
+                if string(&v, "format") == "svg" {
+                    card["restoreMetadata"] = roundtrip::card_recipe(store, &p, &card, size)?;
+                }
                 paths.push(export::image_file(
-                    card,
+                    &card,
                     string(&v, "format"),
                     size,
                     &store.project_dir(ident)?.join("Exports"),
@@ -473,7 +502,7 @@ fn dispatch(
                 }
                 store.allowed_artifact(Path::new(string(&v["document"], "renderRoot")))?;
                 let p = store.load(ident)?;
-                let card = compiler::document_artwork(
+                let mut card = compiler::document_artwork(
                     &v["document"],
                     string(&v, "targetID"),
                     &store.project_dir(ident)?.join("Cache/PDFArtwork"),
@@ -489,6 +518,9 @@ fn dispatch(
                             .or(p["exportFontSize"].as_f64())
                     })
                     .unwrap_or(0.);
+                if string(&v, "format") == "svg" {
+                    card["restoreMetadata"] = roundtrip::card_recipe(store, &p, &card, size)?;
+                }
                 let path = export::image_file(
                     &card,
                     string(&v, "format"),
@@ -513,16 +545,20 @@ fn dispatch(
             Ok(json!(read(p)?))
         }
         "preview_export" => {
-            let card = &v["card"];
-            store.allowed_artifact(Path::new(string(card, "svgPath")))?;
+            let mut card = v["card"].clone();
+            store.allowed_artifact(Path::new(string(&card, "svgPath")))?;
             let p = store.load(ident)?;
+            let size = v["fontSize"]
+                .as_f64()
+                .or(p["exportFontSize"].as_f64())
+                .unwrap_or(0.);
+            if string(&v, "format") == "svg" {
+                card["restoreMetadata"] = roundtrip::card_recipe(store, &p, &card, size)?;
+            }
             Ok(json!(export::image_file(
-                card,
+                &card,
                 string(&v, "format"),
-                v["fontSize"]
-                    .as_f64()
-                    .or(p["exportFontSize"].as_f64())
-                    .unwrap_or(0.),
+                size,
                 &store.project_dir(ident)?.join("Exports")
             )?))
         }
@@ -587,6 +623,12 @@ fn dispatch(
 }
 pub fn run() {
     tauri::Builder::default()
+        .manage(resident::Resident::default())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(resident::hotkey)
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_drag::init())
         .setup(|app| {
@@ -646,6 +688,13 @@ pub fn run() {
                 }
             }
             app.set_menu(menu)?;
+            resident::install(app.handle())?;
+            let runtime = app.state::<Arc<Runtime>>();
+            if let Err(error) =
+                resident::apply_keys(app.handle(), &runtime.settings.load("keybindings.json")?)
+            {
+                resident::report(app.handle(), error);
+            }
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
                 // The CSS background controls translucency. A native material here
@@ -689,19 +738,21 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("Unable to start Mathlidelux")
         .run(|app, event| {
-            #[cfg(target_os = "macos")]
-            if matches!(event, tauri::RunEvent::Reopen { .. }) {
-                lifecycle::cancel_close(app, "main");
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
+            match event {
+                #[cfg(target_os = "macos")]
+                tauri::RunEvent::Opened { urls } => resident::open_files(
+                    app,
+                    urls.into_iter().filter_map(|url| url.to_file_path().ok()).collect(),
+                ),
+                #[cfg(target_os = "macos")]
+                tauri::RunEvent::Reopen { .. } => resident::show_projects(app),
+                tauri::RunEvent::ExitRequested { api, .. } => {
+                    if !lifecycle::exiting(app) {
+                        api.prevent_exit();
+                        lifecycle::request_quit(app);
+                    }
                 }
-            }
-            if let tauri::RunEvent::ExitRequested { api, .. } = event {
-                if !lifecycle::exiting(app) {
-                    api.prevent_exit();
-                    lifecycle::request_quit(app);
-                }
+                _ => {}
             }
         });
 }

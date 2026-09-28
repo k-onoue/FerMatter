@@ -271,6 +271,8 @@ fn default_bindings() -> HashMap<&'static str, Value> {
         ("open", "o", false, false, false, true),
         ("projects", "o", true, false, false, true),
         ("newProject", "n", true, false, false, true),
+        ("globalInstant", "n", false, true, true, true),
+        ("globalInstantClipboard", "v", false, true, true, true),
         ("instant", "k", true, false, false, true),
         ("newEquation", "n", false, false, false, true),
         ("newFigure", "n", false, true, false, true),
@@ -322,6 +324,8 @@ fn keybindings(v: &Value) -> Result<()> {
     // Keep stored overrides usable when new defaults share their keys.
     // Only implicit defaults yield; explicit duplicates are still rejected.
     for id in [
+        "globalInstant",
+        "globalInstantClipboard",
         "instant",
         "zoomIn",
         "zoomOut",

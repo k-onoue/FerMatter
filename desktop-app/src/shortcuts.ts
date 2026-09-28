@@ -13,6 +13,16 @@ export const commands: { id: string; name: string; binding: Binding }[] = [
   ["open", "Open Project", shortcut("o")],
   ["projects", "Projects", shortcut("o", { shift: true })],
   ["newProject", "New Project", shortcut("n", { shift: true })],
+  [
+    "globalInstant",
+    "Instant from Anywhere",
+    shortcut("n", { control: true, option: true }),
+  ],
+  [
+    "globalInstantClipboard",
+    "Edit SVG from Clipboard",
+    shortcut("v", { control: true, option: true }),
+  ],
   ["instant", "New Instant", shortcut("k", { shift: true })],
   ["newEquation", "New Equation", shortcut("n")],
   ["newFigure", "New Figure", shortcut("n", { option: true })],
@@ -82,6 +92,8 @@ export const bindingEqual = (a: Binding, b: Binding) =>
   a.shift === b.shift &&
   a.option === b.option;
 const compatibleDefaults = [
+  "globalInstant",
+  "globalInstantClipboard",
   "instant",
   "zoomIn",
   "zoomOut",
