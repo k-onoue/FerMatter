@@ -310,16 +310,7 @@ pub fn roots(store: &Storage, ids: &Value) -> Result<Vec<PathBuf>> {
 }
 
 pub fn duplicate(store: &Storage, source: &Path, parent: &Path) -> Result<PathBuf> {
-    let original = store.open(source, None)?;
-    let drafts = store.read_drafts(string(&original, "id"))?["buffers"].clone();
-    let instant = store
-        .project_dir(string(&original, "id"))?
-        .join("Instant/session.json");
-    let instant = if instant.exists() {
-        Some(fs::read(instant).map_err(err)?)
-    } else {
-        None
-    };
+    let state = CopyState::read(store, source)?;
     let name = format!(
         "{} copy",
         source
@@ -328,23 +319,60 @@ pub fn duplicate(store: &Storage, source: &Path, parent: &Path) -> Result<PathBu
             .to_string_lossy()
     );
     let target = project_location::copy_folder(source, parent, &name)?;
-    let copy = open_created(store, &target, original["main"].as_str())?;
-    let mut metadata = original;
-    metadata["id"] = copy["id"].clone();
-    metadata["root"] = copy["root"].clone();
-    // Library variants and labels are independent JSON; rendered artifacts may be
-    // reused until the copy is edited. Original metadata/caches remain untouched.
-    store.save(string(&copy, "id"), &metadata)?;
-    json_write(&store.draft_path(string(&copy, "id"))?, &drafts)?;
-    if let Some(bytes) = instant {
-        atomic(
-            &store
-                .project_dir(string(&copy, "id"))?
-                .join("Instant/session.json"),
-            &bytes,
-        )?;
-    }
+    state.write(store, &target)?;
     Ok(target)
+}
+
+pub fn copy_state(store: &Storage, source: &Path, target: &Path) -> Result<()> {
+    CopyState::read(store, source)?.write(store, target)
+}
+struct CopyState {
+    original: Value,
+    drafts: Value,
+    instant: Option<Vec<u8>>,
+}
+impl CopyState {
+    fn read(store: &Storage, source: &Path) -> Result<Self> {
+        let original = store.open(source, None)?;
+        let drafts = store.read_drafts(string(&original, "id"))?["buffers"].clone();
+        let instant = store
+            .project_dir(string(&original, "id"))?
+            .join("Instant/session.json");
+        let instant = if instant.exists() {
+            Some(fs::read(instant).map_err(err)?)
+        } else {
+            None
+        };
+        Ok(Self {
+            original,
+            drafts,
+            instant,
+        })
+    }
+    fn write(self, store: &Storage, target: &Path) -> Result<()> {
+        let Self {
+            original,
+            drafts,
+            instant,
+        } = self;
+        let copy = open_created(store, target, original["main"].as_str())?;
+        let mut metadata = original;
+        metadata["id"] = copy["id"].clone();
+        metadata["root"] = copy["root"].clone();
+        // Library variants and labels are independent JSON; rendered artifacts may be
+        // reused until the copy is edited. Original metadata/caches remain untouched.
+        store.save(string(&copy, "id"), &metadata)?;
+        json_write(&store.draft_path(string(&copy, "id"))?, &drafts)?;
+        if let Some(bytes) = instant {
+            atomic(
+                &store
+                    .project_dir(string(&copy, "id"))?
+                    .join("Instant/session.json"),
+                &bytes,
+            )?;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]

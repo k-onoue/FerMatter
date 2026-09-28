@@ -56,6 +56,24 @@ impl Storage {
             for entry in fs::read_dir(dir).map_err(err)? {
                 let entry = entry.map_err(err)?;
                 if let Ok(mut p) = json_read(&entry.path().join("project.json")) {
+                    // Keep the old sources/metadata recoverable after demo setup,
+                    // while showing their editable copies at the selected location.
+                    if let Some(target) = p["demoRelocatedTo"].as_str() {
+                        if Path::new(target).is_dir()
+                            && self
+                                .home
+                                .join("Projects")
+                                .join(id(target))
+                                .join("project.json")
+                                .is_file()
+                        {
+                            let root = Path::new(string(&p, "root"));
+                            if let Ok(root) = root.canonicalize() {
+                                found.remove(&id(&path_string(&root)));
+                            }
+                            continue;
+                        }
+                    }
                     let root = Path::new(string(&p, "root"));
                     if root.is_dir() {
                         if let Ok(ident) = self.register(root) {
@@ -93,6 +111,7 @@ impl Storage {
         safe(&root, &main)?;
         p["id"] = json!(ident);
         p["root"] = json!(root);
+        p.as_object_mut().unwrap().remove("demoRelocatedTo");
         p["main"] = json!(main);
         p["format"] = json!(if main.ends_with(".typ") {
             "typst"

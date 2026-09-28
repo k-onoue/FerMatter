@@ -10,6 +10,8 @@
 
 ### Added
 
+- Required first-launch project-folder selection, with four bundled editable demos and preservation of existing sample variants, drafts, and Instant history.
+
 - Project cards and list rows include an Instant Mode shortcut.
 
 - Configurable default project folder, one-off New Project location, and Finder folder/ZIP imports. Projects supports multiple selection, duplication, confirmed Trash deletion, and persistent undo/redo.

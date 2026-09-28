@@ -7,6 +7,7 @@ mod native;
 mod project_drop;
 mod project_history;
 mod project_location;
+mod project_setup;
 mod scan;
 mod settings;
 mod storage;
@@ -59,6 +60,9 @@ async fn request(
         payload["key"] = json!(format!("{}::{}", window.label(), string(&payload, "key")));
     }
     if operation == "instant_open" {
+        if project_setup::required(&runtime.store)? {
+            return Err("Choose a project folder in the main window first.".into());
+        }
         let project = if string(&payload, "project").is_empty() {
             None
         } else {
@@ -185,9 +189,19 @@ fn dispatch(
                 .filter(|p| p.file_name().to_string_lossy().ends_with(".theme.json"))
                 .filter_map(|p| json_read(&p.path()).ok())
                 .collect();
+            let setup_required = project_setup::required(store)?;
+            let projects = if setup_required {
+                vec![]
+            } else {
+                store.recent()?
+            };
             Ok(
-                json!({"projects":store.recent()?,"settings":runtime.settings.load("preferences.json")?,"defaultProjectDirectory":project_location::default_directory()?,"theme":runtime.settings.load("theme.json")?,"keybindings":runtime.settings.load("keybindings.json")?,"themes":themes,"templates":json_read(&store.home.join("templates.json")).unwrap_or(json!({})),"storage":store.home}),
+                json!({"setupRequired":setup_required,"projects":projects,"settings":runtime.settings.load("preferences.json")?,"defaultProjectDirectory":project_location::default_directory()?,"theme":runtime.settings.load("theme.json")?,"keybindings":runtime.settings.load("keybindings.json")?,"themes":themes,"templates":json_read(&store.home.join("templates.json")).unwrap_or(json!({})),"storage":store.home}),
             )
+        }
+        "complete_project_setup" => {
+            let _guard = store.writes.lock().unwrap();
+            project_setup::finish(store, &runtime.settings, string(&v, "directory"))
         }
         "open_project" => {
             let path = PathBuf::from(string(&v, "path"));
@@ -749,6 +763,14 @@ pub fn run() {
         })
         .on_menu_event(|app, event| {
             if event.id().as_ref() == "instant" {
+                let runtime = app.state::<Arc<Runtime>>();
+                if project_setup::required(&runtime.store).unwrap_or(true) {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                    return;
+                }
                 if let Err(error) = instant::open(app, None) {
                     eprintln!("Could not open Instant: {error}");
                 }

@@ -51,6 +51,7 @@ import type {
 } from "./types";
 import { targetAtSource, targetsAtLine } from "./navigation";
 import { ProjectsPage } from "./ProjectsPage";
+import { ProjectSetup } from "./ProjectSetup";
 const initialPreferences: Preferences = {
   appearance: "dark",
   autoSave: true,
@@ -92,6 +93,7 @@ export default function App() {
   const [notice, setNotice] = useState("");
   const [windowZoom, setWindowZoom] = useState(1);
   const [defaultProjectDirectory, setDefaultProjectDirectory] = useState("");
+  const [setupRequired, setSetupRequired] = useState(true);
   const [canvasZoom, setCanvasZoom] = useState(1);
   const canvasScroll = useControlScroll((steps) =>
     setCanvasZoom((zoom) => stepZoom(zoom, steps)),
@@ -161,6 +163,7 @@ export default function App() {
   useEffect(() => {
     void rpc<{
       projects: Project[];
+      setupRequired: boolean;
       defaultProjectDirectory: string;
       settings: Preferences;
       themes: Theme[];
@@ -170,6 +173,7 @@ export default function App() {
     }>("startup")
       .then((data) => {
         setProjects(data.projects);
+        setSetupRequired(data.setupRequired);
         setDefaultProjectDirectory(data.defaultProjectDirectory);
         setSettings({ ...initialPreferences, ...data.settings });
         if (data.settings.pinned === true) {
@@ -726,6 +730,7 @@ export default function App() {
         );
         return;
       }
+      if (!ready || setupRequired) return;
       const inModal = !!target.closest('[role="dialog"]');
       if (inModal) return;
       const typing = !!target.closest(
@@ -781,8 +786,21 @@ export default function App() {
     };
     window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);
-  }, [keys, mode, project, selected, visible, drafts, pdfOpen, inspector, pin]);
+  }, [
+    keys,
+    mode,
+    project,
+    selected,
+    visible,
+    drafts,
+    pdfOpen,
+    inspector,
+    pin,
+    ready,
+    setupRequired,
+  ]);
   async function execute(id: string) {
+    if (!ready || setupRequired) return;
     if (id === "instant")
       return rpc("instant_open", { project: project?.id }).catch(report);
     if (id === "open") return openProject();
@@ -882,6 +900,17 @@ export default function App() {
           <LoaderCircle className="spin" />
           <span>Opening…</span>
         </div>
+      ) : setupRequired ? (
+        <ProjectSetup
+          initialDirectory={
+            settings.projectDirectory || defaultProjectDirectory
+          }
+          onComplete={(data) => {
+            setSettings({ ...initialPreferences, ...data.settings });
+            setProjects(data.projects);
+            setSetupRequired(false);
+          }}
+        />
       ) : !project ? (
         <ProjectsPage
           projects={projects}
