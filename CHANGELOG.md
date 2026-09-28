@@ -25,6 +25,8 @@
 
 ### Changed
 
+- Display source font sizes in points instead of “Original” throughout the Library and Source previews.
+
 - Show Source Files and Outline together in a stacked sidebar, with tabs for short windows.
 
 - Adopt the desktop app as Mathlidelux, remove the Rust badge, preserve the original bundle identity and preview data, and import Swift source drafts without overwriting manuscripts. Prototype DMG/PKG tooling now targets the desktop app.

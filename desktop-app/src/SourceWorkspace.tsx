@@ -1,3 +1,4 @@
+import { OutputSizeOptions } from "./OutputSizeOptions";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -946,11 +947,10 @@ export function SourceWorkspace({
                 value={previewSize}
                 onChange={(e) => setPreviewSize(Number(e.target.value))}
               >
-                {[0, 12, 16, 20, 24, 32, 40, 48, 60, 72].map((n) => (
-                  <option value={n} key={n}>
-                    {n ? n + " pt" : "Original"}
-                  </option>
-                ))}
+                <OutputSizeOptions
+                  value={previewSize}
+                  sourceSizes={[preview.sourceFontSize]}
+                />
               </select>
               <button
                 title="Copy image"

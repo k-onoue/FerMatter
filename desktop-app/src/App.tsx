@@ -33,6 +33,7 @@ import { rpc, uid, projectName } from "./api";
 import { CodeEditor, configureTheme, setProjectCompletions } from "./editor";
 import { SourceWorkspace } from "./SourceWorkspace";
 import { PdfPane } from "./PdfPane";
+import { OutputSizeOptions } from "./OutputSizeOptions";
 import { ImagePreview, Modal, Prompt, ContextMenu, type Ask } from "./ui";
 import { Settings, defaults, palette } from "./settings";
 import { commandForEvent, validateBindings } from "./shortcuts";
@@ -1372,11 +1373,12 @@ export default function App() {
                         })
                       }
                     >
-                      {[0, 12, 16, 20, 24, 32, 40, 48, 60, 72].map((n) => (
-                        <option value={n} key={n}>
-                          {n ? n + " pt" : "Original"}
-                        </option>
-                      ))}
+                      <OutputSizeOptions
+                        value={project.exportFontSize || 0}
+                        sourceSizes={project.cards.map(
+                          (card) => card.sourceFontSize,
+                        )}
+                      />
                     </select>
                     <button
                       title={
@@ -1465,15 +1467,11 @@ export default function App() {
                         })
                       }
                     >
-                      {[-1, 0, 12, 16, 20, 24, 32, 40, 48, 60, 72].map((n) => (
-                        <option key={n} value={n}>
-                          {n < 0
-                            ? "Project default"
-                            : n
-                              ? n + " pt"
-                              : "Original"}
-                        </option>
-                      ))}
+                      <OutputSizeOptions
+                        value={selectedCard.exportFontSize ?? -1}
+                        sourceSizes={[selectedCard.sourceFontSize]}
+                        projectSize={project.exportFontSize || 0}
+                      />
                     </select>
                   </label>
                   <button
@@ -1751,11 +1749,11 @@ export default function App() {
                   })
                 }
               >
-                {[-1, 0, 12, 16, 20, 24, 32, 40, 48, 60, 72].map((n) => (
-                  <option value={n} key={n}>
-                    {n < 0 ? "Project default" : n ? n + " pt" : "Original"}
-                  </option>
-                ))}
+                <OutputSizeOptions
+                  value={editing.exportFontSize ?? -1}
+                  sourceSizes={[editing.sourceFontSize]}
+                  projectSize={project.exportFontSize || 0}
+                />
               </select>
             </label>
             <span className="spacer" />
