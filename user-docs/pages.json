@@ -4,6 +4,7 @@
   {"source": "edit-equation.md", "slug": "edit-equation", "title": "Make a version for your talk", "summary": "Edit a presentation variant while keeping the manuscript unchanged."},
   {"source": "export.md", "slug": "export", "title": "Choose size and format", "summary": "Copy, drag, or export SVG, PDF, PNG, and JPEG."},
   {"source": "new-project.md", "slug": "new-project", "title": "Start from pasted equations", "summary": "Create a LaTeX or Typst project from text and a template."},
+  {"source": "instant.md", "slug": "instant", "title": "Make an equation instantly", "summary": "Write, preview, and drag an equation without creating a project."},
   {"source": "navigate-paper.md", "slug": "navigate-paper", "title": "Find an equation in the paper", "summary": "Navigate between the paper PDF, outline, and equation library."},
   {"source": "source-editor.md", "slug": "source-editor", "title": "Edit the project source", "summary": "Edit files, manage panes, and save or recover drafts."},
   {"source": "figures.md", "slug": "figures", "title": "Use TikZ or CeTZ drawings", "summary": "Bring source drawings into your presentation."},

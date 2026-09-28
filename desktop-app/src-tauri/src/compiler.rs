@@ -166,7 +166,7 @@ fn ensure_pdf(pdf: &Path, stage: &Path, c: &Cancellation) -> Result<()> {
     }
     Ok(())
 }
-fn tex_body(card: &Value) -> String {
+pub(crate) fn tex_body(card: &Value) -> String {
     let text = string(card, "tex").trim();
     if string(card, "kind") == "figure" {
         return text.into();
@@ -196,7 +196,7 @@ fn tex_body(card: &Value) -> String {
         format!("\\[{t}\\]")
     }
 }
-fn typst_body(card: &Value) -> Result<String> {
+pub(crate) fn typst_body(card: &Value) -> Result<String> {
     let mut t = string(card, "tex").trim().to_owned();
     if t.is_empty() {
         return Err("Enter an equation or drawing.".into());

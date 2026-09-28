@@ -232,9 +232,10 @@ struct Cached {
 static CACHE: Mutex<Option<Cached>> = Mutex::new(None);
 pub fn background(
     app: &tauri::AppHandle,
+    label: &str,
     previous_key: &str,
 ) -> crate::files::Result<serde_json::Value> {
-    let window = app.get_webview_window("main").ok_or("Window unavailable")?;
+    let window = app.get_webview_window(label).ok_or("Window unavailable")?;
     let (tx, rx) = std::sync::mpsc::channel();
     let target = window.clone();
     window

@@ -1,7 +1,7 @@
 {
   "identifier": "main",
   "description": "Local Mathlidelux window",
-  "windows": ["main"],
+  "windows": ["main", "instant"],
   "permissions": [
     "core:default",
     "core:webview:allow-set-webview-zoom",
@@ -12,6 +12,7 @@
     "core:window:allow-set-fullscreen",
     "core:window:allow-start-dragging",
     "core:window:allow-close",
+    "core:window:allow-destroy",
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize"
   ]

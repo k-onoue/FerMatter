@@ -199,6 +199,7 @@ fn default_bindings() -> HashMap<&'static str, Value> {
         ("open", "o", false, false, false, true),
         ("projects", "o", true, false, false, true),
         ("newProject", "n", true, false, false, true),
+        ("instant", "k", true, false, false, true),
         ("newEquation", "n", false, false, false, true),
         ("newFigure", "n", false, true, false, true),
         ("find", "f", false, false, false, true),
@@ -246,9 +247,10 @@ fn keybindings(v: &Value) -> Result<()> {
         }
         *all.get_mut(id.as_str()).unwrap() = binding.clone()
     }
-    // Keep stored overrides usable when new zoom defaults share their keys.
+    // Keep stored overrides usable when new defaults share their keys.
     // Only implicit defaults yield; explicit duplicates are still rejected.
     for id in [
+        "instant",
         "zoomIn",
         "zoomOut",
         "fitPDF",

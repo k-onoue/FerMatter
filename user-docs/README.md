@@ -11,6 +11,7 @@
 
 ## Other tasks
 
+- [Make an equation instantly](instant.md), without creating a project.
 - Switch between **Grid view** and **List view** on Projects; the app remembers your choice. Each project shows its folder path below its name; hover to read a long path in full.
 - [Start from pasted equations](new-project.md).
 - [Find an equation in the paper PDF](navigate-paper.md).

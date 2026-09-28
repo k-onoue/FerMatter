@@ -13,6 +13,7 @@ export const commands: { id: string; name: string; binding: Binding }[] = [
   ["open", "Open Project", shortcut("o")],
   ["projects", "Projects", shortcut("o", { shift: true })],
   ["newProject", "New Project", shortcut("n", { shift: true })],
+  ["instant", "New Instant", shortcut("k", { shift: true })],
   ["newEquation", "New Equation", shortcut("n")],
   ["newFigure", "New Figure", shortcut("n", { option: true })],
   ["find", "Find", shortcut("f")],
@@ -80,7 +81,8 @@ export const bindingEqual = (a: Binding, b: Binding) =>
   a.control === b.control &&
   a.shift === b.shift &&
   a.option === b.option;
-const zoomCommands = [
+const compatibleDefaults = [
+  "instant",
   "zoomIn",
   "zoomOut",
   "fitPDF",
@@ -92,12 +94,12 @@ export function effectiveBindings(keys: Keybindings): Record<string, Binding> {
   const bindings = Object.fromEntries(
     commands.map((c) => [c.id, keys.bindings[c.id] || c.binding]),
   );
-  // New zoom defaults yield to saved overrides, including legacy PDF shortcuts.
+  // New defaults yield to saved overrides, including legacy PDF shortcuts.
   // Explicit duplicate assignments still fail validation.
   return Object.fromEntries(
     Object.entries(bindings).map(([id, binding]) => [
       id,
-      zoomCommands.includes(id) &&
+      compatibleDefaults.includes(id) &&
       !keys.bindings[id] &&
       Object.entries(keys.bindings).some(
         ([other, saved]) => other !== id && bindingEqual(saved, binding),

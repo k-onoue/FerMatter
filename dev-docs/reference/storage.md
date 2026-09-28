@@ -20,6 +20,8 @@
 | `SourceDrafts/` | Recoverable source buffers |
 | `MigratedSwiftDrafts/` | Original Swift draft backups and import markers |
 | `templates.json` | User templates |
+| `Instant/session.json` | Project-free draft and deduplicated source/template history |
+| `Instant/Cache/`, `Instant/Exports/` | Instant render artifacts and prepared drag/copy files |
 
 - Project ID: first 24 hex characters of the canonical root-path SHA-256; draft filename uses the full hash.
 - Opened folders stay in place; opening a main file uses its containing folder.
@@ -37,6 +39,7 @@
 - Imported drafts never overwrite source files automatically. Saving checks the old source revision.
 - Corrupt recovery data produces an error and is kept; it must not be replaced by an empty editor session.
 - Manual Library order metadata is retained; the current UI displays source order.
+- Instant stores schema-versioned drafts/history atomically. Invalid saved state is preserved and blocks replacement; a pending webview-local draft covers an interrupted save.
 - Do not edit one project simultaneously in old and new apps; their Library metadata is not synchronized.
 
 ## Boundaries

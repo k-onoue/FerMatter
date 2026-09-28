@@ -1,6 +1,7 @@
 mod compiler;
 mod export;
 mod files;
+mod instant;
 mod native;
 mod scan;
 mod settings;
@@ -29,14 +30,34 @@ fn job(runtime: &Runtime, key: &str) -> compiler::Cancellation {
     }
     c
 }
+fn close_jobs(runtime: &Runtime, label: &str) {
+    let prefix = format!("{label}::");
+    runtime.jobs.lock().unwrap().retain(|key, job| {
+        if key.starts_with(&prefix) {
+            job.cancel();
+            false
+        } else {
+            true
+        }
+    });
+}
 #[tauri::command]
 async fn request(
     app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
     state: tauri::State<'_, Arc<Runtime>>,
     operation: String,
-    payload: Value,
+    mut payload: Value,
 ) -> Result<Value> {
     let runtime = state.inner().clone();
+    payload["window"] = json!(window.label());
+    if operation != "desktop_background" {
+        payload["key"] = json!(format!("{}::{}", window.label(), string(&payload, "key")));
+    }
+    if operation == "instant_open" {
+        instant::open(&app).map_err(err)?;
+        return Ok(Value::Null);
+    }
     // Reserve ownership before queuing blocking work. A delayed old request must
     // never replace a newer compiler session after its cancellation was received.
     if operation == "cancel" {
@@ -48,6 +69,7 @@ async fn request(
     let cancellation = if matches!(
         operation.as_str(),
         "scan"
+            | "instant_render"
             | "render"
             | "source_preview"
             | "document"
@@ -75,9 +97,31 @@ fn dispatch(
     let store = &runtime.store;
     let ident = string(&v, "project");
     match op {
+        "instant_session" => instant::session(store, &v),
+        "instant_export" => {
+            let path = store.allowed_artifact(Path::new(string(&v, "path")))?;
+            if !path.starts_with(store.home.join("Instant/Exports")) {
+                return Err("Not an Instant image.".into());
+            }
+            fs::copy(path, string(&v, "destination")).map_err(err)?;
+            Ok(Value::Null)
+        }
+        "instant_render" => {
+            let c = cancellation.ok_or("Missing request ownership")?;
+            let result = instant::render(&store.home, &v["draft"], &c);
+            let mut jobs = runtime.jobs.lock().unwrap();
+            let key = string(&v, "key");
+            if jobs
+                .get(key)
+                .is_some_and(|current| Arc::ptr_eq(&current.0, &c.0))
+            {
+                jobs.remove(key);
+            }
+            result
+        }
         "desktop_background" => {
             #[cfg(target_os = "macos")]
-            return wallpaper::background(app, string(&v, "key"));
+            return wallpaper::background(app, string(&v, "window"), string(&v, "key"));
             #[cfg(not(target_os = "macos"))]
             Ok(Value::Null)
         }
@@ -562,6 +606,24 @@ pub fn run() {
                 store,
                 jobs: Mutex::new(HashMap::new()),
             }));
+            let menu = tauri::menu::Menu::default(app.handle())?;
+            for item in menu.items()? {
+                if let Some(submenu) = item.as_submenu() {
+                    if submenu.text()? == "File" {
+                        submenu.insert(
+                            &tauri::menu::MenuItem::with_id(
+                                app,
+                                "instant",
+                                "New Instant",
+                                true,
+                                None::<&str>,
+                            )?,
+                            0,
+                        )?;
+                    }
+                }
+            }
+            app.set_menu(menu)?;
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
                 // The CSS background controls translucency. A native material here
@@ -570,15 +632,44 @@ pub fn run() {
             }
             Ok(())
         })
+        .on_menu_event(|app, event| {
+            if event.id().as_ref() == "instant" {
+                if let Err(error) = instant::open(app) {
+                    eprintln!("Could not open Instant: {error}");
+                }
+            }
+        })
         .on_window_event(|window, event| {
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 let runtime = window.state::<Arc<Runtime>>();
-                for job in runtime.jobs.lock().unwrap().values() {
-                    job.cancel();
-                }
+                close_jobs(&runtime, window.label());
             }
         })
         .invoke_handler(tauri::generate_handler![request])
         .run(tauri::generate_context!())
         .expect("Unable to start Mathlidelux");
+}
+
+#[cfg(test)]
+mod request_tests {
+    use super::*;
+    #[test]
+    fn closing_instant_does_not_cancel_project_work() {
+        let temp = tempfile::tempdir().unwrap();
+        let runtime = Runtime {
+            store: storage::Storage::new(temp.path().join("data"), temp.path().join("legacy"))
+                .unwrap(),
+            settings: settings::SettingsFiles::new(temp.path()),
+            jobs: Mutex::new(HashMap::new()),
+        };
+        let main = job(&runtime, "main::render");
+        let old = job(&runtime, "instant::render");
+        let instant = job(&runtime, "instant::render");
+        assert!(old.check().is_err());
+        assert!(main.check().is_ok());
+        close_jobs(&runtime, "instant");
+        assert!(instant.check().is_err());
+        assert!(main.check().is_ok());
+        assert_eq!(runtime.jobs.lock().unwrap().len(), 1);
+    }
 }

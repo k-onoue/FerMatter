@@ -188,9 +188,83 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
         json_write(&project_dir.join("verification-document.json"), &document)?;
         results.push(json!({"project":name,"cards":cards.len(),"headings":scanned["outline"].as_array().unwrap().len(),"anchors":document["anchors"].as_array().unwrap().len(),"pdf":document["pdfPath"]}));
     }
+    verify_instant(&output)?;
     let report = json!(results);
     json_write(&output.join("verification.json"), &report)?;
     Ok(report)
+}
+fn verify_instant(output: &Path) -> Result<()> {
+    use crate::{export, instant};
+    let latex = "\\documentclass[12pt]{article}\n\\usepackage{amsmath,amssymb}\n\\newcommand{\\vect}[1]{\\mathbf{#1}}\n\\begin{document}\n{{content}}\n\\end{document}";
+    let typst = "#set text(size: 12pt)\n#let square(x) = $x^2$\n{{content}}\n";
+    let tikz = latex.replace("\\begin{document}", "\\usepackage{tikz}\n\\begin{document}");
+    let cetz = format!("#import \"@preview/cetz:0.5.2\"\n{typst}");
+    let mut reports = vec![];
+    for (name, format, template, source, kind) in [
+        ("latex", "latex", latex, r"\frac{\vect{x}}{2}", "block"),
+        (
+            "multiline",
+            "latex",
+            latex,
+            "\\begin{aligned}a&=b+c\\\\\nd&=e+f\\end{aligned}",
+            "block",
+        ),
+        (
+            "typst-inline",
+            "typst",
+            typst,
+            "(dif x(t))/(dif t)",
+            "inline",
+        ),
+        ("typst-display", "typst", typst, "square(x) + 1", "block"),
+        (
+            "tikz",
+            "latex",
+            &tikz,
+            r"\begin{tikzpicture}\draw (0,0)--(1,0)--(0.5,1)--cycle;\end{tikzpicture}",
+            "figure",
+        ),
+        (
+            "cetz",
+            "typst",
+            &cetz,
+            "#cetz.canvas({ import cetz.draw: *; line((0,0),(1,0),(0.5,1),close: true) })",
+            "figure",
+        ),
+    ] {
+        let mut draft = json!({"source":source,"kind":kind,"fontSize":24,"color":"#2356ab","exportFormat":"svg","template":{"id":name,"name":name,"format":format,"source":template,"compiler":"pdflatex"}});
+        let c = compiler::Cancellation::default();
+        let result = instant::render(output, &draft, &c)?;
+        let card = &result["card"];
+        if card["status"] != "ready" || card["sourceFontSize"].as_f64().unwrap_or(0.) <= 0. {
+            return Err(format!("Instant {name}: no measured artwork"));
+        }
+        for format in ["svg", "pdf", "png", "jpeg"] {
+            let file = export::image_file(card, format, 36., &output.join("Instant/Exports"))?;
+            if file.metadata().map_err(err)?.len() == 0 {
+                return Err(format!("Instant {name}: empty {format}"));
+            }
+        }
+        // A failed render must not return the previous successful image.
+        draft["source"] = json!(if format == "latex" {
+            "\\undefinedInstantCommand{"
+        } else {
+            "#unknown-instant-command("
+        });
+        if instant::render(output, &draft, &c).is_ok() {
+            return Err(format!(
+                "Instant {name}: invalid input unexpectedly rendered"
+            ));
+        }
+        draft["source"] = json!(source);
+        instant::render(output, &draft, &c)?;
+        c.cancel();
+        if instant::render(output, &draft, &c).is_ok() {
+            return Err("Instant: cancelled work returned an image".into());
+        }
+        reports.push(json!({"name":name,"card":card,"path":result["path"]}));
+    }
+    json_write(&output.join("instant-verification.json"), &json!(reports))
 }
 fn normalize(scan: &Value) -> Value {
     let mut cards = vec![];
