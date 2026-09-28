@@ -69,8 +69,8 @@ open 'src-tauri/target/release/bundle/macos/Mathlidelux.app'
 ```sh
 ./desktop-app/scripts/check.sh
 ./desktop-app/scripts/build.sh
-.venv-docs/bin/python scripts/build-guides.py --check
-python3 -B scripts/check-publication.py
+node scripts/build-guides.mjs --check
+node scripts/check-publication.mjs
 git diff --check
 ```
 

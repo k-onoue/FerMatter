@@ -26,5 +26,5 @@
 ## References
 
 - [GitHub Pages source configuration](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
-- [Python-Markdown](https://python-markdown.github.io/).
+- Generator: [markdown-it](https://github.com/markdown-it/markdown-it), run with Node.js after retiring the Python tooling.
 - [MkDocs Markdown documentation](https://www.mkdocs.org/user-guide/writing-your-docs/).

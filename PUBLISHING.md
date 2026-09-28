@@ -10,6 +10,6 @@
 
 ## Updating the demonstration
 
-- Use synthetic `examples/` only; run `python3 -B scripts/prepare-demo.py` after changing samples.
-- Refresh affected guides/media; run `python3 -B scripts/check-publication.py`.
+- Use synthetic `examples/` only; run `node scripts/prepare-demo.mjs` after changing samples.
+- Refresh affected guides/media; run `node scripts/check-publication.mjs`.
 - Full recipe: [documentation and media](dev-docs/documentation.md#tutorial-media).
