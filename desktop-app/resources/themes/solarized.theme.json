@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "mathlidelux.theme",
+  "id": "org.mathlidelux.solarized",
+  "name": "Solarized",
+  "light": {
+    "accent": "#268BD2",
+    "windowBackground": "#FDF6E3",
+    "surfaceBackground": "#EEE8D5",
+    "text": "#657B83",
+    "command": "#268BD2",
+    "delimiter": "#859900",
+    "number": "#D33682",
+    "comment": "#93A1A1"
+  },
+  "dark": {
+    "accent": "#268BD2",
+    "windowBackground": "#002B36",
+    "surfaceBackground": "#00212B",
+    "text": "#839496",
+    "command": "#268BD2",
+    "delimiter": "#859900",
+    "number": "#D33682",
+    "comment": "#586E75"
+  },
+  "extensions": {
+    "org.mathlidelux.theme-source": {
+      "variants": {
+        "light": "Solarized Light",
+        "dark": "Solarized Dark"
+      },
+      "sources": [
+        {
+          "repository": "https://github.com/microsoft/vscode",
+          "revision": "101c86fe138844c24b14ccb1a6636986f68e9bd2",
+          "files": [
+            "extensions/theme-solarized-light/themes/solarized-light-color-theme.json",
+            "extensions/theme-solarized-dark/themes/solarized-dark-color-theme.json"
+          ],
+          "license": "MIT",
+          "licenseFile": "Licenses/microsoft-vscode.txt"
+        }
+      ],
+      "adaptation": "Palette mapped to Mathlidelux interface and syntax tokens; native glass, text opacity, and artwork colors are unchanged."
+    }
+  }
+}

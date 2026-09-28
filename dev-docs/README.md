@@ -7,6 +7,7 @@
 | Task | Document |
 | --- | --- |
 | Build, branch, contribute | [Development](development.md) |
+| Work on the Rust macOS port | [Rust desktop](../desktop-app/README.md) |
 | Find the responsible module | [Architecture](architecture.md) |
 | Choose validation | [Testing](testing.md) |
 | Review a PR or LLM finding | [Reviewing](reviewing.md) |

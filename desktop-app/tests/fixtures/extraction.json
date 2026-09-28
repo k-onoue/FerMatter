@@ -1,0 +1,1114 @@
+{
+  "demo-paper": {
+    "cards": [
+      {
+        "id": "source-1451c2d68a07ff1679e99bd1",
+        "tex": "t \\in \\R",
+        "kind": "inline",
+        "file": "sections/model.tex",
+        "line": 3,
+        "endLine": 3,
+        "sourceOffset": 84,
+        "sourceEnd": 94,
+        "outlinePath": [
+          "heading-bb1216a121feb208a7d97dda",
+          "heading-1409e9e6ad3f2cc37a771380"
+        ]
+      },
+      {
+        "id": "source-2515e1e05e0ba30dc1900668",
+        "tex": "\\begin{equation}\n  s(t) = s_0 + v_0 t + \\frac{1}{2} a t^2\n  \\label{eq:trajectory}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/model.tex",
+        "line": 5,
+        "endLine": 8,
+        "sourceOffset": 200,
+        "sourceEnd": 296,
+        "outlinePath": [
+          "heading-bb1216a121feb208a7d97dda",
+          "heading-1409e9e6ad3f2cc37a771380"
+        ]
+      },
+      {
+        "id": "source-94d20308c7125550140739cf",
+        "tex": "\\begin{equation}\n  v(t) = \\frac{d s(t)}{d t} = v_0 + a t\n  \\label{eq:velocity}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/model.tex",
+        "line": 10,
+        "endLine": 13,
+        "sourceOffset": 347,
+        "sourceEnd": 440,
+        "outlinePath": [
+          "heading-bb1216a121feb208a7d97dda",
+          "heading-1409e9e6ad3f2cc37a771380"
+        ]
+      },
+      {
+        "id": "source-e7a5d997f006e3d02ca03486",
+        "tex": "\\begin{equation}\n  \\vect{\\phi}(t) = \\begin{pmatrix}1 & t & t^2\\end{pmatrix}^{\\!\\top},\n  \\qquad s(t) = \\vect{\\phi}(t)^\\top \\vect{w}\n  \\label{eq:feature_map}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/model.tex",
+        "line": 15,
+        "endLine": 19,
+        "sourceOffset": 515,
+        "sourceEnd": 685,
+        "outlinePath": [
+          "heading-bb1216a121feb208a7d97dda",
+          "heading-1409e9e6ad3f2cc37a771380"
+        ]
+      },
+      {
+        "id": "source-9ed82babb71ff9bad12c7a49",
+        "tex": "\\sigma > 0",
+        "kind": "inline",
+        "file": "sections/model.tex",
+        "line": 21,
+        "endLine": 21,
+        "sourceOffset": 775,
+        "sourceEnd": 787,
+        "outlinePath": [
+          "heading-bb1216a121feb208a7d97dda",
+          "heading-6c8ba866cdbd0b895d70b27a"
+        ]
+      },
+      {
+        "id": "source-88636d81064b74dc7309ff26",
+        "tex": "\\begin{equation}\n  y_i = s(t_i) + \\varepsilon_i,\n  \\qquad \\varepsilon_i \\sim \\mathcal{N}(0,\\sigma^2)\n  \\label{eq:observations}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/model.tex",
+        "line": 22,
+        "endLine": 26,
+        "sourceOffset": 789,
+        "sourceEnd": 930,
+        "outlinePath": [
+          "heading-bb1216a121feb208a7d97dda",
+          "heading-6c8ba866cdbd0b895d70b27a"
+        ]
+      },
+      {
+        "id": "source-c009d07ace0ac3429a066f69",
+        "tex": "\\vect{y}=(y_1,\\ldots,y_n)^\\top",
+        "kind": "inline",
+        "file": "sections/model.tex",
+        "line": 27,
+        "endLine": 27,
+        "sourceOffset": 957,
+        "sourceEnd": 989,
+        "outlinePath": [
+          "heading-bb1216a121feb208a7d97dda",
+          "heading-6c8ba866cdbd0b895d70b27a"
+        ]
+      },
+      {
+        "id": "source-29fd0478ff643ac3e88f246f",
+        "tex": "\\begin{equation}\n  \\vect{y} = \\Phi\\vect{w} + \\vect{\\varepsilon},\n  \\qquad \\Phi_{ij} = \\phi_j(t_i)\n  \\label{eq:matrix_model}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/model.tex",
+        "line": 29,
+        "endLine": 33,
+        "sourceOffset": 1053,
+        "sourceEnd": 1191,
+        "outlinePath": [
+          "heading-bb1216a121feb208a7d97dda",
+          "heading-6c8ba866cdbd0b895d70b27a"
+        ]
+      },
+      {
+        "id": "source-a7e273361389af21b1278647",
+        "tex": "\\begin{equation}\n  \\mathcal{L}(\\vect{w}) = \\frac{1}{2n}\\sum_{i=1}^{n}\n    \\left(y_i-\\vect{\\phi}(t_i)^\\top\\vect{w}\\right)^2\n  \\label{eq:squared_loss}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/fitting.tex",
+        "line": 4,
+        "endLine": 8,
+        "sourceOffset": 127,
+        "sourceEnd": 290,
+        "outlinePath": [
+          "heading-76a6708e34d7c09be024f443",
+          "heading-58336a163044b6c3ec7257f8"
+        ]
+      },
+      {
+        "id": "source-a29ef913ef762ea5b227e351",
+        "tex": "\\begin{equation}\n  \\nabla\\mathcal{L}(\\vect{w}) = \\frac{1}{n}\\Phi^\\top(\\Phi\\vect{w}-\\vect{y})\n  \\label{eq:loss_gradient}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/fitting.tex",
+        "line": 10,
+        "endLine": 13,
+        "sourceOffset": 365,
+        "sourceEnd": 499,
+        "outlinePath": [
+          "heading-76a6708e34d7c09be024f443",
+          "heading-58336a163044b6c3ec7257f8"
+        ]
+      },
+      {
+        "id": "source-4730128289054adf53026245",
+        "tex": "\\vect{w}_0=\\vect{0}",
+        "kind": "inline",
+        "file": "sections/fitting.tex",
+        "line": 15,
+        "endLine": 15,
+        "sourceOffset": 538,
+        "sourceEnd": 559,
+        "outlinePath": [
+          "heading-76a6708e34d7c09be024f443",
+          "heading-be9ab737235db00e42155c69"
+        ]
+      },
+      {
+        "id": "source-4a576187f4b11be0dc44a7b8",
+        "tex": "\\eta > 0",
+        "kind": "inline",
+        "file": "sections/fitting.tex",
+        "line": 15,
+        "endLine": 15,
+        "sourceOffset": 583,
+        "sourceEnd": 593,
+        "outlinePath": [
+          "heading-76a6708e34d7c09be024f443",
+          "heading-be9ab737235db00e42155c69"
+        ]
+      },
+      {
+        "id": "source-e7d6715f37a56d1583a08188",
+        "tex": "\\begin{equation}\n  \\vect{w}_{k+1} = \\vect{w}_k - \\eta\\nabla\\mathcal{L}(\\vect{w}_k)\n  \\label{eq:gradient_descent}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/fitting.tex",
+        "line": 16,
+        "endLine": 19,
+        "sourceOffset": 595,
+        "sourceEnd": 722,
+        "outlinePath": [
+          "heading-76a6708e34d7c09be024f443",
+          "heading-be9ab737235db00e42155c69"
+        ]
+      },
+      {
+        "id": "source-e639175656b0dbb1ff24105e",
+        "tex": "\\begin{equation}\n  \\widehat{\\vect{w}} = (\\Phi^\\top\\Phi)^{-1}\\Phi^\\top\\vect{y}\n  \\label{eq:least_squares}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/fitting.tex",
+        "line": 21,
+        "endLine": 24,
+        "sourceOffset": 805,
+        "sourceEnd": 924,
+        "outlinePath": [
+          "heading-76a6708e34d7c09be024f443",
+          "heading-be9ab737235db00e42155c69"
+        ]
+      },
+      {
+        "id": "source-2827536f9d25d24a3ceb42e9",
+        "tex": "\\lambda > 0",
+        "kind": "inline",
+        "file": "sections/fitting.tex",
+        "line": 25,
+        "endLine": 25,
+        "sourceOffset": 951,
+        "sourceEnd": 964,
+        "outlinePath": [
+          "heading-76a6708e34d7c09be024f443",
+          "heading-be9ab737235db00e42155c69"
+        ]
+      },
+      {
+        "id": "source-336e3b1a8863287b88079937",
+        "tex": "\\begin{align}\n  \\mathcal{L}_{\\lambda}(\\vect{w})\n    &= \\mathcal{L}(\\vect{w}) + \\frac{\\lambda}{2}\\|\\vect{w}\\|_2^2, \\\\\n  \\widehat{\\vect{w}}_{\\lambda}\n    &= (\\Phi^\\top\\Phi+n\\lambda I)^{-1}\\Phi^\\top\\vect{y}.\n  \\label{eq:ridge_solution}\n\\end{align}",
+        "kind": "block",
+        "file": "sections/fitting.tex",
+        "line": 26,
+        "endLine": 32,
+        "sourceOffset": 996,
+        "sourceEnd": 1240,
+        "outlinePath": [
+          "heading-76a6708e34d7c09be024f443",
+          "heading-be9ab737235db00e42155c69"
+        ]
+      },
+      {
+        "id": "source-aa2e2d28093908ff31da09b2",
+        "tex": "\\theta",
+        "kind": "inline",
+        "file": "sections/geometry.tex",
+        "line": 2,
+        "endLine": 2,
+        "sourceOffset": 96,
+        "sourceEnd": 104,
+        "outlinePath": [
+          "heading-e1fdcab5992631b1f41cc0ae"
+        ]
+      },
+      {
+        "id": "source-cdd447752aa045ced1c2538e",
+        "tex": "\\begin{equation}\n  R(\\theta) =\n  \\begin{pmatrix}\n    \\cos\\theta & -\\sin\\theta \\\\\n    \\sin\\theta & \\cos\\theta\n  \\end{pmatrix}\n  \\label{eq:rotation_matrix}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/geometry.tex",
+        "line": 3,
+        "endLine": 10,
+        "sourceOffset": 106,
+        "sourceEnd": 274,
+        "outlinePath": [
+          "heading-e1fdcab5992631b1f41cc0ae"
+        ]
+      },
+      {
+        "id": "source-a8f64b04b83f265f408f9f6a",
+        "tex": "\\begin{equation}\n  \\|R(\\theta)\\vect{x}\\|_2^2 = \\vect{x}^\\top\\vect{x}\n  \\label{eq:length_preservation}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/geometry.tex",
+        "line": 12,
+        "endLine": 15,
+        "sourceOffset": 337,
+        "sourceEnd": 453,
+        "outlinePath": [
+          "heading-e1fdcab5992631b1f41cc0ae"
+        ]
+      },
+      {
+        "id": "source-65a6503148dd3046a6e678e9",
+        "tex": "|\\rho|<1",
+        "kind": "inline",
+        "file": "sections/geometry.tex",
+        "line": 16,
+        "endLine": 16,
+        "sourceOffset": 525,
+        "sourceEnd": 535,
+        "outlinePath": [
+          "heading-e1fdcab5992631b1f41cc0ae"
+        ]
+      },
+      {
+        "id": "source-4e5713b05279611c0728e937",
+        "tex": "\\begin{equation}\n  \\Sigma = \\begin{pmatrix}\n    \\sigma_x^2 & \\rho\\sigma_x\\sigma_y \\\\\n    \\rho\\sigma_x\\sigma_y & \\sigma_y^2\n  \\end{pmatrix}\n  \\label{eq:position_covariance}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/geometry.tex",
+        "line": 17,
+        "endLine": 23,
+        "sourceOffset": 537,
+        "sourceEnd": 723,
+        "outlinePath": [
+          "heading-e1fdcab5992631b1f41cc0ae"
+        ]
+      },
+      {
+        "id": "source-837bf4b68aca61359cc4c8f2",
+        "tex": "\\begin{equation}\n  p(z) = \\frac{1}{\\sqrt{2\\pi}}\\exp\\!\\left(-\\frac{z^2}{2}\\right)\n  \\label{eq:normal_density}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/geometry.tex",
+        "line": 25,
+        "endLine": 28,
+        "sourceOffset": 796,
+        "sourceEnd": 919,
+        "outlinePath": [
+          "heading-e1fdcab5992631b1f41cc0ae"
+        ]
+      },
+      {
+        "id": "source-f03444714e0fc07f9da3ae7c",
+        "tex": "\\begin{equation}\n  \\Pr(a\\leq Z\\leq b) = \\int_a^b p(z)\\,dz\n  \\label{eq:interval_probability}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/geometry.tex",
+        "line": 30,
+        "endLine": 33,
+        "sourceOffset": 998,
+        "sourceEnd": 1104,
+        "outlinePath": [
+          "heading-e1fdcab5992631b1f41cc0ae"
+        ]
+      },
+      {
+        "id": "source-42558ec33567a17a793b6d7b",
+        "tex": "\\begin{equation}\n  h(x)=\\begin{cases}\n    0, & x<0,\\\\\n    x, & x\\geq 0\n  \\end{cases}\n  \\label{eq:positive_part}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/summary.tex",
+        "line": 4,
+        "endLine": 10,
+        "sourceOffset": 179,
+        "sourceEnd": 305,
+        "outlinePath": [
+          "heading-d3f835c2feb427113bd5fefb"
+        ]
+      },
+      {
+        "id": "source-c679a2eb99fa7b86610fe934",
+        "tex": "m",
+        "kind": "inline",
+        "file": "sections/summary.tex",
+        "line": 11,
+        "endLine": 11,
+        "sourceOffset": 330,
+        "sourceEnd": 333,
+        "outlinePath": [
+          "heading-d3f835c2feb427113bd5fefb"
+        ]
+      },
+      {
+        "id": "source-03fcd99871102320ee05cece",
+        "tex": "\\begin{equation}\n  \\sum_{j=0}^{m} r^j = \\frac{1-r^{m+1}}{1-r}, \\qquad r\\neq 1.\n  \\label{eq:geometric_sum}\n\\end{equation}",
+        "kind": "block",
+        "file": "sections/summary.tex",
+        "line": 12,
+        "endLine": 15,
+        "sourceOffset": 363,
+        "sourceEnd": 483,
+        "outlinePath": [
+          "heading-d3f835c2feb427113bd5fefb"
+        ]
+      },
+      {
+        "id": "source-195850562bea08670f5b0f68",
+        "tex": "\\begin{align}\n  s(t_1)-s(t_0) &= \\int_{t_0}^{t_1}v(t)\\,dt \\\\\n    &= v_0(t_1-t_0)+\\frac{a}{2}(t_1^2-t_0^2).\n  \\label{eq:displacement}\n\\end{align}",
+        "kind": "block",
+        "file": "sections/summary.tex",
+        "line": 17,
+        "endLine": 21,
+        "sourceOffset": 560,
+        "sourceEnd": 704,
+        "outlinePath": [
+          "heading-d3f835c2feb427113bd5fefb"
+        ]
+      }
+    ],
+    "outline": [
+      {
+        "id": "heading-bb1216a121feb208a7d97dda",
+        "title": "A simple model",
+        "level": 2,
+        "file": "sections/model.tex",
+        "line": 1,
+        "path": [
+          "heading-bb1216a121feb208a7d97dda"
+        ]
+      },
+      {
+        "id": "heading-1409e9e6ad3f2cc37a771380",
+        "title": "Trajectory",
+        "level": 3,
+        "file": "sections/model.tex",
+        "line": 2,
+        "path": [
+          "heading-bb1216a121feb208a7d97dda",
+          "heading-1409e9e6ad3f2cc37a771380"
+        ]
+      },
+      {
+        "id": "heading-6c8ba866cdbd0b895d70b27a",
+        "title": "Observations",
+        "level": 3,
+        "file": "sections/model.tex",
+        "line": 20,
+        "path": [
+          "heading-bb1216a121feb208a7d97dda",
+          "heading-6c8ba866cdbd0b895d70b27a"
+        ]
+      },
+      {
+        "id": "heading-76a6708e34d7c09be024f443",
+        "title": "Fitting the trajectory",
+        "level": 2,
+        "file": "sections/fitting.tex",
+        "line": 1,
+        "path": [
+          "heading-76a6708e34d7c09be024f443"
+        ]
+      },
+      {
+        "id": "heading-58336a163044b6c3ec7257f8",
+        "title": "Objective",
+        "level": 3,
+        "file": "sections/fitting.tex",
+        "line": 2,
+        "path": [
+          "heading-76a6708e34d7c09be024f443",
+          "heading-58336a163044b6c3ec7257f8"
+        ]
+      },
+      {
+        "id": "heading-be9ab737235db00e42155c69",
+        "title": "Estimation",
+        "level": 3,
+        "file": "sections/fitting.tex",
+        "line": 14,
+        "path": [
+          "heading-76a6708e34d7c09be024f443",
+          "heading-be9ab737235db00e42155c69"
+        ]
+      },
+      {
+        "id": "heading-e1fdcab5992631b1f41cc0ae",
+        "title": "Geometry and uncertainty",
+        "level": 2,
+        "file": "sections/geometry.tex",
+        "line": 1,
+        "path": [
+          "heading-e1fdcab5992631b1f41cc0ae"
+        ]
+      },
+      {
+        "id": "heading-d3f835c2feb427113bd5fefb",
+        "title": "A few useful building blocks",
+        "level": 2,
+        "file": "sections/summary.tex",
+        "line": 1,
+        "path": [
+          "heading-d3f835c2feb427113bd5fefb"
+        ]
+      }
+    ],
+    "files": [
+      "main.tex",
+      "sections/fitting.tex",
+      "sections/geometry.tex",
+      "sections/model.tex",
+      "sections/summary.tex"
+    ]
+  },
+  "demo-tikz": {
+    "cards": [
+      {
+        "id": "source-b48563f79a6f204a29ad047f",
+        "tex": "\\begin{tikzpicture}[thick]\n  \\draw[demoBlue,fill=demoBlue!8] (0,0) -- (4,0) -- (2,2.6) -- cycle;\n  \\node[point,label=below:$A$] at (0,0) {};\n  \\node[point,label=below:$B$] at (4,0) {};\n  \\node[point,label=above:$C$] at (2,2.6) {};\n\\end{tikzpicture}",
+        "kind": "figure",
+        "file": "main.tex",
+        "line": 15,
+        "endLine": 20,
+        "sourceOffset": 404,
+        "sourceEnd": 652,
+        "outlinePath": [
+          "heading-f10b41f3622396a8d218d77c"
+        ]
+      },
+      {
+        "id": "source-7dd6f17282bb36dc07a055f0",
+        "tex": "S=bh/2",
+        "kind": "inline",
+        "file": "main.tex",
+        "line": 22,
+        "endLine": 22,
+        "sourceOffset": 666,
+        "sourceEnd": 674,
+        "outlinePath": [
+          "heading-f10b41f3622396a8d218d77c"
+        ]
+      },
+      {
+        "id": "source-d7b4e56cbb62f12018921f32",
+        "tex": "\\begin{tikzpicture}[node distance=16mm,box/.style={draw=demoBlue,fill=demoBlue!8,rounded corners,minimum height=10mm,minimum width=23mm}]\n  \\node[box] (a) {Source};\n  \\node[box,right=of a] (b) {SVG};\n  \\node[box,right=of b] (c) {Slides};\n  \\draw[-{Stealth},thick,demoBlue] (a) -- (b);\n  \\draw[-{Stealth},thick,demoBlue] (b) -- (c);\n\\end{tikzpicture}",
+        "kind": "figure",
+        "file": "main.tex",
+        "line": 26,
+        "endLine": 32,
+        "sourceOffset": 727,
+        "sourceEnd": 1076,
+        "outlinePath": [
+          "heading-9a51cb68269b4ab2062b1549"
+        ]
+      }
+    ],
+    "outline": [
+      {
+        "id": "heading-f10b41f3622396a8d218d77c",
+        "title": "A triangle",
+        "level": 2,
+        "file": "main.tex",
+        "line": 13,
+        "path": [
+          "heading-f10b41f3622396a8d218d77c"
+        ]
+      },
+      {
+        "id": "heading-9a51cb68269b4ab2062b1549",
+        "title": "A workflow",
+        "level": 2,
+        "file": "main.tex",
+        "line": 23,
+        "path": [
+          "heading-9a51cb68269b4ab2062b1549"
+        ]
+      }
+    ],
+    "files": [
+      "main.tex"
+    ]
+  },
+  "demo-typst": {
+    "cards": [
+      {
+        "id": "typst-657a6e108a8cbb1ebbabb3ab",
+        "tex": "x(t) in RR^2",
+        "kind": "inline",
+        "file": "main.typ",
+        "line": 12,
+        "endLine": 12,
+        "sourceOffset": 391,
+        "sourceEnd": 405,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 391
+          }
+        ]
+      },
+      {
+        "id": "typst-cf0ce057f091179a75a3025f",
+        "tex": "t >= 0",
+        "kind": "inline",
+        "file": "main.typ",
+        "line": 12,
+        "endLine": 12,
+        "sourceOffset": 424,
+        "sourceEnd": 432,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 424
+          }
+        ]
+      },
+      {
+        "id": "typst-5448c949474f3bd107e4350d",
+        "tex": "x(t) = vec(cos t, sin t)",
+        "kind": "block",
+        "file": "main.typ",
+        "line": 14,
+        "endLine": 14,
+        "sourceOffset": 435,
+        "sourceEnd": 463,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 435
+          }
+        ]
+      },
+      {
+        "id": "typst-b3c06a18e4a6d4259e3ae5c5",
+        "tex": "norm(x(t)) = 1",
+        "kind": "block",
+        "file": "main.typ",
+        "line": 16,
+        "endLine": 16,
+        "sourceOffset": 481,
+        "sourceEnd": 499,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 481
+          }
+        ]
+      },
+      {
+        "id": "typst-2a2ad56fdad18bf1c123f415",
+        "tex": "v(t) = (dif x(t)) / (dif t)",
+        "kind": "inline",
+        "file": "sections/model.typ",
+        "line": 6,
+        "endLine": 6,
+        "sourceOffset": 76,
+        "sourceEnd": 105,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-7c102c665abb9bf06f820866"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 518
+          },
+          {
+            "file": "sections/model.typ",
+            "offset": 76
+          }
+        ]
+      },
+      {
+        "id": "typst-8c07967893c64e72065189c2",
+        "tex": "v(t) = vec(-sin t, cos t)",
+        "kind": "block",
+        "file": "sections/model.typ",
+        "line": 8,
+        "endLine": 8,
+        "sourceOffset": 108,
+        "sourceEnd": 137,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-7c102c665abb9bf06f820866"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 518
+          },
+          {
+            "file": "sections/model.typ",
+            "offset": 108
+          }
+        ]
+      },
+      {
+        "id": "typst-e577ae6c09697aa3588f52a6",
+        "tex": "norm(v(t)) = 1",
+        "kind": "block",
+        "file": "sections/model.typ",
+        "line": 10,
+        "endLine": 10,
+        "sourceOffset": 153,
+        "sourceEnd": 171,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-7c102c665abb9bf06f820866"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 518
+          },
+          {
+            "file": "sections/model.typ",
+            "offset": 153
+          }
+        ]
+      },
+      {
+        "id": "typst-350803f328b38e8070a370d2",
+        "tex": "a(t) = (dif^2 x(t)) / (dif t^2) = -x(t)",
+        "kind": "block",
+        "file": "sections/model.typ",
+        "line": 12,
+        "endLine": 12,
+        "sourceOffset": 184,
+        "sourceEnd": 227,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-7c102c665abb9bf06f820866"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 518
+          },
+          {
+            "file": "sections/model.typ",
+            "offset": 184
+          }
+        ]
+      },
+      {
+        "id": "typst-3fca1b6b896aedb8ba6b94ca",
+        "tex": "L = integral_0^(2 pi) norm(v(t)) dif t = 2 pi",
+        "kind": "block",
+        "file": "sections/model.typ",
+        "line": 14,
+        "endLine": 14,
+        "sourceOffset": 247,
+        "sourceEnd": 296,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-7c102c665abb9bf06f820866"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 518
+          },
+          {
+            "file": "sections/model.typ",
+            "offset": 247
+          }
+        ]
+      },
+      {
+        "id": "typst-d21747692d613893121cf314",
+        "tex": "y_i",
+        "kind": "inline",
+        "file": "sections/fitting.typ",
+        "line": 6,
+        "endLine": 6,
+        "sourceOffset": 103,
+        "sourceEnd": 108,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-2f71eda8164948618ab2b09f"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 548
+          },
+          {
+            "file": "sections/fitting.typ",
+            "offset": 103
+          }
+        ]
+      },
+      {
+        "id": "typst-00dce2d00556eaf29052750f",
+        "tex": "prediction_i",
+        "kind": "inline",
+        "file": "sections/fitting.typ",
+        "line": 6,
+        "endLine": 6,
+        "sourceOffset": 127,
+        "sourceEnd": 141,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-2f71eda8164948618ab2b09f"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 548
+          },
+          {
+            "file": "sections/fitting.typ",
+            "offset": 127
+          }
+        ]
+      },
+      {
+        "id": "typst-189aeba6fc6f2eb1cebee01a",
+        "tex": "hat(y)_i = beta_0 + beta_1 t_i",
+        "kind": "block",
+        "file": "sections/fitting.typ",
+        "line": 8,
+        "endLine": 8,
+        "sourceOffset": 144,
+        "sourceEnd": 178,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-2f71eda8164948618ab2b09f"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 548
+          },
+          {
+            "file": "sections/fitting.typ",
+            "offset": 144
+          }
+        ]
+      },
+      {
+        "id": "typst-4aa83724e241fc27de35608d",
+        "tex": "cal(L)(beta) = sum_(i=1)^n (y_i - hat(y)_i)^2",
+        "kind": "block",
+        "file": "sections/fitting.typ",
+        "line": 10,
+        "endLine": 10,
+        "sourceOffset": 198,
+        "sourceEnd": 247,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-2f71eda8164948618ab2b09f"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 548
+          },
+          {
+            "file": "sections/fitting.typ",
+            "offset": 198
+          }
+        ]
+      },
+      {
+        "id": "typst-45f786607f68314efed3f6e2",
+        "tex": "hat(beta) = (X^T X)^(-1) X^T y",
+        "kind": "block",
+        "file": "sections/fitting.typ",
+        "line": 12,
+        "endLine": 12,
+        "sourceOffset": 268,
+        "sourceEnd": 302,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-2f71eda8164948618ab2b09f"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 548
+          },
+          {
+            "file": "sections/fitting.typ",
+            "offset": 268
+          }
+        ]
+      },
+      {
+        "id": "typst-e7a676a6e2ec0dba806510c5",
+        "tex": "\"RMSE\" = sqrt(1/n sum_(i=1)^n (y_i - hat(y)_i)^2)",
+        "kind": "block",
+        "file": "sections/fitting.typ",
+        "line": 14,
+        "endLine": 14,
+        "sourceOffset": 325,
+        "sourceEnd": 378,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-2f71eda8164948618ab2b09f"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 548
+          },
+          {
+            "file": "sections/fitting.typ",
+            "offset": 325
+          }
+        ]
+      },
+      {
+        "id": "typst-7dd7292b6b8bf800b6d5923f",
+        "tex": "A = pi r^2",
+        "kind": "block",
+        "file": "main.typ",
+        "line": 23,
+        "endLine": 23,
+        "sourceOffset": 602,
+        "sourceEnd": 616,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-d78b705364775da374594d7e"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 602
+          }
+        ]
+      },
+      {
+        "id": "typst-c8d86a9f59b1e279c249e726",
+        "tex": "R(theta) = mat(cos theta, -sin theta; sin theta, cos theta)",
+        "kind": "block",
+        "file": "main.typ",
+        "line": 25,
+        "endLine": 25,
+        "sourceOffset": 628,
+        "sourceEnd": 691,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-d78b705364775da374594d7e"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 628
+          }
+        ]
+      },
+      {
+        "id": "typst-655d9d01143f607ca068e01f",
+        "tex": "f(x) = cases(x^2 & \"if \" x >= 0, -x & \"otherwise\")",
+        "kind": "block",
+        "file": "main.typ",
+        "line": 27,
+        "endLine": 27,
+        "sourceOffset": 707,
+        "sourceEnd": 761,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-d78b705364775da374594d7e"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 707
+          }
+        ]
+      },
+      {
+        "id": "typst-a26bee5b9cdf98b16a27be5f",
+        "tex": "r = 1",
+        "kind": "inline",
+        "file": "main.typ",
+        "line": 29,
+        "endLine": 29,
+        "sourceOffset": 797,
+        "sourceEnd": 804,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-d78b705364775da374594d7e"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 797
+          }
+        ]
+      },
+      {
+        "id": "typst-5d113a79bd8c4cf8224aed77",
+        "tex": "A = pi",
+        "kind": "inline",
+        "file": "main.typ",
+        "line": 29,
+        "endLine": 29,
+        "sourceOffset": 809,
+        "sourceEnd": 817,
+        "outlinePath": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-d78b705364775da374594d7e"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 809
+          }
+        ]
+      }
+    ],
+    "outline": [
+      {
+        "id": "heading-fd999363cf7dd3e79016864f",
+        "title": "A Small Study in Motion",
+        "level": 1,
+        "file": "main.typ",
+        "line": 7,
+        "path": [
+          "heading-fd999363cf7dd3e79016864f"
+        ]
+      },
+      {
+        "id": "heading-7c102c665abb9bf06f820866",
+        "title": "Motion",
+        "level": 2,
+        "file": "sections/model.typ",
+        "line": 4,
+        "path": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-7c102c665abb9bf06f820866"
+        ]
+      },
+      {
+        "id": "heading-2f71eda8164948618ab2b09f",
+        "title": "Fitting observations",
+        "level": 2,
+        "file": "sections/fitting.typ",
+        "line": 4,
+        "path": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-2f71eda8164948618ab2b09f"
+        ]
+      },
+      {
+        "id": "heading-d78b705364775da374594d7e",
+        "title": "A geometric view",
+        "level": 2,
+        "file": "main.typ",
+        "line": 21,
+        "path": [
+          "heading-fd999363cf7dd3e79016864f",
+          "heading-d78b705364775da374594d7e"
+        ]
+      }
+    ],
+    "files": [
+      "main.typ",
+      "sections/fitting.typ",
+      "sections/model.typ"
+    ]
+  },
+  "demo-cetz": {
+    "cards": [
+      {
+        "id": "typst-6383829e38b493bdb3fa37d8",
+        "tex": "#cetz.canvas({\n  import cetz.draw: *\n  line((0, 0), (4, 0), (2, 2.6), close: true, stroke: rgb(\"3478d4\") + 1.2pt, fill: rgb(\"edf4ff\"))\n  content((0, -0.4), $A$)\n  content((4, -0.4), $B$)\n  content((2, 3), $C$)\n})",
+        "kind": "figure",
+        "file": "main.typ",
+        "line": 12,
+        "endLine": 18,
+        "sourceOffset": 244,
+        "sourceEnd": 455,
+        "outlinePath": [
+          "heading-ba1d63dc43f0a20963178579"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 243
+          }
+        ]
+      },
+      {
+        "id": "typst-be288458762cb73541669f75",
+        "tex": "S = b h / 2",
+        "kind": "inline",
+        "file": "main.typ",
+        "line": 20,
+        "endLine": 20,
+        "sourceOffset": 480,
+        "sourceEnd": 493,
+        "outlinePath": [
+          "heading-ba1d63dc43f0a20963178579"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 480
+          }
+        ]
+      },
+      {
+        "id": "typst-8d468a9deb31aaa0b76c2d47",
+        "tex": "#sketch({\n    import cetz.draw: *\n    rect((0, 0), (2.4, 1), stroke: rgb(\"3478d4\"), fill: rgb(\"edf4ff\"))\n    rect((3.6, 0), (6, 1), stroke: rgb(\"3478d4\"), fill: rgb(\"edf4ff\"))\n    rect((7.2, 0), (9.6, 1), stroke: rgb(\"3478d4\"), fill: rgb(\"edf4ff\"))\n    line((2.4, 0.5), (3.6, 0.5), stroke: rgb(\"3478d4\") + 1.2pt)\n    line((6, 0.5), (7.2, 0.5), stroke: rgb(\"3478d4\") + 1.2pt)\n    content((1.2, 0.5), [Source])\n    content((4.8, 0.5), [SVG])\n    content((8.4, 0.5), [Slides])\n  })",
+        "kind": "figure",
+        "file": "main.typ",
+        "line": 24,
+        "endLine": 34,
+        "sourceOffset": 520,
+        "sourceEnd": 997,
+        "outlinePath": [
+          "heading-f24cc540967bc872db2f9583"
+        ],
+        "typstContext": [
+          {
+            "file": "main.typ",
+            "offset": 509
+          }
+        ]
+      }
+    ],
+    "outline": [
+      {
+        "id": "heading-ba1d63dc43f0a20963178579",
+        "title": "A triangle",
+        "level": 1,
+        "file": "main.typ",
+        "line": 9,
+        "path": [
+          "heading-ba1d63dc43f0a20963178579"
+        ]
+      },
+      {
+        "id": "heading-f24cc540967bc872db2f9583",
+        "title": "A workflow",
+        "level": 1,
+        "file": "main.typ",
+        "line": 22,
+        "path": [
+          "heading-f24cc540967bc872db2f9583"
+        ]
+      }
+    ],
+    "files": [
+      "main.typ"
+    ]
+  }
+}

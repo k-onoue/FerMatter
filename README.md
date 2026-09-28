@@ -28,6 +28,7 @@
 
 | Path | Purpose |
 | --- | --- |
+| `desktop-app/` | [Rust/TypeScript macOS port](desktop-app/README.md), built alongside the Swift app |
 | `macos-app/` | Native app, workers, tests, build tooling |
 | `dev-docs/` | Shared development instructions and references |
 | `user-docs/` | Markdown sources for the public guide |

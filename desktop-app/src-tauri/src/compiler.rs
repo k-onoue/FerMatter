@@ -1,0 +1,741 @@
+use crate::{files::*, scan};
+use serde_json::{json, Value};
+use std::{
+    fs,
+    io::Read,
+    path::{Path, PathBuf},
+    process::{Command, Stdio},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+    time::{Duration, Instant},
+};
+#[derive(Clone, Default)]
+pub struct Cancellation(
+    pub Arc<AtomicBool>,
+    Arc<Mutex<std::collections::HashSet<u32>>>,
+);
+impl Cancellation {
+    pub fn cancel(&self) {
+        self.0.store(true, Ordering::SeqCst);
+        for id in self.1.lock().unwrap().iter() {
+            terminate_group(*id);
+        }
+    }
+    pub fn check(&self) -> Result<()> {
+        if self.0.load(Ordering::SeqCst) {
+            Err("Cancelled".into())
+        } else {
+            Ok(())
+        }
+    }
+}
+fn terminate_group(id: u32) {
+    #[cfg(unix)]
+    unsafe {
+        libc::kill(-(id as i32), libc::SIGKILL);
+    }
+}
+struct ProcessRegistration {
+    id: u32,
+    cancellation: Cancellation,
+}
+impl Drop for ProcessRegistration {
+    fn drop(&mut self) {
+        self.cancellation.1.lock().unwrap().remove(&self.id);
+    }
+}
+pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) -> Result<String> {
+    cancel.check()?;
+    let mut log = tempfile::tempfile().map_err(err)?;
+    let mut command = Command::new(program);
+    command
+        .args(args)
+        .current_dir(cwd)
+        .env(
+            "PATH",
+            format!(
+                "/Library/TeX/texbin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:{}",
+                std::env::var("PATH").unwrap_or_default()
+            ),
+        )
+        .env_remove("SYNCTEX_EDITOR")
+        .env_remove("SYNCTEX_VIEWER")
+        .stdin(Stdio::null())
+        .stdout(log.try_clone().map_err(err)?)
+        .stderr(log.try_clone().map_err(err)?);
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        command.process_group(0);
+    }
+    let mut child = command.spawn().map_err(|e| format!("{program}: {e}"))?;
+    cancel.1.lock().unwrap().insert(child.id());
+    let registration = ProcessRegistration {
+        id: child.id(),
+        cancellation: cancel.clone(),
+    };
+    let start = Instant::now();
+    let status = loop {
+        if cancel.check().is_err() || start.elapsed() > Duration::from_secs(180) {
+            #[cfg(unix)]
+            unsafe {
+                libc::kill(-(child.id() as i32), libc::SIGKILL);
+            }
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(if cancel.check().is_err() {
+                "Cancelled".into()
+            } else {
+                format!("{program} timed out after 180 seconds.")
+            });
+        }
+        if let Some(status) = child.try_wait().map_err(err)? {
+            break status;
+        }
+        std::thread::sleep(Duration::from_millis(25));
+    };
+    drop(registration);
+    cancel.check()?;
+    use std::io::{Seek, SeekFrom};
+    log.seek(SeekFrom::Start(0)).map_err(err)?;
+    let mut bytes = vec![];
+    log.read_to_end(&mut bytes).map_err(err)?;
+    let output = String::from_utf8_lossy(&bytes).into_owned();
+    if !status.success() {
+        return Err(output
+            .chars()
+            .rev()
+            .take(16000)
+            .collect::<String>()
+            .chars()
+            .rev()
+            .collect());
+    }
+    cancel.check()?;
+    Ok(output)
+}
+pub fn args(values: &[&str]) -> Vec<String> {
+    values.iter().map(|s| s.to_string()).collect()
+}
+pub fn path(p: &Path) -> String {
+    p.to_string_lossy().into_owned()
+}
+fn tex_args(stage: &Path, engine: &str, out: &Path, main: &str, pdf: bool) -> Result<Vec<String>> {
+    let rc = ["latexmkrc", ".latexmkrc"]
+        .into_iter()
+        .find(|s| stage.join(s).is_file());
+    let mut a = args(&["-norc"]);
+    if let Some(rc) = rc {
+        a.extend(args(&["-r", rc]))
+    }
+    match engine {
+        "pdflatex" => a.push("-pdf".into()),
+        "xelatex" => a.push("-xelatex".into()),
+        "lualatex" => a.push("-lualatex".into()),
+        "project" if rc.is_some() => {}
+        _ => return Err("Choose a LaTeX compiler in Project Settings.".into()),
+    }
+    if pdf {
+        a.push("-synctex=1".into())
+    }
+    a.extend(args(&[
+        "-interaction=nonstopmode",
+        "-halt-on-error",
+        "-file-line-error",
+        "-latexoption=-no-shell-escape",
+    ]));
+    a.push(format!("-outdir={}", out.display()));
+    a.push(main.into());
+    Ok(a)
+}
+fn ensure_pdf(pdf: &Path, stage: &Path, c: &Cancellation) -> Result<()> {
+    if !pdf.exists() && pdf.with_extension("dvi").exists() {
+        let ps = pdf.with_extension("ps");
+        run(
+            "dvips",
+            &args(&["-o", &path(&ps), &path(&pdf.with_extension("dvi"))]),
+            stage,
+            c,
+        )?;
+        run("ps2pdf", &args(&[&path(&ps), &path(pdf)]), stage, c)?;
+    }
+    if !pdf.is_file() {
+        return Err("The compiler did not produce a PDF.".into());
+    }
+    Ok(())
+}
+fn tex_body(card: &Value) -> String {
+    let text = string(card, "tex").trim();
+    if string(card, "kind") == "figure" {
+        return text.into();
+    }
+    let t = scan::uncomment(text);
+    let t = scan::re(r"\n[ \t]*\n+").replace_all(&t, "\n");
+    let t = scan::re(r"\\(?:label|tag\*?)\{[^}]*\}").replace_all(&t, "");
+    let t = scan::re(r"\\(begin|end)\{(equation|align|gather|multline)\*?\}")
+        .replace_all(&t, "\\$1{$2*}");
+    if scan::re(r"^\\begin\{(?:equation|align|gather|multline|displaymath|math)\*?\}")
+        .is_match(t.trim())
+    {
+        return scan::re(r"\n[ \t]*\n+")
+            .replace_all(t.trim(), "\n")
+            .into_owned();
+    }
+    let mut t = t.trim().to_owned();
+    for (a, b) in [("$$", "$$"), ("\\[", "\\]"), ("\\(", "\\)"), ("$", "$")] {
+        if t.starts_with(a) && t.ends_with(b) && t.len() >= a.len() + b.len() {
+            t = t[a.len()..t.len() - b.len()].trim().into();
+            break;
+        }
+    }
+    if string(card, "kind") == "inline" {
+        format!("${t}$")
+    } else {
+        format!("\\[{t}\\]")
+    }
+}
+fn typst_body(card: &Value) -> Result<String> {
+    let mut t = string(card, "tex").trim().to_owned();
+    if t.is_empty() {
+        return Err("Enter an equation or drawing.".into());
+    }
+    if string(card, "kind") == "figure" {
+        return Ok(t);
+    }
+    if t.starts_with('$') {
+        if scan::math_end(&t, 0) != Some(t.len()) {
+            return Err("Enter one Typst equation.".into());
+        }
+        t = t[1..t.len() - 1].trim().into()
+    }
+    Ok(if string(card, "kind") == "inline" {
+        format!("#set text(top-edge: \"bounds\", bottom-edge: \"bounds\")\n${t}$")
+    } else {
+        format!("$ {t} $")
+    })
+}
+fn ready(card: &Value, base: &Path, size: f64) -> Value {
+    json!({"id":card["id"],"status":"ready","svgPath":base.with_extension("svg"),"pngPath":base.with_extension("png"),"pdfPath":base.with_extension("pdf"),"sourceFontSize":size})
+}
+pub fn raster(svg: &[u8], png: &Path, width: u32) -> Result<()> {
+    let options = resvg::usvg::Options::default();
+    let tree = resvg::usvg::Tree::from_data(svg, &options).map_err(err)?;
+    let size = tree.size();
+    let scale = width as f32 / size.width().max(size.height());
+    let w = (size.width() * scale).ceil().max(1.) as u32;
+    let h = (size.height() * scale).ceil().max(1.) as u32;
+    if w > 16000 || h > 16000 {
+        return Err("Image exceeds 16,000 pixels.".into());
+    }
+    let mut pixmap = resvg::tiny_skia::Pixmap::new(w, h).ok_or("Image is too large")?;
+    resvg::render(
+        &tree,
+        resvg::tiny_skia::Transform::from_scale(scale, scale),
+        &mut pixmap.as_mut(),
+    );
+    pixmap.save_png(png).map_err(err)
+}
+fn cache_hit(card: &Value, base: &Path) -> Option<Value> {
+    if ["svg", "png", "pdf"]
+        .iter()
+        .all(|e| base.with_extension(e).is_file())
+    {
+        let s = fs::read_to_string(base.with_extension("svg")).ok()?;
+        let c = scan::re(r#"data-(?:tex|typst)-font-size="([0-9.]+)"#).captures(&s)?;
+        Some(ready(card, base, c[1].parse().ok()?))
+    } else {
+        None
+    }
+}
+pub fn render(
+    root: &Path,
+    main: &str,
+    engine: &str,
+    cards: &[Value],
+    cache: &Path,
+    c: &Cancellation,
+    mut emit: impl FnMut(Value),
+) -> Result<()> {
+    fs::create_dir_all(cache).map_err(err)?;
+    let stamp = fingerprint(root)?;
+    let typst = main.ends_with(".typ");
+    let version = if typst {
+        run("typst", &args(&["--version"]), root, c)?
+    } else {
+        run("latexmk", &args(&["-v"]), root, c)?
+    };
+    let mut pending = vec![];
+    for card in cards {
+        c.check()?;
+        let key = id(&format!(
+            "rust-1|{stamp}|{main}|{engine}|{version}|{}|{}|{}",
+            card["kind"], card["tex"], card["typstContext"]
+        ));
+        let base = cache.join(key);
+        if let Some(e) = cache_hit(card, &base) {
+            emit(e)
+        } else {
+            pending.push((card.clone(), base))
+        }
+    }
+    if pending.is_empty() {
+        return Ok(());
+    }
+    let temp = tempfile::tempdir().map_err(err)?;
+    let stage = temp.path().join("source");
+    snapshot(root, &stage, &Value::Null)?;
+    let stage = stage.canonicalize().map_err(err)?;
+    let output = temp.path().join("output");
+    fs::create_dir_all(&output).map_err(err)?;
+    if typst {
+        for (card, base) in pending {
+            c.check()?;
+            let result = render_typst(&stage, main, &card, &base, c);
+            match result {
+                Ok(e) => emit(e),
+                Err(e) => {
+                    c.check()?;
+                    let log = base.with_extension("log");
+                    fs::write(&log, &e).map_err(err)?;
+                    emit(json!({"id":card["id"],"status":"failed","error":e,"logPath":log}));
+                }
+            }
+        }
+    } else {
+        let source = read(&safe(&stage, main)?)?;
+        let begin = scan::re(r"\\begin\s*\{document\}")
+            .find(&source)
+            .ok_or("Main file has no document environment")?
+            .start();
+        let preamble = &source[..begin];
+        for group in pending.chunks(32) {
+            render_tex_group(&stage, &output, engine, preamble, group, c, &mut emit)?
+        }
+    }
+    Ok(())
+}
+fn render_typst(
+    stage: &Path,
+    main: &str,
+    card: &Value,
+    base: &Path,
+    c: &Cancellation,
+) -> Result<Value> {
+    let original = read(&safe(stage, main)?)?;
+    let default_offset = scan::tokens(&original)
+        .iter()
+        .find(|t| matches!(t.kind, "math" | "figure" | "include"))
+        .map(|t| original[..t.start].chars().count())
+        .unwrap_or(original.chars().count());
+    let default = vec![json!({"file":main,"offset":default_offset})];
+    let frames = card["typstContext"]
+        .as_array()
+        .filter(|v| !v.is_empty())
+        .unwrap_or(&default);
+    let token = format!("mathlidelux-{}", uuid::Uuid::new_v4());
+    let mut child: Option<PathBuf> = None;
+    let mut generated = vec![];
+    let result = (|| {
+        for (i, frame) in frames.iter().enumerate().rev() {
+            let p = safe(stage, string(frame, "file"))?;
+            let text = read(&p)?;
+            let prelude = scan::setup_before(
+                &text,
+                scan::offset(&text, frame["offset"].as_u64().unwrap_or(0) as usize),
+            );
+            let target = p.parent().unwrap().join(format!("{token}-{i}.typ"));
+            let content = if let Some(ref child) = child {
+                format!(
+                    "#include {}",
+                    json!(format!("/{}", child.strip_prefix(stage).unwrap().display()))
+                )
+            } else {
+                format!("#set page(width: auto, height: auto, margin: 2pt, fill: none, header: none, footer: none, background: none, foreground: none, numbering: none)\n#set math.equation(numbering: none)\n#context [#metadata(text.size.pt()) <slide-math-font>]\n{}\n",typst_body(card)?)
+            };
+            fs::write(&target, format!("{prelude}\n{content}")).map_err(err)?;
+            generated.push(target.clone());
+            child = Some(target)
+        }
+        let child = child.ok_or("Missing Typst context")?;
+        let common = args(&["--root", &path(stage), "--font-path", &path(stage)]);
+        for ext in ["pdf", "svg"] {
+            let mut a = args(&["compile"]);
+            a.extend(common.clone());
+            a.extend(args(&[&path(&child), &path(&base.with_extension(ext))]));
+            run("typst", &a, stage, c)?;
+        }
+        let mut a = args(&["query"]);
+        a.extend(common);
+        a.extend(args(&[
+            &path(&child),
+            "<slide-math-font>",
+            "--field",
+            "value",
+        ]));
+        let sizes: Vec<f64> = serde_json::from_str(&run("typst", &a, stage, c)?).map_err(err)?;
+        let size = *sizes
+            .first()
+            .filter(|s| s.is_finite() && **s > 0.)
+            .ok_or("Could not measure font size")?;
+        let svg = fs::read_to_string(base.with_extension("svg"))
+            .map_err(err)?
+            .replacen(
+                "<svg ",
+                &format!("<svg data-typst-font-size=\"{size}\" data-slide-math-bounds=\"glyph\" "),
+                1,
+            );
+        raster(svg.as_bytes(), &base.with_extension("png"), 900)?;
+        fs::write(base.with_extension("svg"), svg).map_err(err)?;
+        Ok(ready(card, base, size))
+    })();
+    for p in generated {
+        let _ = fs::remove_file(p);
+    }
+    result
+}
+fn render_tex_group(
+    stage: &Path,
+    output: &Path,
+    engine: &str,
+    preamble: &str,
+    group: &[(Value, PathBuf)],
+    c: &Cancellation,
+    emit: &mut impl FnMut(Value),
+) -> Result<()> {
+    c.check()?;
+    let job = format!("mathlidelux-{}", uuid::Uuid::new_v4());
+    let result = (|| -> Result<f64> {
+        let figures = group.iter().any(|(v, _)| string(v, "kind") == "figure");
+        let document=format!("\\PassOptionsToPackage{{active,tightpage}}{{preview}}\n{preamble}\n{}\n\\usepackage{{preview}}\n\\pagestyle{{empty}}\n\\begin{{document}}\n\\ifdefined\\ClearShipoutPictureBG\\ClearShipoutPictureBG\\fi\n\\ifdefined\\ClearShipoutPictureFG\\ClearShipoutPictureFG\\fi\n\\ifdefined\\nolinenumbers\\nolinenumbers\\fi\n\\ifdefined\\tikzexternaldisable\\tikzexternaldisable\\fi\n\\makeatletter\\typeout{{SLIDEMATHFONT:\\f@size}}\\makeatother\n{}\n\\end{{document}}\n",if figures{"\\usepackage{tikz}"}else{""},group.iter().map(|(v,_)|format!("\\begin{{preview}}\n{}\n\\end{{preview}}",tex_body(v))).collect::<Vec<_>>().join("\n"));
+        fs::write(stage.join(format!("{job}.tex")), document).map_err(err)?;
+        run(
+            "latexmk",
+            &tex_args(stage, engine, output, &format!("{job}.tex"), false)?,
+            stage,
+            c,
+        )?;
+        let pdf = output.join(format!("{job}.pdf"));
+        ensure_pdf(&pdf, stage, c)?;
+        let cropped = output.join(format!("{job}-crop.pdf"));
+        run(
+            "pdfcrop",
+            &args(&["--margins", "2", &path(&pdf), &path(&cropped)]),
+            stage,
+            c,
+        )?;
+        let info = run("pdfinfo", &args(&[&path(&cropped)]), stage, c)?;
+        let pages = scan::re(r"(?m)^Pages:\s+(\d+)")
+            .captures(&info)
+            .and_then(|v| v[1].parse::<usize>().ok());
+        if pages != Some(group.len()) {
+            return Err("Rendered page count does not match equation count.".into());
+        }
+        let log = fs::read_to_string(output.join(format!("{job}.log"))).map_err(err)?;
+        let size = scan::re(r"SLIDEMATHFONT:([0-9.]+)")
+            .captures(&log)
+            .and_then(|v| v[1].parse::<f64>().ok())
+            .ok_or("Could not measure font size")?;
+        for (index, (card, base)) in group.iter().enumerate() {
+            c.check()?;
+            let page = (index + 1).to_string();
+            let pdf = base.with_extension("pdf");
+            run(
+                "pdftocairo",
+                &args(&[
+                    "-pdf",
+                    "-origpagesizes",
+                    "-f",
+                    &page,
+                    "-l",
+                    &page,
+                    &path(&cropped),
+                    &path(&pdf),
+                ]),
+                stage,
+                c,
+            )?;
+            let svg = base.with_extension("svg");
+            run(
+                "pdf2svg",
+                &args(&[&path(&cropped), &path(&svg), &page]),
+                stage,
+                c,
+            )?;
+            let text = fs::read_to_string(&svg).map_err(err)?.replacen(
+                "<svg ",
+                &format!("<svg data-tex-font-size=\"{size}\" "),
+                1,
+            );
+            raster(text.as_bytes(), &base.with_extension("png"), 900)?;
+            fs::write(svg, text).map_err(err)?;
+            emit(ready(card, base, size));
+        }
+        Ok(size)
+    })();
+    if let Err(e) = result {
+        c.check()?;
+        if group.len() > 1 {
+            let half = group.len() / 2;
+            render_tex_group(stage, output, engine, preamble, &group[..half], c, emit)?;
+            render_tex_group(stage, output, engine, preamble, &group[half..], c, emit)?
+        } else {
+            let (card, base) = &group[0];
+            let log = base.with_extension("log");
+            fs::write(&log, &e).map_err(err)?;
+            emit(json!({"id":card["id"],"status":"failed","error":e,"logPath":log}));
+        }
+    }
+    Ok(())
+}
+pub fn document(
+    root: &Path,
+    main: &str,
+    engine: &str,
+    cache: &Path,
+    drafts: &Value,
+    c: &Cancellation,
+) -> Result<Value> {
+    let dest = cache.join(format!("document-{}", uuid::Uuid::new_v4()));
+    let stage = dest.join("Source");
+    let out = dest.join("Output");
+    fs::create_dir_all(&out).map_err(err)?;
+    let result = (|| {
+        snapshot(root, &stage, drafts)?;
+        let targets = scan::extract(&stage, main, None)?["cards"].clone();
+        let (pdf, anchors) = if main.ends_with(".typ") {
+            typst_document(&stage, main, &out, c)?
+        } else {
+            run(
+                "latexmk",
+                &tex_args(&stage, engine, &out, main, true)?,
+                &stage,
+                c,
+            )?;
+            let pdf = out
+                .join(Path::new(main).file_stem().unwrap())
+                .with_extension("pdf");
+            ensure_pdf(&pdf, &stage, c)?;
+            (pdf, vec![])
+        };
+        Ok(
+            json!({"pdfPath":pdf,"sourceRoot":stage,"format":if main.ends_with(".typ"){"typst"}else{"latex"},"anchors":anchors,"targets":targets}),
+        )
+    })();
+    if result.is_err() {
+        let _ = fs::remove_dir_all(&dest);
+    }
+    result
+}
+fn typst_document(
+    stage: &Path,
+    main: &str,
+    out: &Path,
+    c: &Cancellation,
+) -> Result<(PathBuf, Vec<Value>)> {
+    let scan = scan::extract(stage, main, None)?;
+    let mut changes: std::collections::BTreeMap<String, std::collections::BTreeMap<usize, String>> =
+        Default::default();
+    let mut targets: std::collections::HashMap<String, Vec<Value>> = Default::default();
+    let ns = format!("ml-{}", uuid::Uuid::new_v4());
+    let label = format!("map-{}", uuid::Uuid::new_v4());
+    for card in scan["cards"].as_array().unwrap() {
+        let file = string(card, "file");
+        let text = read(&safe(stage, file)?)?;
+        let start = scan::offset(&text, card["sourceOffset"].as_u64().unwrap() as usize);
+        let end = scan::offset(&text, card["sourceEnd"].as_u64().unwrap() as usize);
+        let key = format!("{file}:{start}");
+        targets
+            .entry(key.clone())
+            .or_default()
+            .push(card["id"].clone());
+        let edit = changes.entry(file.into()).or_default();
+        if string(card, "kind") == "figure" {
+            edit.insert(start, "context { let ml_drawing = ".into());
+            edit.insert(end,format!("; let ml_size = measure(ml_drawing); metadata(({}, {}, ml_size.width.pt(), ml_size.height.pt())); ml_drawing }}",json!(ns),json!(key)));
+        } else {
+            let mut pos = start + 1;
+            while pos < text.len() && text[pos..].starts_with(char::is_whitespace) {
+                pos = scan::next(&text, pos)
+            }
+            edit.insert(pos, format!("#metadata(({}, {})) ", json!(ns), json!(key)));
+        }
+    }
+    for h in scan["outline"].as_array().unwrap() {
+        let file = string(h, "file");
+        let text = read(&safe(stage, file)?)?;
+        let pos = text
+            .split_inclusive('\n')
+            .take(h["line"].as_u64().unwrap_or(1) as usize - 1)
+            .map(str::len)
+            .sum();
+        let key = format!("{file}:heading:{pos}");
+        targets
+            .entry(key.clone())
+            .or_default()
+            .push(h["id"].clone());
+        changes
+            .entry(file.into())
+            .or_default()
+            .insert(pos, format!("#metadata(({}, {}))\n", json!(ns), json!(key)));
+    }
+    for (file, edits) in changes {
+        let p = safe(stage, &file)?;
+        let mut text = read(&p)?;
+        for (i, s) in edits.iter().rev() {
+            text.insert_str(*i, s)
+        }
+        fs::write(p, text).map_err(err)?;
+    }
+    let entry = safe(stage, main)?;
+    let query=format!("\n#context [#metadata(query(metadata).filter(it => type(it.value) == array and (it.value.len() == 2 or it.value.len() == 4) and it.value.at(0) == {}).map(it => {{let p = it.location().position(); (key: it.value.at(1), page: p.page, x: p.x.pt(), y: p.y.pt(), width: if it.value.len() == 4 {{it.value.at(2)}} else {{0}}, height: if it.value.len() == 4 {{it.value.at(3)}} else {{0}})}})) <{label}>]\n",json!(ns));
+    let text = read(&entry)? + &query;
+    fs::write(&entry, text).map_err(err)?;
+    let pdf = out.join("document.pdf");
+    let common = args(&["--root", &path(stage), "--font-path", &path(stage)]);
+    let mut a = args(&["compile"]);
+    a.extend(common.clone());
+    a.extend(args(&[&path(&entry), &path(&pdf)]));
+    run("typst", &a, stage, c)?;
+    let mut a = args(&["query"]);
+    a.extend(common);
+    a.extend(args(&[
+        &path(&entry),
+        &format!("<{label}>"),
+        "--field",
+        "value",
+        "--one",
+    ]));
+    let records: Vec<Value> = serde_json::from_str(&run("typst", &a, stage, c)?).map_err(err)?;
+    let mut anchors = vec![];
+    for mut record in records {
+        if let Some(ids) = targets.get_mut(string(&record, "key")) {
+            if !ids.is_empty() {
+                record["targetID"] = ids.remove(0);
+                anchors.push(record);
+            }
+        }
+    }
+    Ok((pdf, anchors))
+}
+
+pub fn navigate(document: &Value, request: &Value, c: &Cancellation) -> Result<Value> {
+    let file = string(request, "file");
+    let mut line = request["line"].as_u64().unwrap_or(1);
+    // TeX emits display/align nodes at the end of the environment. Its opening
+    // line (and even early body lines in align) can map to preceding prose.
+    if let Some(target) = document["targets"].as_array().and_then(|targets| {
+        targets
+            .iter()
+            .find(|t| t["file"] == file && t["line"].as_u64() == Some(line))
+    }) {
+        if string(target, "kind") != "inline" {
+            line = target["endLine"].as_u64().unwrap_or(line);
+        }
+    }
+    let page = request["page"].as_u64().unwrap_or(1);
+    let x = request["x"].as_f64().unwrap_or(0.);
+    let y = request["y"].as_f64().unwrap_or(0.);
+    let reverse = request["reverse"].as_bool().unwrap_or(false);
+    let stage = Path::new(string(document, "sourceRoot"));
+    let pdf = string(document, "pdfPath");
+    let output = if reverse {
+        run(
+            "synctex",
+            &args(&["edit", "-o", &format!("{page}:{x}:{y}:{pdf}")]),
+            stage,
+            c,
+        )?
+    } else {
+        let file = safe(stage, file)?;
+        run(
+            "synctex",
+            &args(&[
+                "view",
+                "-i",
+                &format!("{line}:1:{}", file.display()),
+                "-o",
+                pdf,
+            ]),
+            stage,
+            c,
+        )?
+    };
+    let mut records = vec![];
+    let mut record = std::collections::HashMap::new();
+    for line in output.lines() {
+        if let Some((key, value)) = line.split_once(':') {
+            if key == "Output" && record.contains_key("Page") {
+                records.push(std::mem::take(&mut record));
+            }
+            record
+                .entry(key.to_owned())
+                .or_insert(value.trim().to_owned());
+        }
+    }
+    records.push(record);
+    let record = &records[0];
+    if reverse {
+        let file = record
+            .get("Input")
+            .ok_or("No source location at this PDF position.")?;
+        let file = stage.join(file).canonicalize().map_err(err)?;
+        let root = stage.canonicalize().map_err(err)?;
+        if !file.starts_with(&root) {
+            return Err("PDF source is outside the snapshot".into());
+        }
+        Ok(
+            json!({"file":file.strip_prefix(root).unwrap(),"line":record.get("Line").and_then(|s|s.parse::<u64>().ok()).unwrap_or(1),"column":record.get("Column").and_then(|s|s.parse::<i64>().ok()).unwrap_or(-1)}),
+        )
+    } else {
+        let number = |r: &std::collections::HashMap<String, String>, key: &str| {
+            r.get(key).and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.)
+        };
+        let x = number(record, "x");
+        let y = number(record, "y");
+        // Prefer the tight equation box sharing the first hit's left edge;
+        // the first outer box can include the distant equation number.
+        let bounds = records
+            .iter()
+            .filter(|r| {
+                r.get("Page") == record.get("Page")
+                    && (number(r, "h") - x).abs() < 0.2
+                    && number(r, "W") > 0.
+                    && number(r, "H") > 0.
+                    && number(r, "v") >= y
+                    && number(r, "v") - number(r, "H") <= y
+            })
+            .min_by(|a, b| number(a, "W").total_cmp(&number(b, "W")))
+            .unwrap_or(record);
+        Ok(
+            json!({"page":record.get("Page").and_then(|s|s.parse::<u64>().ok()).ok_or("No PDF location for this source line.")?,"x":number(bounds,"h"),"y":number(bounds,"v")-number(bounds,"H"),"width":number(bounds,"W"),"height":number(bounds,"H")}),
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn cancellation_kills_process_group() {
+        let d = tempfile::tempdir().unwrap();
+        let c = Cancellation::default();
+        let other = c.clone();
+        let root = d.path().to_owned();
+        let thread = std::thread::spawn(move || {
+            run("/bin/sh", &args(&["-c", "sleep 30 & wait"]), &root, &other)
+        });
+        std::thread::sleep(Duration::from_millis(100));
+        c.cancel();
+        assert_eq!(thread.join().unwrap().unwrap_err(), "Cancelled");
+    }
+    #[test]
+    fn body_preserves_math_style() {
+        assert_eq!(
+            tex_body(&json!({"kind":"block","tex":"\\begin{align}a&=b\\label{x}\\end{align}"})),
+            "\\begin{align*}a&=b\\end{align*}"
+        );
+        assert!(typst_body(&json!({"kind":"inline","tex":"$a$ $b$"})).is_err());
+    }
+}

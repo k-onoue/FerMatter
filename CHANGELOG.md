@@ -10,6 +10,8 @@
 
 ### Added
 
+- Parallel macOS port in Rust and TypeScript, with a Python-free backend, shared Monaco editors, equation/figure exports and PDF navigation; kept separate from the Swift app while replacement verification continues.
+
 - Task-based user guides, maintained in Markdown and available on the product site.
 - Shared contributor and agent documentation with review and release checklists.
 - File-managed shortcuts and declarative color themes, with import/export and recovery.
@@ -20,6 +22,9 @@
 
 ### Changed
 
+- Adopt the desktop app as Mathlidelux, remove the Rust badge, preserve the original bundle identity and preview data, and import Swift source drafts without overwriting manuscripts. Prototype DMG/PKG tooling now targets the desktop app.
+
+- Rust preview: background-only translucency and active-display full-screen wallpaper; single-click PDF, Library, and Source equation navigation with visible selection.
 - Make shortcut settings easier to scan with larger, spaced key symbols and alternating rows.
 - Use a single theme background across each project card and its equation preview.
 - Simplify the product page around moving an equation from a paper to a slide.

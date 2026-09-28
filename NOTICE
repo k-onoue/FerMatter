@@ -5,5 +5,5 @@ Bundled color palettes are adapted from GitHub VS Code Theme, Catppuccin,
 VS Code Solarized and Modern, Atom One Light/Dark, Rosé Pine, Ayu, Tokyo Night,
 Night Owl, Horizon, Vitesse, Everforest, Gruvbox Material, Noctis, and Min (MIT).
 Original copyright notices, license texts, source revisions, and adaptation
-notes accompany the themes in macos-app/Sources/SlideMath/Themes/ and in the
-app's Contents/Resources/Mathlidelux_SlideMath.bundle/Themes/ directory.
+notes accompany the themes in desktop-app/resources/themes/ and in the
+app's Contents/Resources/themes/ directory.

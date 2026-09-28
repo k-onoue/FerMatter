@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "mathlidelux.theme",
+  "id": "org.mathlidelux.everforest",
+  "name": "Everforest",
+  "light": {
+    "accent": "#8DA101",
+    "windowBackground": "#FDF6E3",
+    "surfaceBackground": "#FDF6E3",
+    "text": "#5C6A72",
+    "command": "#F85552",
+    "delimiter": "#5C6A72",
+    "number": "#DF69BA",
+    "comment": "#939F91"
+  },
+  "dark": {
+    "accent": "#A7C080",
+    "windowBackground": "#2D353B",
+    "surfaceBackground": "#2D353B",
+    "text": "#D3C6AA",
+    "command": "#E67E80",
+    "delimiter": "#D3C6AA",
+    "number": "#D699B6",
+    "comment": "#859289"
+  },
+  "extensions": {
+    "org.mathlidelux.theme-source": {
+      "variants": {
+        "light": "Everforest Light",
+        "dark": "Everforest Dark"
+      },
+      "sources": [
+        {
+          "repository": "https://github.com/sainnhe/everforest-vscode",
+          "revision": "b17f8affe9096f18d209caf2fc26322490e55857",
+          "files": [
+            "themes/everforest-light.json",
+            "themes/everforest-dark.json"
+          ],
+          "license": "MIT",
+          "licenseFile": "Licenses/sainnhe-everforest-vscode.txt"
+        }
+      ],
+      "adaptation": "Editor/sidebar backgrounds, keyword commands, punctuation/operator delimiters, numeric constants, and comments; missing punctuation uses text. Accent uses links (Night Owl uses keyword). All RGB colors are opaque; upstream alpha is removed, not applied to text. Native glass and artwork rendering are unchanged."
+    }
+  }
+}
