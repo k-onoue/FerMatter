@@ -914,8 +914,64 @@ small,
   min-height: 0;
   flex-direction: column;
 }
-.tree-tools {
+.source-navigation {
   display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.source-navigation-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+.source-files {
+  flex: 3;
+}
+.source-outline {
+  flex: 2;
+  border-top: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+  margin-top: 12px;
+  padding-top: 10px;
+}
+.tree-panel-heading {
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  gap: 6px;
+  font-size: 11px;
+  padding: 0 8px;
+}
+.compact-tree-tabs {
+  display: none;
+}
+.source-navigation.compact {
+  position: relative;
+}
+.source-navigation.compact .compact-tree-tabs {
+  display: flex;
+  padding-right: 34px;
+}
+.source-navigation.compact.tree-mode-files .source-outline,
+.source-navigation.compact.tree-mode-outline .source-files {
+  display: none;
+}
+.source-navigation.compact .source-outline {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+}
+.source-navigation.compact .source-outline .tree-panel-heading,
+.source-navigation.compact .source-files .tree-panel-heading strong {
+  display: none;
+}
+.source-navigation.compact .source-files .tree-panel-heading {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+.tree-tools {
   align-items: center;
   gap: 3px;
   font-size: 11px;

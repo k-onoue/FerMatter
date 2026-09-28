@@ -25,6 +25,8 @@
 
 ### Changed
 
+- Show Source Files and Outline together in a stacked sidebar, with tabs for short windows.
+
 - Adopt the desktop app as Mathlidelux, remove the Rust badge, preserve the original bundle identity and preview data, and import Swift source drafts without overwriting manuscripts. Prototype DMG/PKG tooling now targets the desktop app.
 
 - Background rendering: background-only translucency and active-display full-screen wallpaper; single-click PDF, Library, and Source equation navigation with visible selection.

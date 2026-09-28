@@ -25,6 +25,7 @@
 - `⌃Tab` / `⌃⇧Tab`: next/previous source tab.
 - `⌘\` / `⌥⌘\`: split right/down; tab edge-drops also split; center-drop moves a tab.
 - Closing a tab retains its buffer and recovery draft; reopen the file to continue.
+- **Files** and **Outline** share the sidebar vertically and scroll independently. Short windows switch to Files/Outline tabs.
 - Source **Outline** follows the current file's unsaved headings; the Library outline uses the document scan.
 
 ## Preview at the caret
