@@ -17,6 +17,14 @@ impl SettingsFiles {
             revisions: Mutex::new(HashMap::new()),
         }
     }
+    pub fn initialize(&self, name: &str, value: &Value) -> Result<()> {
+        valid_name(name)?;
+        if !self.dir.join(name).exists() && !self.dir.join(format!(".last-valid-{name}")).exists() {
+            validate(name, value)?;
+            json_write(&self.dir.join(name), value)?;
+        }
+        Ok(())
+    }
     #[cfg(target_os = "macos")]
     pub fn import_swift_preferences(&self, path: &Path) -> Result<()> {
         if self.dir.join("preferences.json").exists()
@@ -107,7 +115,14 @@ impl SettingsFiles {
     }
 }
 fn valid_name(name: &str) -> Result<()> {
-    if ["preferences.json", "theme.json", "keybindings.json"].contains(&name) {
+    if [
+        "preferences.json",
+        "theme.json",
+        "keybindings.json",
+        "instant.json",
+    ]
+    .contains(&name)
+    {
         Ok(())
     } else {
         Err("Unknown settings file".into())
@@ -115,6 +130,7 @@ fn valid_name(name: &str) -> Result<()> {
 }
 fn default_document(name: &str) -> Value {
     match name {
+        "instant.json" => crate::instant_settings::defaults(),
         "theme.json" => {
             json!({"schemaVersion":1,"kind":"mathlidelux.theme","id":"org.mathlidelux.default","name":"Default","light":{},"dark":{}})
         }
@@ -131,6 +147,7 @@ pub fn validate(name: &str, v: &Value) -> Result<()> {
         return Err("Settings must be a JSON object.".into());
     }
     match name {
+        "instant.json" => crate::instant_settings::validate(v),
         "theme.json" => theme(v),
         "keybindings.json" => keybindings(v),
         "preferences.json" => {
@@ -199,6 +216,7 @@ fn default_bindings() -> HashMap<&'static str, Value> {
         ("open", "o", false, false, false, true),
         ("projects", "o", true, false, false, true),
         ("newProject", "n", true, false, false, true),
+        ("instant", "k", true, false, false, true),
         ("newEquation", "n", false, false, false, true),
         ("newFigure", "n", false, true, false, true),
         ("find", "f", false, false, false, true),
@@ -246,9 +264,10 @@ fn keybindings(v: &Value) -> Result<()> {
         }
         *all.get_mut(id.as_str()).unwrap() = binding.clone()
     }
-    // Keep stored overrides usable when new zoom defaults share their keys.
+    // Keep stored overrides usable when new defaults share their keys.
     // Only implicit defaults yield; explicit duplicates are still rejected.
     for id in [
+        "instant",
         "zoomIn",
         "zoomOut",
         "fitPDF",

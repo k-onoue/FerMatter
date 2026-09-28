@@ -24,6 +24,7 @@
 - Choose **Open Project** for a folder or **Open file or ZIP** for an archive; existing projects need no template.
 - Samples: [LaTeX](examples/demo-paper/), [Typst](examples/demo-typst/), [TikZ](examples/demo-tikz/), [CeTZ](examples/demo-cetz/).
 - Pasted equations: **New Project** → choose a template → paste → **Create Project**.
+- Single equations: [Instant](user-docs/instant.md); open it inside a project to reuse its packages and commands.
 - Library variants leave manuscript source unchanged; **Source** mode edits real project files.
 
 ## Repository layout

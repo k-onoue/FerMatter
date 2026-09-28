@@ -1,3 +1,4 @@
+import templateDefaults from "./template-defaults.json";
 export interface ProjectTemplate {
   id: string;
   name: string;
@@ -10,43 +11,8 @@ export interface TemplateConfiguration {
   defaultID: string;
 }
 export type InputMode = "automatic" | "equations" | "source";
-const latex =
-  "\\documentclass[12pt]{article}\n\\usepackage{amsmath,amssymb,mathtools,bm}\n\\pagestyle{empty}\n\\begin{document}\n{{content}}\n\\end{document}\n";
-const typst =
-  "#set text(size: 12pt)\n#set math.equation(numbering: none)\n\n{{content}}\n";
-export const builtinTemplates: ProjectTemplate[] = [
-  {
-    id: "builtin-latex",
-    name: "LaTeX",
-    format: "latex",
-    source: latex,
-    compiler: "pdflatex",
-  },
-  {
-    id: "builtin-typst",
-    name: "Typst",
-    format: "typst",
-    source: typst,
-    compiler: "pdflatex",
-  },
-  {
-    id: "builtin-tikz",
-    name: "LaTeX + TikZ",
-    format: "latex",
-    source: latex.replace(
-      "\\pagestyle",
-      "\\usepackage{tikz}\n\\usetikzlibrary{arrows.meta,calc,positioning}\n\\pagestyle",
-    ),
-    compiler: "pdflatex",
-  },
-  {
-    id: "builtin-cetz",
-    name: "Typst + CeTZ",
-    format: "typst",
-    source: '#import "@preview/cetz:0.5.2"\n' + typst,
-    compiler: "pdflatex",
-  },
-];
+export const builtinTemplates: ProjectTemplate[] =
+  templateDefaults as ProjectTemplate[];
 export const initialTemplates: TemplateConfiguration = {
   custom: [],
   defaultID: "builtin-latex",

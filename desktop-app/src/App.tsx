@@ -28,6 +28,7 @@ import {
   Tag,
   X,
   TriangleAlert,
+  Zap,
 } from "lucide-react";
 import { rpc, uid, projectName } from "./api";
 import { CodeEditor, configureTheme, setProjectCompletions } from "./editor";
@@ -784,6 +785,8 @@ export default function App() {
     return () => window.removeEventListener("keydown", handler, true);
   }, [keys, mode, project, selected, visible, drafts, pdfOpen, inspector, pin]);
   async function execute(id: string) {
+    if (id === "instant")
+      return rpc("instant_open", { project: project?.id }).catch(report);
     if (id === "open") return openProject();
     if (id === "newProject") {
       setNewProject(true);
@@ -904,6 +907,14 @@ export default function App() {
           </div>
           <header className="projects-heading">
             <h1>Projects</h1>
+            <button
+              className="soft"
+              title="New Instant (⇧⌘K)"
+              onClick={() => void execute("instant")}
+            >
+              <Zap size={17} />
+              Instant
+            </button>
             <span className="spacer" />
             <button
               className="zoom-level"
@@ -1143,6 +1154,13 @@ export default function App() {
               <div>
                 <h1>{title}</h1>
                 <span className="spacer" />
+                <button
+                  title="Open with Instant Mode"
+                  aria-label="Open with Instant Mode"
+                  onClick={() => void execute("instant")}
+                >
+                  <Zap size={17} />
+                </button>
                 <button
                   title="Always on top"
                   className={pin ? "active" : ""}

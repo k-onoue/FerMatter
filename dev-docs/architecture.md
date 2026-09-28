@@ -14,6 +14,7 @@
 | Source buffers, file tree, tabs and split panes | `src/SourceWorkspace.tsx`, `src/panes.ts` |
 | PDF viewer, source ranges and hit matching | `src/PdfPane.tsx`, `src/navigation.ts` |
 | Settings and project templates | `src/settings.tsx`, `src/templates.ts`, `src/NewProjectDialog.tsx` |
+| Project-free Instant window, drafts and history | `src/InstantWindow.tsx`, `src/instant.ts`, `src-tauri/src/instant.rs` |
 | Shortcut matching and defaults | `src/shortcuts.ts`; matching Rust validation in `src-tauri/src/settings.rs` |
 | IPC and request ownership | `src-tauri/src/lib.rs` |
 | LaTeX/Typst extraction, includes and outline | `src-tauri/src/scan.rs` |
@@ -30,6 +31,9 @@
 - Reserve compiler request ownership before queuing blocking work.
 - Replacing/cancelling a request terminates its process group; ignore late callbacks using request/project identity.
 - Keep separate render, caret-preview, document and forward/reverse-navigation jobs.
+- Namespace request ownership by the calling window; closing Instant must not cancel the project window's jobs.
+- `instant` is global; `instant-<project-id>` owns local scratch state. Resolve its scope from the native window label, not the request's project field.
+- Project Instant compiles saved project snapshots with existing preamble/import context; it does not alter manuscripts or consume unsaved Source buffers.
 - Compile snapshots; do not write manuscripts to render a card or PDF.
 - PDF navigation targets refer to the compiled snapshot; rebuild after source changes.
 

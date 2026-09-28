@@ -1,0 +1,207 @@
+.instant-toolbar,
+.instant-options,
+.instant-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+}
+.instant-toolbar {
+  padding: 4px 12px;
+}
+.instant-options {
+  flex-wrap: wrap;
+}
+.instant-options select {
+  max-width: 220px;
+}
+.instant-context {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  max-width: 65%;
+}
+.instant-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.instant-workspace {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 14px;
+  gap: 10px;
+  overflow: auto;
+}
+.instant-split {
+  flex: 1;
+  min-height: 160px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.instant-editor,
+.instant-preview,
+.instant-settings {
+  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.instant-editor {
+  min-width: 0;
+  min-height: 0;
+  background: color-mix(in srgb, var(--surfaceBackground) 55%, transparent);
+}
+.instant-editor .code-editor,
+.instant-template-editor .code-editor {
+  height: 100%;
+}
+.instant-preview {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 20px;
+  min-width: 0;
+  min-height: 0;
+  background-color: #fff;
+  background-image: conic-gradient(
+    #ededed 25%,
+    transparent 0 50%,
+    #ededed 0 75%,
+    transparent 0
+  );
+  background-size: 16px 16px;
+  color: #606770;
+}
+.instant-preview.white-ink {
+  background-color: #343840;
+  background-image: conic-gradient(
+    #41464e 25%,
+    transparent 0 50%,
+    #41464e 0 75%,
+    transparent 0
+  );
+}
+.instant-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.instant-preview img[draggable="true"] {
+  cursor: grab;
+}
+.instant-empty {
+  font-size: 15px;
+}
+.instant-status {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  font-size: 11px;
+  background: #fff;
+  border-radius: 5px;
+  padding: 3px 5px;
+}
+.instant-status:empty {
+  display: none;
+}
+.instant-history {
+  width: 190px;
+  padding: 4px 8px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  border-right: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+}
+.instant-history input {
+  width: 100%;
+}
+.instant-history > div {
+  overflow: auto;
+}
+.instant-history button {
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  gap: 5px;
+  padding: 10px 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+  border-radius: 0;
+}
+.instant-history code {
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.instant-settings {
+  flex-shrink: 0;
+}
+.instant-settings label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.instant-settings input[type="range"] {
+  width: 80px;
+}
+.instant-template-editor {
+  height: 130px;
+}
+.instant-footer {
+  border-top: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+  margin-top: 12px;
+}
+.instant-size {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.instant-size input {
+  width: 65px;
+}
+.instant-footer input[type="color"] {
+  padding: 3px;
+  width: 32px;
+  height: 32px;
+}
+.instant-error {
+  max-height: 130px;
+  overflow: auto;
+  color: var(--text);
+  border-left: 3px solid #d65a61;
+  padding: 7px 10px;
+}
+.instant-error pre {
+  font-size: 11px;
+}
+@media (max-width: 660px) {
+  .instant-split {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+  .instant-history {
+    width: 150px;
+  }
+  .instant-options select {
+    max-width: 180px;
+  }
+  .instant-footer {
+    gap: 5px;
+    padding-inline: 10px;
+  }
+}
