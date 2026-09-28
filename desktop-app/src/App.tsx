@@ -63,6 +63,7 @@ import type {
 import { targetAtSource, targetsAtLine } from "./navigation";
 import { ProjectsPage } from "./ProjectsPage";
 import { ProjectSetup } from "./ProjectSetup";
+import { ProjectRecovery, type ProjectProblem } from "./ProjectRecovery";
 const initialPreferences: Preferences = {
   appearance: "dark",
   autoSave: true,
@@ -88,6 +89,7 @@ import { initialTemplates, type TemplateConfiguration } from "./templates";
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]),
     [project, setProject] = useState<Project | null>(null);
+  const [projectProblems, setProjectProblems] = useState<ProjectProblem[]>([]);
   const [mode, setMode] = useState<"library" | "source">("library");
   const [libraryStale, setLibraryStale] = useState(false);
   const [sourceMounted, setSourceMounted] = useState(false);
@@ -189,6 +191,11 @@ export default function App() {
     new Promise((resolve) => setPrompt({ title, value, label, resolve }));
   function report(e: unknown) {
     if (String(e) !== "Cancelled") setError(String(e));
+    if (String(e).includes("File:")) {
+      void rpc<ProjectProblem[]>("project_problems")
+        .then(setProjectProblems)
+        .catch(() => {});
+    }
   }
   useEffect(() => {
     void getCurrentWebview().setZoom(windowZoom).catch(report);
@@ -196,6 +203,7 @@ export default function App() {
   useEffect(() => {
     void rpc<{
       projects: Project[];
+      projectProblems: ProjectProblem[];
       setupRequired: boolean;
       defaultProjectDirectory: string;
       settings: SettingsSnapshot<Preferences>;
@@ -206,6 +214,7 @@ export default function App() {
     }>("startup")
       .then((data) => {
         setProjects(data.projects);
+        setProjectProblems(data.projectProblems);
         setSetupRequired(data.setupRequired);
         setDefaultProjectDirectory(data.defaultProjectDirectory);
         preferencesDocument.accept({
@@ -1000,6 +1009,13 @@ export default function App() {
       <div className="titlebar" data-tauri-drag-region>
         <span data-tauri-drag-region>Mathlidelux</span>
       </div>
+      {ready && !setupRequired && (
+        <ProjectRecovery
+          problems={projectProblems}
+          onProblems={setProjectProblems}
+          onProjects={setProjects}
+        />
+      )}
       {!ready ? (
         <div className="empty">
           <LoaderCircle className="spin" />

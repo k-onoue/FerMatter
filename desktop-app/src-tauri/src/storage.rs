@@ -1,4 +1,4 @@
-use crate::{files::*, scan};
+use crate::{files::*, project_data, scan};
 use serde_json::{json, Value};
 use std::{
     collections::HashMap,
@@ -55,7 +55,7 @@ impl Storage {
             }
             for entry in fs::read_dir(dir).map_err(err)? {
                 let entry = entry.map_err(err)?;
-                if let Ok(mut p) = json_read(&entry.path().join("project.json")) {
+                if let Ok(mut p) = project_data::read(&entry.path().join("project.json")) {
                     // Keep the old sources/metadata recoverable after demo setup,
                     // while showing their editable copies at the selected location.
                     if let Some(target) = p["demoRelocatedTo"].as_str() {
@@ -92,12 +92,14 @@ impl Storage {
         let ident = self.register(root)?;
         let root = self.root(&ident)?;
         let dir = self.project_dir(&ident)?;
-        let mut p = if dir.join("project.json").exists() {
-            json_read(&dir.join("project.json"))?
+        let mut p = if dir.join("project.json").exists()
+            || project_data::backup(&dir.join("project.json")).exists()
+        {
+            project_data::read(&dir.join("project.json"))?
         } else {
             // Swift may have hashed an alias such as /var rather than /private/var.
             // Match its saved root too, so canonicalizing does not lose variants.
-            self.legacy_project(&ident, &root).unwrap_or_else(|| {
+            self.legacy_project(&ident, &root)?.unwrap_or_else(|| {
                 json!({"root":root,"cards":[],"customOrder":[],"sections":[],"sectionAssignments":{},"exportFormat":"svg","exportFontSize":0})
             })
         };
@@ -111,7 +113,9 @@ impl Storage {
         safe(&root, &main)?;
         p["id"] = json!(ident);
         p["root"] = json!(root);
-        p.as_object_mut().unwrap().remove("demoRelocatedTo");
+        p.as_object_mut()
+            .ok_or("Invalid project metadata.")?
+            .remove("demoRelocatedTo");
         p["main"] = json!(main);
         p["format"] = json!(if main.ends_with(".typ") {
             "typst"
@@ -129,27 +133,70 @@ impl Storage {
             })
         }
         self.save(&ident, &p)?;
-        Ok(p)
+        project_data::normalize(p)
     }
-    fn legacy_project(&self, ident: &str, root: &Path) -> Option<Value> {
+    fn legacy_project(&self, ident: &str, root: &Path) -> Result<Option<Value>> {
         let projects = self.legacy.join("Projects");
-        if let Ok(p) = json_read(&projects.join(ident).join("project.json")) {
-            return Some(p);
+        let exact = projects.join(ident).join("project.json");
+        if exact.exists() {
+            return project_data::read(&exact).map(Some);
         }
-        fs::read_dir(projects).ok()?.flatten().find_map(|entry| {
-            let p = json_read(&entry.path().join("project.json")).ok()?;
+        let Ok(entries) = fs::read_dir(projects) else {
+            return Ok(None);
+        };
+        Ok(entries.flatten().find_map(|entry| {
+            let p = project_data::read(&entry.path().join("project.json")).ok()?;
             (Path::new(string(&p, "root")).canonicalize().ok()?.as_path() == root).then_some(p)
-        })
+        }))
     }
     pub fn load(&self, ident: &str) -> Result<Value> {
         self.root(ident)?;
-        json_read(&self.project_dir(ident)?.join("project.json"))
+        project_data::read(&self.project_dir(ident)?.join("project.json"))
     }
     pub fn save(&self, ident: &str, p: &Value) -> Result<()> {
+        if !p.is_object() {
+            return Err("Project metadata must be an object.".into());
+        }
         let mut p = p.clone();
         p["root"] = json!(self.root(ident)?);
         p["id"] = json!(ident);
-        json_write(&self.project_dir(ident)?.join("project.json"), &p)
+        project_data::write(&self.project_dir(ident)?.join("project.json"), &p)
+    }
+    pub fn project_problems(&self) -> Result<Vec<Value>> {
+        let mut problems = Vec::new();
+        for base in [&self.home, &self.legacy] {
+            let folder = base.join("Projects");
+            if !folder.is_dir() {
+                continue;
+            }
+            for entry in fs::read_dir(folder).map_err(err)?.flatten() {
+                let path = entry.path().join("project.json");
+                if !path.exists() && !project_data::backup(&path).exists() {
+                    continue;
+                }
+                if let Err(message) = project_data::read(&path) {
+                    let ident = entry.file_name().to_string_lossy().into_owned();
+                    let original = project_data::bytes(&path).ok();
+                    let missing = path
+                        .symlink_metadata()
+                        .is_err_and(|e| e.kind() == std::io::ErrorKind::NotFound);
+                    let revision = if missing {
+                        Some("missing".to_string())
+                    } else {
+                        original.as_ref().map(hash)
+                    };
+                    let can_restore = base == &self.home
+                        && self.project_dir(&ident).is_ok()
+                        && (original.is_some() || missing)
+                        && project_data::read(&project_data::backup(&path)).is_ok();
+                    problems.push(json!({"id":ident,"path":path,"message":message,"canRestore":can_restore,"revision":revision}));
+                }
+            }
+        }
+        Ok(problems)
+    }
+    pub fn recover_project(&self, ident: &str, expected: &str) -> Result<()> {
+        project_data::recover(&self.project_dir(ident)?.join("project.json"), expected)
     }
     pub fn allowed_artifact(&self, p: &Path) -> Result<PathBuf> {
         let path = p.canonicalize().map_err(err)?;
@@ -317,6 +364,65 @@ pub fn import_zip(archive: &Path, parent: &Path) -> Result<PathBuf> {
 mod tests {
     use super::*;
     use base64::{engine::general_purpose::STANDARD, Engine};
+    #[test]
+    fn corrupt_metadata_is_reported_without_blocking_other_projects() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Storage::new(temp.path().join("data"), temp.path().join("legacy")).unwrap();
+        let roots: Vec<_> = ["good", "bad"]
+            .iter()
+            .map(|name| {
+                let root = temp.path().join(name);
+                fs::create_dir(&root).unwrap();
+                fs::write(root.join("main.typ"), "$ x $").unwrap();
+                root
+            })
+            .collect();
+        let good = store.open(&roots[0], None).unwrap();
+        let bad = store.open(&roots[1], None).unwrap();
+        let path = store
+            .project_dir(string(&bad, "id"))
+            .unwrap()
+            .join("project.json");
+        fs::write(&path, "[]").unwrap();
+        assert!(store.open(&roots[1], None).is_err());
+        assert!(store.save(string(&bad, "id"), &json!([])).is_err());
+        assert_eq!(store.recent().unwrap().len(), 1);
+        assert_eq!(store.recent().unwrap()[0]["id"], good["id"]);
+        let problems = store.project_problems().unwrap();
+        assert_eq!(problems.len(), 1);
+        assert_eq!(problems[0]["canRestore"], true);
+        store
+            .recover_project(string(&bad, "id"), string(&problems[0], "revision"))
+            .unwrap();
+        assert_eq!(store.recent().unwrap().len(), 2);
+        assert!(store.project_problems().unwrap().is_empty());
+        assert_eq!(
+            fs::read_to_string(roots[1].join("main.typ")).unwrap(),
+            "$ x $"
+        );
+    }
+    #[test]
+    fn corrupt_legacy_project_is_kept_without_creating_an_empty_replacement() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("source");
+        fs::create_dir(&root).unwrap();
+        fs::write(root.join("main.typ"), "$ x $").unwrap();
+        let store = Storage::new(temp.path().join("data"), temp.path().join("legacy")).unwrap();
+        let ident = store.register(&root).unwrap();
+        let path = store
+            .legacy
+            .join("Projects")
+            .join(&ident)
+            .join("project.json");
+        atomic(&path, b"{broken").unwrap();
+        assert!(store.open(&root, None).is_err());
+        assert!(!store
+            .project_dir(&ident)
+            .unwrap()
+            .join("project.json")
+            .exists());
+        assert_eq!(fs::read_to_string(path).unwrap(), "{broken");
+    }
     #[test]
     fn swift_drafts_migrate_once_without_writing_source() {
         let dir = tempfile::tempdir().unwrap();

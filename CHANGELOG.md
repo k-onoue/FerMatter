@@ -41,6 +41,8 @@
 - Keep recent Library edits when rescans or renders finish late. Source moves retain drafts, main-file settings and shared editor Undo; unsaved files cannot be moved to Trash.
 - Release closed project and transient variant editor models without discarding shared split-pane Undo history.
 
+- Validate saved project metadata and offer explicit backup recovery while preserving unreadable originals, source files, drafts, and compatible unknown fields.
+
 - Align slider thumbs with track endpoints at minimum and maximum values.
 
 - Display source font sizes in points instead of “Original” throughout the Library and Source previews.

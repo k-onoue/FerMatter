@@ -1573,3 +1573,21 @@ kbd {
 .template-options button {
   font-size: 11px;
 }
+
+.project-recovery-notice {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 2rem;
+  flex-shrink: 0;
+}
+.project-recovery-item {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--text) 15%, transparent);
+  border-radius: 0.75rem;
+}
+.project-recovery-item code {
+  display: block;
+  overflow-wrap: anywhere;
+}
