@@ -279,14 +279,24 @@ pub fn render_project(
     Ok(json!({"card":card,"path":path}))
 }
 
-pub fn open(app: &tauri::AppHandle, project: Option<&Value>) -> tauri::Result<()> {
+pub fn open(app: &tauri::AppHandle, project: Option<&Value>) -> Result<()> {
+    let project = project.cloned();
+    crate::lifecycle::on_main(app, move |app| {
+        open_window(&app, project.as_ref()).map_err(err)
+    })
+}
+fn open_window(app: &tauri::AppHandle, project: Option<&Value>) -> tauri::Result<()> {
     use tauri::Manager;
+    if crate::lifecycle::quitting(app) {
+        return Err(std::io::Error::other("Finish saving before opening another editor.").into());
+    }
     let ident = project.map(|p| string(p, "id")).unwrap_or("");
     let label = if ident.is_empty() {
         "instant".into()
     } else {
         format!("instant-{ident}")
     };
+    crate::lifecycle::cancel_close(app, &label);
     if let Some(window) = app.get_webview_window(&label) {
         window.show()?;
         window.unminimize()?;

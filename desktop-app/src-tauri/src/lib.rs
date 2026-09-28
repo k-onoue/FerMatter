@@ -752,23 +752,23 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![request])
         .build(tauri::generate_context!())
         .expect("Unable to start Mathlidelux")
-        .run(|app, event| {
-            match event {
-                #[cfg(target_os = "macos")]
-                tauri::RunEvent::Opened { urls } => resident::open_files(
-                    app,
-                    urls.into_iter().filter_map(|url| url.to_file_path().ok()).collect(),
-                ),
-                #[cfg(target_os = "macos")]
-                tauri::RunEvent::Reopen { .. } => resident::show_projects(app),
-                tauri::RunEvent::ExitRequested { api, .. } => {
-                    if !lifecycle::exiting(app) {
-                        api.prevent_exit();
-                        lifecycle::request_quit(app);
-                    }
+        .run(|app, event| match event {
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Opened { urls } => resident::open_files(
+                app,
+                urls.into_iter()
+                    .filter_map(|url| url.to_file_path().ok())
+                    .collect(),
+            ),
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Reopen { .. } => resident::show_projects(app),
+            tauri::RunEvent::ExitRequested { api, .. } => {
+                if !lifecycle::exiting(app) {
+                    api.prevent_exit();
+                    lifecycle::request_quit(app);
                 }
-                _ => {}
             }
+            _ => {}
         });
 }
 

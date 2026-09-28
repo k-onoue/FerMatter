@@ -15,11 +15,18 @@ pub struct Resident {
     keys: Mutex<Vec<(Shortcut, String)>>,
 }
 pub fn show_projects(app: &tauri::AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.show();
-        let _ = window.unminimize();
-        let _ = window.set_focus();
-    }
+    let _ = crate::lifecycle::on_main(app, |app| {
+        if crate::lifecycle::quitting(&app) {
+            return Ok(());
+        }
+        crate::lifecycle::cancel_close(&app, "main");
+        if let Some(window) = app.get_webview_window("main") {
+            window.show().map_err(err)?;
+            window.unminimize().map_err(err)?;
+            window.set_focus().map_err(err)?;
+        }
+        Ok(())
+    });
 }
 pub fn report(app: &tauri::AppHandle, error: String) {
     use tauri_plugin_dialog::DialogExt;
@@ -30,6 +37,9 @@ pub fn report(app: &tauri::AppHandle, error: String) {
         .show(|_| {});
 }
 pub fn open_instant(app: &tauri::AppHandle) -> Result<()> {
+    if crate::lifecycle::quitting(app) {
+        return Err("Finish saving before opening another editor.".into());
+    }
     let runtime = app.state::<Arc<Runtime>>();
     if project_setup::required(&runtime.store)? {
         show_projects(app);
@@ -38,6 +48,9 @@ pub fn open_instant(app: &tauri::AppHandle) -> Result<()> {
     instant::open(app, None).map_err(err)
 }
 pub fn import_svg(app: &tauri::AppHandle, sources: &[String]) -> Result<()> {
+    if crate::lifecycle::quitting(app) {
+        return Err("Finish saving before opening another SVG.".into());
+    }
     if sources.is_empty() || sources.len() > 16 {
         return Err("Open between 1 and 16 SVG files.".into());
     }
@@ -56,6 +69,14 @@ pub fn import_svg(app: &tauri::AppHandle, sources: &[String]) -> Result<()> {
         .iter()
         .map(|s| roundtrip::decode(s).and_then(|v| roundtrip::resolve(&runtime.store, &v)))
         .collect::<Result<Vec<_>>>()?;
+    crate::lifecycle::on_main(app, move |app| admit_imports(&app, restored))
+}
+fn admit_imports(app: &tauri::AppHandle, restored: Vec<(Option<Value>, Value)>) -> Result<()> {
+    // Queue admission and window creation must be ordered with native Quit's
+    // window snapshot; an editor created afterward could escape its save barrier.
+    if crate::lifecycle::quitting(app) {
+        return Err("Finish saving before opening another SVG.".into());
+    }
     let state = app.state::<Resident>();
     let mut queued = Vec::new();
     let mut pending = state.pending.lock().unwrap();

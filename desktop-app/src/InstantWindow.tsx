@@ -93,6 +93,10 @@ export default function InstantWindow() {
   const saveError = useRef(""),
     sequence = useRef(0);
   const replacement = useRef(0);
+  const importFlight = useRef<Promise<void> | null>(null);
+  const drainImports = useRef<() => Promise<void>>(async () => {
+    throw new Error("Wait for Instant to finish loading before closing it.");
+  });
   draftRef.current = draft;
   const report = (e: unknown) => {
     if (String(e) !== "Cancelled") setError(String(e));
@@ -217,12 +221,12 @@ export default function InstantWindow() {
   replaceRef.current = replace;
   useEffect(() => {
     if (!draft) return;
-    let stopped = false,
-      importing = false;
-    const consume = async () => {
-      if (stopped || importing) return;
-      importing = true;
-      try {
+    let stopped = false;
+    const consume = (): Promise<void> => {
+      if (importFlight.current) return importFlight.current;
+      const operation = (async () => {
+        if (stopped)
+          throw new Error("Instant is closing. Reopen the SVG to restore it.");
         let item = await rpc<{ token: string; draft: InstantDraft } | null>(
           "instant_import_pending",
         );
@@ -237,17 +241,24 @@ export default function InstantWindow() {
           setNotice("Source restored. Press Render to preview.");
           item = await rpc("instant_import_pending", { token: item.token });
         }
-      } catch (e) {
-        report(e);
-      } finally {
-        importing = false;
-      }
+      })();
+      importFlight.current = operation;
+      void operation
+        .finally(() => {
+          if (importFlight.current === operation) importFlight.current = null;
+        })
+        .catch(() => {});
+      return operation;
     };
-    const event = listen("instant-import-pending", () => void consume());
+    drainImports.current = consume;
+    const event = listen(
+      "instant-import-pending",
+      () => void consume().catch(report),
+    );
     const focus = getCurrentWindow().onFocusChanged(({ payload }) => {
-      if (payload) void consume();
+      if (payload) void consume().catch(report);
     });
-    void event.then(() => consume());
+    void event.then(() => consume()).catch(report);
     return () => {
       stopped = true;
       void event.then((stop) => stop());
@@ -324,6 +335,7 @@ export default function InstantWindow() {
 
   useEffect(() => {
     const unregister = registerWindowFlush("instant", async () => {
+      await drainImports.current();
       if (draftRef.current) persist(draftRef.current);
       await Promise.all([queue.current, configurationDocument.flush()]);
       if (saveError.current) throw new Error(saveError.current);
