@@ -1,6 +1,13 @@
 import { builtinTemplates, type ProjectTemplate } from "./templates";
 import type { Card } from "./types";
 
+export interface RenderedInstant {
+  card: Card;
+  path: string;
+  revision: string;
+  image: string;
+}
+
 export interface InstantDraft {
   requiresRender?: boolean;
   restorationProject?: { uuid: string; name?: string } | null;

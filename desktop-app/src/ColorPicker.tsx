@@ -2,9 +2,10 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { HexColorPicker } from "react-colorful";
 import { loadColorHistory, rememberColor } from "./colorHistory";
+import { parseHexInput } from "./outputColor";
 import "./ColorPicker.css";
 
-const colors = [
+const colors: [string, string][] = [
   ["Black", "#000000"],
   ["White", "#ffffff"],
   ["Red", "#dc2626"],
@@ -14,6 +15,38 @@ const colors = [
   ["Blue", "#2563eb"],
   ["Purple", "#9333ea"],
 ];
+
+function ColorSwatches({
+  label,
+  colors,
+  value,
+  onChoose,
+}: {
+  label: string;
+  colors: [string, string][];
+  value: string;
+  onChoose: (color: string) => void;
+}) {
+  return (
+    <div className="instant-color-swatches" role="group" aria-label={label}>
+      {colors.length ? (
+        colors.map(([name, color]) => (
+          <button
+            key={color}
+            aria-label={name}
+            title={name}
+            aria-pressed={value.toLowerCase() === color}
+            onClick={() => onChoose(color)}
+          >
+            <span style={{ backgroundColor: color }} />
+          </button>
+        ))
+      ) : (
+        <span className="instant-color-empty">—</span>
+      )}
+    </div>
+  );
+}
 
 export function ColorPicker({
   value,
@@ -44,8 +77,8 @@ export function ColorPicker({
     remember(color);
   };
   const rememberHex = () => {
-    if (hexEdited.current && /^#?[0-9a-f]{6}$/i.test(hex))
-      remember("#" + hex.replace(/^#/, "").toLowerCase());
+    const color = parseHexInput(hex);
+    if (hexEdited.current && color) remember(color);
     hexEdited.current = false;
   };
   const close = () => {
@@ -149,23 +182,12 @@ export function ColorPicker({
             style={position}
           >
             <div className="instant-color-heading">Default</div>
-            <div
-              className="instant-color-swatches"
-              role="group"
-              aria-label="Default colors"
-            >
-              {colors.map(([name, color]) => (
-                <button
-                  key={color}
-                  aria-label={name}
-                  title={name}
-                  aria-pressed={value.toLowerCase() === color}
-                  onClick={() => choose(color)}
-                >
-                  <span style={{ backgroundColor: color }} />
-                </button>
-              ))}
-            </div>
+            <ColorSwatches
+              label="Default colors"
+              colors={colors}
+              value={value}
+              onChoose={choose}
+            />
             <div className="instant-color-heading">Color Picker</div>
             <HexColorPicker
               color={value}
@@ -173,27 +195,12 @@ export function ColorPicker({
               onChangeEnd={remember}
             />
             <div className="instant-color-heading">History</div>
-            <div
-              className="instant-color-swatches"
-              role="group"
-              aria-label="Color history"
-            >
-              {history.length ? (
-                history.map((color) => (
-                  <button
-                    key={color}
-                    aria-label={color}
-                    title={color}
-                    aria-pressed={value.toLowerCase() === color}
-                    onClick={() => choose(color)}
-                  >
-                    <span style={{ backgroundColor: color }} />
-                  </button>
-                ))
-              ) : (
-                <span className="instant-color-empty">—</span>
-              )}
-            </div>
+            <ColorSwatches
+              label="Color history"
+              colors={history.map((color) => [color, color])}
+              value={value}
+              onChoose={choose}
+            />
             <label className="instant-color-hex">
               HEX
               <input
@@ -207,8 +214,8 @@ export function ColorPicker({
                   const text = event.target.value;
                   setHex(text);
                   hexEdited.current = true;
-                  if (/^#?[0-9a-f]{6}$/i.test(text))
-                    onChange("#" + text.replace(/^#/, "").toLowerCase());
+                  const color = parseHexInput(text);
+                  if (color) onChange(color);
                 }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") rememberHex();
