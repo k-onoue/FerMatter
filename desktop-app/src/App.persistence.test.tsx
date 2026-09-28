@@ -117,6 +117,7 @@ beforeEach(() => {
         if (operation === "startup")
           return {
             projects: [project],
+            projectProblems: [],
             setupRequired: false,
             defaultProjectDirectory: "/synthetic",
             settings: {
