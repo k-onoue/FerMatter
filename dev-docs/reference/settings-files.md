@@ -8,6 +8,7 @@ Import and Export. Shortcuts can be reset; choose Default to reset the theme.
 - `keybindings.json` contains shortcut overrides. Recording or clearing a shortcut
   saves the file immediately.
 - `theme.json` contains the active theme, including both light and dark palettes.
+- `preferences.json` stores appearance, auto-save and window preferences. `projectView` is `grid` (default) or `list`; older files without it keep the grid view.
 
 Edit JSON opens the built-in editor. For external edits, save the file and choose
 Reload. Import validates a local JSON file and copies it into the settings folder;

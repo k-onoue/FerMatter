@@ -121,7 +121,7 @@ fn default_document(name: &str) -> Value {
         "keybindings.json" => {
             json!({"schemaVersion":1,"kind":"mathlidelux.keybindings","bindings":{}})
         }
-        _ => json!({"appearance":"dark","autoSave":true,"opacity":0.88,"pdfWidth":420}),
+        _ => json!({"appearance":"dark","autoSave":true,"opacity":0.88,"pdfWidth":420,"projectView":"grid"}),
     }
 }
 pub fn validate(name: &str, v: &Value) -> Result<()> {
@@ -132,6 +132,11 @@ pub fn validate(name: &str, v: &Value) -> Result<()> {
         "theme.json" => theme(v),
         "keybindings.json" => keybindings(v),
         "preferences.json" => {
+            if let Some(view) = v.get("projectView") {
+                if !matches!(view.as_str(), Some("grid" | "list")) {
+                    return Err("Project view must be grid or list.".into());
+                }
+            }
             if let Some(opacity) = v.get("opacity") {
                 if !opacity.as_f64().is_some_and(|n| (0.45..=1.).contains(&n)) {
                     return Err("Background opacity must be between 0.45 and 1.".into());
