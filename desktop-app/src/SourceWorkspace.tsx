@@ -187,6 +187,7 @@ export function SourceWorkspace({
     ),
   );
   const mutating = useRef(false);
+  const filesystemRevision = useRef(0);
   const mutationDone = useRef<Promise<void> | null>(null);
   const [mutationBusy, setMutationBusy] = useState(false);
   const autoSaveRef = useRef(autoSave);
@@ -256,6 +257,8 @@ export function SourceWorkspace({
   );
   const open = useCallback(
     async (path: string, pane?: string, line?: number) => {
+      if (!draftsHydrated.current || mutating.current) return false;
+      const revision = filesystemRevision.current;
       const target = pane || refs.current.activePane;
       const sequence = (fileOpens.current.get(target) || 0) + 1;
       fileOpens.current.set(target, sequence);
@@ -265,7 +268,8 @@ export function SourceWorkspace({
             project: project.id,
             path,
           });
-          if (!mounted.current) return false;
+          if (!mounted.current || revision !== filesystemRevision.current)
+            return false;
           updateBuffers((b) =>
             b[path] ? b : { ...b, [path]: { ...buffer, modelKey: uid() } },
           );
@@ -501,9 +505,12 @@ export function SourceWorkspace({
     path: string;
     destination?: string;
   }) {
+    if (!draftsHydrated.current)
+      throw new Error("Wait for project drafts to finish loading.");
     if (mutating.current)
       throw new Error("Wait for the current file operation.");
     mutating.current = true;
+    filesystemRevision.current++;
     let release!: () => void;
     mutationDone.current = new Promise<void>((resolve) => {
       release = resolve;
