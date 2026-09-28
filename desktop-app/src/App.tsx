@@ -1155,8 +1155,8 @@ export default function App() {
                 <h1>{title}</h1>
                 <span className="spacer" />
                 <button
-                  title="New Instant (⇧⌘K)"
-                  aria-label="New Instant"
+                  title="Open with Instant Mode"
+                  aria-label="Open with Instant Mode"
                   onClick={() => void execute("instant")}
                 >
                   <Zap size={17} />
