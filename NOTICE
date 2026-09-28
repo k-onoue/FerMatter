@@ -7,3 +7,7 @@ Night Owl, Horizon, Vitesse, Everforest, Gruvbox Material, Noctis, and Min (MIT)
 Original copyright notices, license texts, source revisions, and adaptation
 notes accompany the themes in desktop-app/resources/themes/ and in the
 app's Contents/Resources/themes/ directory.
+
+Bundled source formatting uses Prettier and unified-latex (MIT), and Typstyle
+with typst-syntax (Apache-2.0). Dependency copyright and license texts are
+included in the app's generated vendor notices.

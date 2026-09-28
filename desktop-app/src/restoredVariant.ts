@@ -16,6 +16,6 @@ export function restoredVariant(draft: InstantDraft, project: Project): Card {
     exportFontSize: draft.fontSize,
     exportFormat: draft.exportFormat,
     instantColor: draft.color.slice(1),
-    requiresRender: true,
+    requiresRender: false,
   };
 }

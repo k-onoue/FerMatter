@@ -38,6 +38,10 @@
 
 ## Editing shortcuts
 
+- **Format** (`⇧⌥F`) formats the open LaTeX or Typst file. `⌘Z` undoes the change; the usual save setting applies.
+- Formatters are bundled: [Prettier/unified-latex](https://github.com/siefkenj/prettier-plugin-latex) for LaTeX and [Typstyle](https://github.com/typstyle-rs/typstyle) for Typst. No separate formatter installation is needed.
+- Formatting is manual, limited to 1 MiB per file. Errors leave the buffer unchanged; typing or switching files cancels pending formatting.
+
 | Action | Keys |
 | --- | --- |
 | Find/replace | `⌘F` |
@@ -45,6 +49,7 @@
 | Delete selected lines | `⇧⌘K` |
 | Insert line below/above | `⌘Return` / `⇧⌘Return` |
 | Toggle line comment | `⌘/` |
+| Format LaTeX/Typst | `⇧⌥F` |
 | Indent/outdent | `⌘]` / `⌘[`; Tab / Shift-Tab |
 
 - [Command completion](edit-equation.md#type-less) works here too.

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { asset, rpc, projectName } from "./api";
 import { CodeEditor, setProjectCompletions } from "./editor";
+import { ColorPicker } from "./ColorPicker";
 import { defaults } from "./appearance";
 import type { SettingsSnapshot } from "./settingsPersistence";
 import { useSettingsDocument } from "./useSettingsDocument";
@@ -214,7 +215,10 @@ export default function InstantWindow() {
     if (before?.source.trim()) await remember(before);
     if (replacement.current !== ticket || draftRef.current !== before)
       return false;
-    change(value);
+    setRendered(null);
+    // Old SVG imports/history used an explicit-render gate. Opening them now
+    // follows the same automatic preview flow as typing a new equation.
+    change(value.requiresRender ? { ...value, requiresRender: false } : value);
     setCompileError("");
     return true;
   }
@@ -239,9 +243,8 @@ export default function InstantWindow() {
             );
           await queue.current;
           if (saveError.current) throw new Error(saveError.current);
-          setRendered(null);
           setImportFocus(item.token);
-          setNotice("Source restored. Press Render to preview.");
+          setNotice("Source restored");
           item = await rpc("instant_import_pending", { token: item.token });
         }
       })();
@@ -306,8 +309,10 @@ export default function InstantWindow() {
               ? configuredInstant(config.value)
               : initialInstant());
         const pending = localStorage.getItem(pendingKey);
-        if (pending) {
-          next = JSON.parse(pending);
+        if (pending) next = JSON.parse(pending);
+        const enablePreview = next.requiresRender === true;
+        if (enablePreview) next = { ...next, requiresRender: false };
+        if (pending || enablePreview) {
           // Validate recovery through the same backend before allowing further edits.
           await rpc("instant_session", { action: "save", draft: next });
           localStorage.removeItem(pendingKey);
@@ -776,6 +781,7 @@ export default function InstantWindow() {
                           project="instant"
                           path={"template-" + draft.template.id}
                           format={draft.template.format}
+                          formatMode={false}
                           value={draft.template.source}
                           onChange={(source) =>
                             patch({ template: { ...draft.template, source } })
@@ -823,6 +829,7 @@ export default function InstantWindow() {
                     }
                     format={draft.template.format}
                     value={draft.source}
+                    formatMode={draft.kind === "figure" ? "document" : "math"}
                     onChange={(source) => patch({ source })}
                     onSave={() => persist(draft)}
                   />
@@ -898,12 +905,9 @@ export default function InstantWindow() {
               />
               pt
             </label>
-            <input
-              aria-label="Equation color"
-              title="Equation color"
-              type="color"
+            <ColorPicker
               value={draft.color}
-              onChange={(event) => patch({ color: event.target.value })}
+              onChange={(color) => patch({ color })}
             />
             <span className="spacer" />
             <button

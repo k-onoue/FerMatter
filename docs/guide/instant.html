@@ -35,10 +35,12 @@
 <li>Existing <a href="requirements.html">compiler requirements</a> still apply.</li>
 <li>Images have a transparent background; JPEG uses white. The checkerboard is only the preview background.</li>
 <li>Output color is independent of the app theme. The opacity slider changes the window background, not text or exported artwork.</li>
+<li>Click the color swatch for presets or a HEX value. Color changes update the preview and exported artwork.</li>
 </ul>
 <h2 id="editing-and-templates">Editing and templates</h2>
 <ul>
 <li>The editor includes syntax completion, undo/redo, line numbers, and the usual editing shortcuts.</li>
+<li><strong>Format</strong> (<code>⇧⌥F</code>) formats the current equation or code; <code>⌘Z</code> undoes it. The <a href="source-editor.html#editing-shortcuts">formatters</a> are bundled with the app.</li>
 <li><code>⌘Enter</code> or the refresh button renders again.</li>
 <li>Copy and drag become available when the preview matches the current input and settings. Errors retain the last preview for reference, but prevent exporting it as the new result.</li>
 </ul>
@@ -109,7 +111,7 @@
 <li>Drag artwork from PowerPoint or drop an SVG file into Mathlidelux to reopen its source.</li>
 <li>A matching project tab or Instant is reused. If neither is open, dropping into the main window opens a project tab; other entry points open Instant. Missing or ambiguous projects open the standalone Instant.</li>
 <li>A project tab opens the imported source in <strong>Edit Variant</strong>. Its original source files stay unchanged; an existing Library draft is preserved as a variant. Instant keeps the previous draft in History.</li>
-<li>Imported source waits for <strong>Render</strong>; opening a file does not execute its code.</li>
+<li>Restored source renders automatically when its editor opens. Compiler errors remain editable; original project source files stay unchanged.</li>
 <li>SVG source includes the equation and template/preamble. Review it before sharing; the complete manuscript and app storage paths are not embedded.</li>
 <li>Project-specific Typst definitions, imported files, packages and fonts may still require the original project. Standalone fallback cannot recreate missing dependencies.</li>
 <li>Other applications may strip SVG metadata when pasting or copying it. Keep the original SVG or use Instant History if the copied artwork has no editable source. SVGs exported by older versions have no restoration metadata.</li>

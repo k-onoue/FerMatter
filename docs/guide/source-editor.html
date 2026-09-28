@@ -61,6 +61,11 @@
 <li>The same <a href="limits.html">source-extraction limits</a> apply; generated math may need the full document preview.</li>
 </ul>
 <h2 id="editing-shortcuts">Editing shortcuts</h2>
+<ul>
+<li><strong>Format</strong> (<code>⇧⌥F</code>) formats the open LaTeX or Typst file. <code>⌘Z</code> undoes the change; the usual save setting applies.</li>
+<li>Formatters are bundled: <a href="https://github.com/siefkenj/prettier-plugin-latex">Prettier/unified-latex</a> for LaTeX and <a href="https://github.com/typstyle-rs/typstyle">Typstyle</a> for Typst. No separate formatter installation is needed.</li>
+<li>Formatting is manual, limited to 1 MiB per file. Errors leave the buffer unchanged; typing or switching files cancels pending formatting.</li>
+</ul>
 <table>
 <thead>
 <tr>
@@ -88,6 +93,10 @@
 <tr>
 <td>Toggle line comment</td>
 <td><code>⌘/</code></td>
+</tr>
+<tr>
+<td>Format LaTeX/Typst</td>
+<td><code>⇧⌥F</code></td>
 </tr>
 <tr>
 <td>Indent/outdent</td>

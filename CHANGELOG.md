@@ -12,6 +12,7 @@
 
 ### Added
 
+- On-demand LaTeX/Typst formatting in Source, Library variants and Instant, with bundled formatters, undo, and cancellation when input changes.
 - Project workspace tabs that retain Library, Source and PDF state independently.
 - Restore SVG artwork dragged from PowerPoint into an existing project tab or Instant, opening the appropriate editor when needed.
 - Fresh-input release verification, recorded dependency audits and an explicit signed/notarized packaging path with validation manifests.
@@ -41,6 +42,7 @@
 
 ### Changed
 
+- Restore SVG recipes with an automatic preview, and choose Instant output colors in an in-app palette with HEX controls.
 - Reuse the running macOS app when launched again, including from another app copy, to prevent duplicate menu-bar icons.
 - Protect settings against stale-window overwrites and preserve rapid preference changes with ordered saves and explicit reload after conflicts.
 - Stream large project snapshots and hashes with cancellation, bound image allocations and avoid loading every selected image when copying multiple items.

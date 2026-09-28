@@ -3,7 +3,7 @@ import { initialInstant } from "./instant";
 import { restoredVariant } from "./restoredVariant";
 import type { Project } from "./types";
 
-it("restores source/style/context into independent, uncompiled presentation variants", () => {
+it("restores source/style/context into independent variants ready for automatic preview", () => {
   const project = {
     id: "demo",
     main: "main.typ",
@@ -25,7 +25,7 @@ it("restores source/style/context into independent, uncompiled presentation vari
     tex: "custom(x)",
     origin: "custom",
     status: "pending",
-    requiresRender: true,
+    requiresRender: false,
     restoredContextFile: "sections/model.typ",
     instantColor: "123abc",
     exportFontSize: 40,

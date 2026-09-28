@@ -2,6 +2,7 @@ mod cache;
 mod compiler;
 mod export;
 mod files;
+mod formatting;
 mod instant;
 mod instant_settings;
 mod lifecycle;
@@ -83,6 +84,23 @@ async fn request(
     payload["window"] = json!(window.label());
     if operation != "desktop_background" {
         payload["key"] = json!(format!("{}::{}", window.label(), string(&payload, "key")));
+    }
+    if operation == "format_typst" {
+        let key = string(&payload, "key").to_owned();
+        let cancellation = job(&runtime, &key);
+        return tauri::async_runtime::spawn_blocking(move || {
+            let result = formatting::format(&payload, &cancellation);
+            let mut jobs = runtime.jobs.lock().unwrap();
+            if jobs
+                .get(&key)
+                .is_some_and(|current| Arc::ptr_eq(&current.0, &cancellation.0))
+            {
+                jobs.remove(&key);
+            }
+            result
+        })
+        .await
+        .map_err(err)?;
     }
     if operation == "resident_workspace" {
         resident::workspace(&app, window.label(), &payload["projects"])?;
@@ -703,6 +721,9 @@ fn dispatch(
     }
 }
 pub fn run() {
+    if formatting::worker_requested() {
+        return;
+    }
     let context = tauri::generate_context!();
     #[cfg(unix)]
     let guard = match single_instance::claim(&context.config().identifier) {

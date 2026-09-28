@@ -427,6 +427,43 @@ fn verify_instant(output: &Path) -> Result<()> {
                 return Err(format!("Instant {name}: empty {format}"));
             }
         }
+        if name == "latex" || name == "typst-display" {
+            let mut colored = draft.clone();
+            colored["color"] = json!("#dc2626");
+            let red = instant::render(output, &colored, &c)?;
+            if red["path"] == result["path"] || red["card"]["svgPath"] == card["svgPath"] {
+                return Err(format!("Instant {name}: color reused old artwork"));
+            }
+            for (image, expected) in [(&result, [35u8, 86, 171]), (&red, [220u8, 38, 38])] {
+                let png = export::image_file(
+                    &image["card"],
+                    "png",
+                    36.,
+                    &output.join("Instant/Exports"),
+                )?;
+                let pixels = image::open(png).map_err(err)?.into_rgba8();
+                if !pixels
+                    .pixels()
+                    .any(|p| p[3] > 240 && (0..3).all(|i| p[i].abs_diff(expected[i]) <= 4))
+                {
+                    return Err(format!(
+                        "Instant {name}: preview/export lost equation color"
+                    ));
+                }
+            }
+            let svg = crate::roundtrip::read_svg(Path::new(string(&red, "path")))?;
+            let recipe = crate::roundtrip::decode(&svg)?;
+            let temp = tempfile::tempdir().map_err(err)?;
+            let store =
+                crate::storage::Storage::new(temp.path().join("data"), temp.path().join("legacy"))?;
+            let (_, restored) = crate::roundtrip::resolve(&store, &recipe)?;
+            if restored["color"] != colored["color"] || restored["requiresRender"] != false {
+                return Err(format!(
+                    "Instant {name}: restored draft is not ready to preview"
+                ));
+            }
+            instant::render(output, &restored, &c)?;
+        }
         // A failed render must not return the previous successful image.
         draft["source"] = json!(if format == "latex" {
             "\\undefinedInstantCommand{"

@@ -257,7 +257,7 @@ pub fn resolve(store: &Storage, value: &Value) -> Result<(Option<Value>, Value)>
         None
     };
     let mut draft = value["draft"].clone();
-    draft["requiresRender"] = json!(true);
+    draft["requiresRender"] = json!(false);
     if let Some(p) = &project {
         let root = store.root(string(p, "id"))?;
         let context = string(&draft, "contextFile");
@@ -368,11 +368,11 @@ mod tests {
             .is_symlink());
     }
     #[test]
-    fn fallback_never_runs_imported_source() {
+    fn fallback_restores_an_automatic_preview_draft_without_compiling() {
         let dir = tempfile::tempdir().unwrap();
         let store = Storage::new(dir.path().join("data"), dir.path().join("legacy")).unwrap();
         let (_, value) = resolve(&store, &recipe(&draft(), Value::Null)).unwrap();
-        assert_eq!(value["requiresRender"], true);
+        assert_eq!(value["requiresRender"], false);
         assert_eq!(value["source"], draft()["source"]);
     }
 

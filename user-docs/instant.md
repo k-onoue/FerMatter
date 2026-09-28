@@ -11,10 +11,12 @@
 - Existing [compiler requirements](requirements.md) still apply.
 - Images have a transparent background; JPEG uses white. The checkerboard is only the preview background.
 - Output color is independent of the app theme. The opacity slider changes the window background, not text or exported artwork.
+- Click the color swatch for presets or a HEX value. Color changes update the preview and exported artwork.
 
 ## Editing and templates
 
 - The editor includes syntax completion, undo/redo, line numbers, and the usual editing shortcuts.
+- **Format** (`⇧⌥F`) formats the current equation or code; `⌘Z` undoes it. The [formatters](source-editor.md#editing-shortcuts) are bundled with the app.
 - `⌘Enter` or the refresh button renders again.
 - Copy and drag become available when the preview matches the current input and settings. Errors retain the last preview for reference, but prevent exporting it as the new result.
 
@@ -68,7 +70,7 @@
 - Drag artwork from PowerPoint or drop an SVG file into Mathlidelux to reopen its source.
 - A matching project tab or Instant is reused. If neither is open, dropping into the main window opens a project tab; other entry points open Instant. Missing or ambiguous projects open the standalone Instant.
 - A project tab opens the imported source in **Edit Variant**. Its original source files stay unchanged; an existing Library draft is preserved as a variant. Instant keeps the previous draft in History.
-- Imported source waits for **Render**; opening a file does not execute its code.
+- Restored source renders automatically when its editor opens. Compiler errors remain editable; original project source files stay unchanged.
 - SVG source includes the equation and template/preamble. Review it before sharing; the complete manuscript and app storage paths are not embedded.
 - Project-specific Typst definitions, imported files, packages and fonts may still require the original project. Standalone fallback cannot recreate missing dependencies.
 - Other applications may strip SVG metadata when pasting or copying it. Keep the original SVG or use Instant History if the copied artwork has no editable source. SVGs exported by older versions have no restoration metadata.

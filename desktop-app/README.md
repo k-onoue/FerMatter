@@ -8,7 +8,7 @@
 
 ## Build and run
 
-- Apple Silicon development build; macOS 14+ deployment target, verified on macOS 26. Rust stable, Node.js 22+, Xcode command-line tools.
+- Apple Silicon development build; macOS 14+ deployment target, verified on macOS 26. Rust stable (1.92+), Node.js 22+, Xcode command-line tools.
 - Verified development toolchain: Rust 1.98.1, Node.js 26.5.0, macOS 26.5.2.
 - A project-local toolchain at `build/rustup/` is optional; scripts otherwise use the installed Rust toolchain.
 
@@ -34,7 +34,7 @@ open 'src-tauri/target/release/bundle/macos/Mathlidelux.app'
 | Library | Search/type/outline/label filters, range/toggle/rectangle selection, double-click variants, per-item output size |
 | Images | SVG default; PNG/JPEG/vector PDF; native outbound file drag and image clipboard |
 | Source | Real file editing, tree operations, shared editor models, nested horizontal/vertical panes, draggable/middle-click tabs |
-| Editing | Monaco Undo/Redo, line numbers/actions, syntax coloring, command completion, project definitions, recoverable drafts |
+| Editing | Monaco Undo/Redo, line numbers/actions, syntax coloring, command completion, bundled LaTeX/Typst formatting, project definitions, recoverable drafts |
 | Preview | Unsaved source snapshot at caret; export/drag; isolated compiler processes with cancellation |
 | PDF | Whole-document build, single-click PDF ↔ Library/Source navigation, selected-equation highlight, caret tracking, retained pane width |
 | Settings | Light/dark/system appearance, fifteen theme pairs, shortcut JSON, recovery/conflict checks, background opacity, pinning |

@@ -196,6 +196,7 @@ export function NewProjectDialog({
           path={template.id + (editing ? "-template" : "")}
           value={editing ? templateDraft : text}
           format={template.format}
+          formatMode={!editing && mode === "source" ? "document" : false}
           onChange={editing ? setTemplateDraft : setText}
           onSave={() => void (editing ? saveTemplate() : create())}
         />
