@@ -1,11 +1,14 @@
 # Mathlidelux app icon
 
-- Approved artwork: `AppIcon.icon/Assets/AppIcon.png`, created with `image_gen` on 2026-09-27.
-- An x² tile is dragged onto a slide; the white cursor has a soft glow and no outline.
-- The original Icon Composer package is retained here for future icon builds.
-- Tauri bundles the existing `src-tauri/icons/icon.icns` and `icon.png`; it does not require Icon Composer or an image generation service.
-- In-app mark: `public/app-icon.png`; website mark: `docs/assets/icon.png` at the repository root.
+- Artwork supplied and selected by the repository owner on 2026-09-28.
+- An x² tile, cursor, and curved arrow point toward an image on a slide.
+- Source asset: `AppIcon.icon/Assets/AppIcon.png`; the opaque interior is unchanged from the supplied image.
+- The owner approved conventional image processing to remove the dark exterior. The final alpha mask follows the existing rounded-square edge, with edge colors corrected for the removed backdrop.
+- Built-in `image_gen` background-extraction attempts left exterior artifacts and were not used in the shipped asset.
+- Tauri bundles `src-tauri/icons/icon.icns` and `icon.png`; no image generation service or Icon Composer is needed at build time.
+- In-app mark: `src-tauri/icons/icon.png`; website mark: `docs/assets/icon.png` at the repository root.
+- ICNS contains 16, 32, 128, 256 and 512-point representations at 1×/2×, resized with Lanczos and packaged with `iconutil`.
 
-## Final image edit prompt
+## Image-generation edit prompt (unused output)
 
-> Use case: precise-object-edit. This is a transparent production app icon with a cutout defect. Repair ONLY its external alpha edge. There are ragged blue flecks, wisps and thin artifacts OUTSIDE the main blue rounded square, especially above the top edge and below the bottom edge. REMOVE ALL detached flecks, residual backdrop, colored fringing and wisps from the transparent outer margin. The outer contour must be a pristine geometrically smooth continuous rounded square, with clean antialiasing directly at the contour and completely transparent pixels beyond that smooth boundary. Do not add any exterior shadow or glow. Keep the entire interior EXACTLY unchanged: blue gradient background, pale slide with blue title line, blue x² tile with white typography, solid white cursor with its subtle internal white halo, all placement and dimensions. Preserve square canvas and margin. This is alpha mask cleanup only, not a redesign. Use genuine alpha transparency outside the single clean rounded-square boundary.
+> Remove only the dark backdrop outside the blue-purple rounded square. Preserve the x² tile, cursor, curved arrow, slide, geometry, colors and framing. Use clean alpha transparency beyond the existing rounded-square boundary, without an exterior shadow or flecks.
