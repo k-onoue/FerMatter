@@ -1,58 +1,49 @@
 # Architecture
 
-- The parallel [Rust macOS port](../desktop-app/README.md) lives in `desktop-app/`; the architecture below describes the existing Swift app.
-
-- Native SwiftUI/AppKit app; Swift package has no third-party dependencies.
-- Python workers extract/compile LaTeX, Typst, TikZ, and CeTZ in temporary project copies.
-- Sources: [Swift](../macos-app/Sources/SlideMath/), [workers](../macos-app/Resources/), [tests](../macos-app/Tests/).
+- Maintained app: [desktop-app](../desktop-app/README.md), Tauri 2 + Rust + React/TypeScript.
+- Monaco supplies the shared editor; PDF.js displays document PDFs.
+- Rust invokes external LaTeX/Typst compilers in temporary project snapshots; no Python worker runtime.
+- The retired Swift/Python implementation is available in Git history before its removal PR.
 
 ## Responsibilities
 
-| Area | Main files |
+| Area | Location under `desktop-app/` |
 | --- | --- |
-| Scenes, selection, render/export coordination | `SlideMathApp.swift`, `LibraryStore.swift` |
-| Identity, saved metadata, model compatibility | `AppIdentity.swift`, `ProjectStorage.swift`, `Models.swift` |
-| Process transport and request ownership | `Worker.swift`, `WorkerSession.swift` |
-| Source buffers, saves, conflicts, file operations | `ProjectFiles.swift`, `FileOperations.swift` |
-| File tree, split panes, tabs | `ProjectFileTree.swift`, `ProjectFileViews.swift`, `SourcePaneLayout.swift`, `SourceTabInteractions.swift` |
-| Retained native text editor | `SourceEditor.swift`, `AssistedTextView.swift` |
-| Completion and argument fields | `SourceCompletion.swift`, `ProjectCompletions.swift`, `SourceCompletionViews.swift` |
-| Line actions and outline | `SourceEditingCommands.swift`, `SourceLineRuler.swift`, `SourceOutline.swift` |
-| PDF mapping and image representations | `PDFNavigation.swift`, `SVGExporter.swift`, `ImageExporter.swift` |
-| Settings persistence and themes | `SettingsFiles.swift`, `KeyboardShortcuts.swift`, `ThemePreferences.swift` |
-| Release checks and accepted downloads | `AppUpdates.swift`, `AppUpdateViews.swift`, `UpdateDownloader.swift` |
-| Caret previews and draft snapshots | `SourceMathPreview.swift`, `source_preview.py` |
-| Window preferences and wallpaper | `WindowPreferences.swift`, `DesktopWallpaper.swift`, `RememberedSplitView.swift` |
+| Workflows, selection, Library variants | `src/App.tsx`, `src/variants.ts` |
+| Shared Monaco models, coloring, completion | `src/editor.tsx` |
+| Source buffers, file tree, tabs and split panes | `src/SourceWorkspace.tsx`, `src/panes.ts` |
+| PDF viewer, source ranges and hit matching | `src/PdfPane.tsx`, `src/navigation.ts` |
+| Settings and project templates | `src/settings.tsx`, `src/templates.ts`, `src/NewProjectDialog.tsx` |
+| IPC and request ownership | `src-tauri/src/lib.rs` |
+| LaTeX/Typst extraction, includes and outline | `src-tauri/src/scan.rs` |
+| Compiler snapshots, cancellation and SyncTeX | `src-tauri/src/compiler.rs` |
+| Safe paths, atomic writes and conflict checks | `src-tauri/src/files.rs` |
+| Project metadata and legacy draft import | `src-tauri/src/storage.rs` |
+| Settings validation, recovery and migration | `src-tauri/src/settings.rs` |
+| Image export and macOS clipboard | `src-tauri/src/export.rs`, `src-tauri/src/native.rs` |
+| Full-screen wallpaper fallback | `src-tauri/src/wallpaper.rs`, `src/useDesktopBackground.ts` |
+| Themes, artwork and attribution | `resources/`, `src-tauri/icons/` |
 
 ## Request lifecycle
 
-- `Worker`: Python process; request JSON in a temporary file; ordered JSON-line events on the main queue.
-- `WorkerSession`: owns one request; replacement/cancellation/completion invalidates old callbacks.
-- Release the old worker before invoking completion; completion may start another request.
-- Keep independent sessions for library render, edit preview, measurement, PDF build, and navigation.
-- Keep manuscript files unchanged during extraction/rendering; see [storage](reference/storage.md).
+- Reserve compiler request ownership before queuing blocking work.
+- Replacing/cancelling a request terminates its process group; ignore late callbacks using request/project identity.
+- Keep separate render, caret-preview, document and forward/reverse-navigation jobs.
+- Compile snapshots; do not write manuscripts to render a card or PDF.
+- PDF navigation targets refer to the compiled snapshot; rebuild after source changes.
 
-## Editor lifecycle
+## Editor and persistence
 
-- `ProjectFiles` owns shared file buffers and editor controllers.
-- Retain native scroll/text views across SwiftUI reconstruction to preserve caret, scroll, and Undo.
-- Use typed pane/path keys; callbacks hold the project weakly.
-- Save only after checking original bytes; write atomically; surface conflicts.
-- Auto save applies to edits made this session; restored drafts wait for an edit or explicit save.
-- Remap open editors and pending saves when files move or rename.
-- Library variants and Source edits have different persistence targets; preserve that boundary.
-- One native editor supports library, source, templates, and new-project input.
-
-## Caret previews
-
-- Each editor uses an independent debounced worker; caret or draft changes invalidate stale results.
-- UTF-16 ranges match AppKit caret positions, including CRLF and non-BMP characters.
-- Overlay open drafts in a temporary project copy without saving the manuscript.
-- Cancellation terminates the preview compiler process group and removes the snapshot.
-- [PR snapshot](history/pr-snapshot-2026-09-28.md) records the earlier integration plan.
+- Share Monaco models between panes; retain independent tab/selection state.
+- Source saves compare original bytes and write atomically; retain encoding/newlines.
+- Recover drafts before opening tabs. Recovered drafts require an edit or explicit save.
+- Library variants only change metadata; Source mode changes real files.
+- Remap open buffers/tabs after file rename or move.
+- Use UTF-16 offsets consistently for scans, caret previews and PDF navigation.
+- See [storage](reference/storage.md) for legacy import and conflict handling.
 
 ## Limits and validation
 
-- Source extraction is literal/static, not full TeX/Typst execution: [user limits](../user-docs/limits.md).
-- `latexmkrc`/TeX are executable input; shell escape disabled does not constitute an OS sandbox.
+- Extraction is literal/static, not full TeX/Typst execution: [user limits](../user-docs/limits.md).
+- TeX, `latexmkrc`, and project code are executable input; temporary copies are not an OS sandbox.
 - [Testing](testing.md), [reviewing](reviewing.md), [historical validation](history/validation-2026-09.md).

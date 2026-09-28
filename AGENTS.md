@@ -28,7 +28,7 @@
 
 ## Checks from the repository root
 
-- App/worker changes: `./macos-app/scripts/check.sh` and `./macos-app/scripts/build.sh`.
+- App changes: `./desktop-app/scripts/check.sh` and `./desktop-app/scripts/build.sh`.
 - Docs/site changes: `.venv-docs/bin/python scripts/build-guides.py --check` and `python3 -B scripts/check-publication.py`.
 - Every change: `git diff --check`; inspect the staged diff before committing.
 - See [setup](dev-docs/documentation.md#build-and-preview) for the docs environment.

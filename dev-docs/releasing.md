@@ -2,9 +2,9 @@
 
 ## Current boundary
 
-- Development prototype: macOS 26+, Apple Silicon; Python and compilers are external.
+- Development prototype: Apple Silicon; macOS 14+ deployment target, verified on macOS 26. Only compiler tools remain external; no Python runtime.
 - No signed/notarized public download at this documentation baseline.
-- Prototype packaging and update transport are [in-flight PRs](history/pr-snapshot-2026-09-28.md).
+- [Prototype packaging](reference/packaging.md) builds DMG/PKG. In-app update transport is not yet implemented in the current app.
 - Repository is private as of 2026-09-28; Pages is public. Test release access without authentication before advertising downloads.
 - Keep `docs/site-config.js` → `releaseAvailable: false` until all public-release checks pass.
 
@@ -15,11 +15,11 @@
 - Describe incompatible changes and migration steps explicitly; `0.x` is not permission to silently discard data.
 - At 1.0+: major for breaking public contracts, minor for compatible features/deprecations, patch for compatible fixes.
 - Compatibility surface: saved projects/drafts/templates, documented settings schemas/command IDs, and documented import/export behavior.
-- Internal Swift/Python interfaces and cosmetic layout are not a promised external API.
+- Internal Rust/TypeScript interfaces and cosmetic layout are not a promised external API.
 - Preserve bundle ID/support paths unless a tested migration accompanies the change.
 - Prerelease example: `0.11.0-rc.1`; do not offer it through stable update/download links.
-- Update `CFBundleShortVersionString` and increment `CFBundleVersion` in `macos-app/scripts/build.sh`.
-- Keep site version and release notes consistent; incrementing only build metadata does not trigger the updater.
+- Set the version in `desktop-app/src-tauri/tauri.conf.json`; keep Cargo/npm versions consistent. Increment `bundle.macOS.bundleVersion` for each distributable build.
+- Keep site version and release notes consistent; a future updater must compare semantic versions, not only build metadata.
 - Reference: [SemVer](https://semver.org/lang/ja/); its 0.x rules allow instability, while the stricter rules above are this project's policy.
 
 ## Changelog
@@ -46,7 +46,7 @@
 - Sign app/bundled executables with Developer ID; use appropriate hardened runtime; notarize and staple.
 - Include LICENSE, NOTICE, and notices for bundled third-party components.
 - Verify installation, launch, compilers, exports, and upgrading from an older build on a clean Mac.
-- Verify update download/cancel/retry/manual installation using the [update contract](reference/updates.md).
+- Verify manual app replacement preserves data. Before offering in-app updates, implement and test the [update contract](reference/updates.md).
 - Prepare `Mathlidelux.dmg`; do not reuse the [unnotarized prototype artifacts](reference/packaging.md).
 - Verify anonymous access to the release asset; never embed a repository credential in the app/site.
 - Reference: [Apple Developer ID distribution](https://developer.apple.com/developer-id/).
@@ -66,7 +66,7 @@ git push origin vX.Y.Z
 - Create a draft GitHub Release from the tag; attach tested artifacts and curated notes; inspect before publication.
 - Publish as stable only when the release is stable; keep previews marked prerelease.
 - After anonymous download/install checks pass, use a separate reviewed site change to enable downloads and set the version.
-- Website asset name: `Mathlidelux.dmg`; [updater](reference/updates.md) has an additional versioned fallback.
+- Website asset name: `Mathlidelux.dmg`; the proposed [update contract](reference/updates.md) defines a versioned fallback.
 - References: [Git tags](https://git-scm.com/book/ja/v2/Git-%E3%81%AE%E5%9F%BA%E6%9C%AC-%E3%82%BF%E3%82%B0), [GitHub Releases](https://docs.github.com/ja/repositories/releasing-projects-on-github/about-releases), [release asset links](https://docs.github.com/en/repositories/releasing-projects-on-github/linking-to-releases).
 
 ## Publish the website

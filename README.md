@@ -2,10 +2,12 @@
 
 - Bring equations from a LaTeX or Typst paper into your presentation.
 - Browse equations and TikZ/CeTZ drawings; edit slide-specific variants; copy/export SVG, PDF, PNG, or JPEG.
-- Development prototype for **macOS 26+ / Apple Silicon**; no signed, notarized public download yet.
-- Python and compiler tools are external: [requirements](user-docs/requirements.md).
+- Development prototype for **Apple Silicon Mac** (macOS 14+ build target; verified on macOS 26); no signed, notarized public download yet.
+- No Python or development SDK is needed to run the app. Compiler tools remain external: [requirements](user-docs/requirements.md).
 
-![Mathlidelux with a synthetic sample](docs/assets/app-light.jpg)
+![Earlier Mathlidelux workflow with a synthetic sample](docs/assets/app-light.jpg)
+
+*Workflow image from the earlier Swift prototype; the current interface differs.*
 
 ## Start here
 
@@ -19,7 +21,7 @@
 
 ## Try a sample
 
-- Choose **Open Project** and select a folder/ZIP; existing projects need no template.
+- Choose **Open Project** for a folder or **Open file or ZIP** for an archive; existing projects need no template.
 - Samples: [LaTeX](examples/demo-paper/), [Typst](examples/demo-typst/), [TikZ](examples/demo-tikz/), [CeTZ](examples/demo-cetz/).
 - Pasted equations: **New Project** → choose a template → paste → **Create Project**.
 - Library variants leave manuscript source unchanged; **Source** mode edits real project files.
@@ -28,8 +30,7 @@
 
 | Path | Purpose |
 | --- | --- |
-| `desktop-app/` | [Rust/TypeScript macOS port](desktop-app/README.md), built alongside the Swift app |
-| `macos-app/` | Native app, workers, tests, build tooling |
+| `desktop-app/` | [Desktop app](desktop-app/README.md): Rust/Tauri, React/TypeScript, tests, resources and packaging |
 | `dev-docs/` | Shared development instructions and references |
 | `user-docs/` | Markdown sources for the public guide |
 | `docs/` | Public Pages site, generated guides, approved media, sample ZIPs |

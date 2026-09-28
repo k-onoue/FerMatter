@@ -2,18 +2,19 @@
 
 ## Setup
 
-- Apple Silicon Mac; macOS 26+; Xcode with the macOS 26 SDK.
-- Install Python and the tools for the selected format: [requirements](../user-docs/requirements.md).
+- Apple Silicon Mac; Rust stable, Node.js 22+, Xcode command-line tools.
+- macOS 14+ deployment target; verified on macOS 26.
+- Install the tools for the selected format: [requirements](../user-docs/requirements.md).
 - Run from the repository root:
 
 ```sh
-./macos-app/scripts/build.sh
-open macos-app/build/Mathlidelux.app
+./desktop-app/scripts/build.sh
+open desktop-app/src-tauri/target/release/bundle/macos/Mathlidelux.app
 ```
 
 - Output: an ad hoc signed local app; no Developer ID signing or notarization.
-- `DEVELOPER_DIR` overrides Xcode selection; the script otherwise uses `/Applications/Xcode.app` when present.
-- App icon provenance: [AppIcon.md](../macos-app/Resources/AppIcon.md).
+- Scripts install locked npm dependencies when missing; an optional project-local Rust toolchain is supported. See [desktop setup](../desktop-app/README.md#build-and-run).
+- App icon provenance: [AppIcon.md](../desktop-app/resources/AppIcon.md).
 
 ## Branch and PR
 

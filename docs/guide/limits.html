@@ -36,21 +36,23 @@
 <ul>
 <li>Check the <a href="requirements.html">required tools</a>, main file, compiler, packages, fonts, and relative imports.</li>
 <li>Open the equation/compiler log for the specific error.</li>
-<li>A failed PDF build retains the old PDF but disables navigation until rebuilding succeeds.</li>
+<li>A failed PDF build retains the old PDF and its navigation snapshot; rebuild successfully to navigate current edits.</li>
 <li>Generated content can lack a PDF/source target; LaTeX equations on the same source line can share a target.</li>
 <li>Use an explicit input mode if <a href="new-project.html">Auto</a> misidentifies pasted text.</li>
 </ul>
 <h2 id="not-available">Not available</h2>
 <ul>
 <li>PDF/OCR input, cloud sync, and automatic rescanning of externally edited sources.</li>
-<li>Fully bundled runtime dependencies and a signed/notarized public installer.</li>
+<li>Bundled compiler tools and a signed/notarized public installer.</li>
+<li>In-app update downloads, manual Library ordering controls, tree drag/import and file-operation Undo from the earlier Swift app.</li>
 <li>Guaranteed drag compatibility with every presentation app; try copy/paste or an exported file.</li>
 </ul>
 <h2 id="local-data">Local data</h2>
 <ul>
-<li>Opened folders stay where they are; ZIPs are extracted into local app storage.</li>
-<li>Metadata, caches, exports, and drafts live under <code>~/Library/Application Support/Slide Math</code>.</li>
-<li>The legacy folder name preserves existing projects after the Mathlidelux rename.</li>
+<li>Opened folders stay where they are; new projects and ZIP extraction use Documents/Mathlidelux.</li>
+<li>Current metadata, caches, exports, and drafts live under <code>~/Library/Application Support/Slide Math/Rust Preview</code>.</li>
+<li>This internal folder name is kept for compatibility; existing Swift data stays in the parent folder and is imported as needed.</li>
+<li>Swift drafts are imported once without saving source files. Competing drafts are preserved with a backup and a warning.</li>
 <li>Removing the app does not remove your project sources or support data.</li>
 </ul></article>
   </main>

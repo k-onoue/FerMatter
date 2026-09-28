@@ -4,7 +4,7 @@
 
 | Change | Required evidence |
 | --- | --- |
-| App, Swift, workers | `./macos-app/scripts/check.sh`; `./macos-app/scripts/build.sh` |
+| App, frontend, compiler backend | `./desktop-app/scripts/check.sh`; `./desktop-app/scripts/build.sh` |
 | User docs, site, site generator | Build guides; freshness check; publication check; browser preview |
 | Developer docs only | Publication/link check; review commands and referenced behavior |
 | Synthetic samples | `python3 -B scripts/prepare-demo.py`; compiler checks; publication check |
@@ -13,9 +13,11 @@
 
 ## App checks
 
-- `check.sh`: Swift tests, Python tests, publication checks.
-- Real compiler tests are enabled by default (`SLIDEMATH_COMPILER_TESTS=1`).
-- Missing tools can skip tests; a release pass must install requirements and explain remaining skips.
+- `check.sh`: TypeScript/Vite production build, frontend tests, Rust tests, four synthetic real-compiler checks.
+- Real compiler checks run by default; `MATHLIDELUX_COMPILER_TESTS=0` explicitly skips them.
+- Missing compilers fail the default run. A skipped run is not a release pass.
+- Run `cargo clippy --manifest-path desktop-app/src-tauri/Cargo.toml --lib -- -D warnings` with the same Rust environment.
+- CI runs frontend/Rust checks on macOS with compiler checks explicitly skipped; local release checks must cover real compilers.
 - Build verifies the local ad hoc signature; it does not verify notarization.
 - Test storage/source changes with disposable copies and external-edit conflicts.
 - Test worker changes with cancellation and late results after switching projects.

@@ -3,7 +3,7 @@
 1. Choose **New Project** (`⇧⌘N`) and enter a name.
 2. Choose **LaTeX**, **Typst**, **LaTeX + TikZ**, or **Typst + CeTZ**.
 3. Paste your text; choose Auto, One per line, or Source.
-4. Check the destination using **Change…**, then choose **Create Project**.
+4. Choose **Create Project**; the source folder is created in Documents/Mathlidelux.
 
 | Input mode | Content |
 | --- | --- |
@@ -13,9 +13,9 @@
 
 ## Project location
 
-- New projects default to `~/Documents/Mathlidelux`; **Change…** selects another parent folder.
+- New projects are created in `~/Documents/Mathlidelux`.
 - Existing projects retain their saved locations; opening a folder uses it in place.
-- **Show in Finder** on a project opens its source folder.
+- **Reveal in Finder** on a project opens its source folder.
 
 ## Try two equations
 
@@ -37,7 +37,7 @@ integral_0^1 x^2 dif x = 1/3
 
 - **Load File…** reads a UTF-8 `.tex`, `.typ`, or `.txt` file into the text area; it does not modify the original or copy companion files.
 - To keep imports/images together, use [Open Project](paper-to-slides.md) instead.
-- **Settings → Templates → Customize…** creates an editable copy of a built-in template.
+- In **New Project**, choose **Edit Template** to customize a template. Saving a built-in creates a named copy.
 - Add packages/macros/fonts; keep exactly one `{{content}}` placeholder; choose **Save Template**.
 - LaTeX templates can choose pdfLaTeX, XeLaTeX, or LuaLaTeX.
 - Template changes affect future projects; existing sources stay unchanged.

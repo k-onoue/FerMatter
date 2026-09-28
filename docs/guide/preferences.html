@@ -23,16 +23,16 @@
     <h1>Shortcuts and appearance</h1>
 
     <article class="guide-content" aria-label="Guide instructions"><ul>
-<li>Open <strong>Mathlidelux → Settings…</strong> (<code>⌘,</code>).</li>
-<li><strong>Shortcuts</strong>: record/clear a shortcut or restore defaults; changes persist and update menus.</li>
+<li>Open <strong>Settings</strong> using the gear button or <code>⌘,</code>.</li>
+<li><strong>Shortcuts</strong>: record a shortcut, reset one assignment, or restore defaults; changes persist.</li>
 <li>Duplicate assignments and reserved macOS/text-editing shortcuts are rejected.</li>
-<li><strong>Editor</strong>: choose auto save or Manual; set the auto-save delay.</li>
-<li><strong>Templates</strong>: customize the setup for <a href="new-project.html">new projects</a>.</li>
+<li><strong>Editor → Save files</strong>: choose After changes or Manually (<code>⌘S</code>).</li>
+<li><strong>New Project → Edit Template</strong>: customize the setup for <a href="new-project.html">new projects</a>.</li>
 </ul>
 <h2 id="color-themes">Color themes</h2>
 <ul>
 <li>Open <strong>Settings → Appearance → Color Theme</strong>; choose Default or one of fifteen bundled pairs.</li>
-<li><strong>System</strong> follows macOS; <strong>Light</strong> and <strong>Dark</strong> select the matching palette. Preview both palettes below the picker.</li>
+<li><strong>System</strong> follows macOS; <strong>Light</strong> and <strong>Dark</strong> select the matching palette. The preview follows the selected appearance.</li>
 <li>Themes apply immediately and persist across launches; switching replaces the active <code>theme.json</code>. Export custom colors first to keep a reusable copy.</li>
 </ul>
 <table>
@@ -122,27 +122,27 @@
 </tbody>
 </table>
 <ul>
-<li>Palettes are adapted to Mathlidelux; native glass and exported artwork retain their existing rendering.</li>
+<li>Palettes are adapted to Mathlidelux; exported artwork retains its original rendering.</li>
 </ul>
 <h2 id="manage-shortcuts-and-themes-as-files">Manage shortcuts and themes as files</h2>
 <ul>
-<li><strong>Shortcuts</strong> and <strong>Appearance</strong> provide <strong>Open File</strong>, <strong>Show in Finder</strong>, <strong>Reload</strong>, <strong>Import…</strong>, and <strong>Export…</strong>.</li>
+<li><strong>Shortcuts</strong> and <strong>Appearance</strong> provide <strong>Edit JSON</strong>, <strong>Reload</strong>, <strong>Import…</strong>, and <strong>Export…</strong>.</li>
+<li><strong>Tools → Settings folder → Reveal in Finder</strong> opens the storage location.</li>
 <li>Edit <code>keybindings.json</code> or <code>theme.json</code>, save, then choose <strong>Reload</strong> to apply external changes.</li>
 <li>Import replaces the active settings after validation; export saves a reusable copy.</li>
-<li>Invalid files keep the last valid settings; <strong>Restore Defaults</strong> replaces custom settings.</li>
+<li>Invalid files keep the last valid settings; reset shortcuts or select the Default theme to restore built-ins.</li>
 <li>Theme files customize light/dark interface and editor colors; exported artwork keeps its original colors.</li>
 </ul>
 <h2 id="updates">Updates</h2>
 <ul>
-<li><strong>Settings → Updates</strong> controls automatic checks; <strong>Check for Updates…</strong> checks immediately.</li>
-<li><strong>Download Update</strong> accepts a release download. <strong>Open Disk Image</strong> opens it for manual installation.</li>
-<li>Quit Mathlidelux and copy the new app into Applications; the updater does not replace the running app.</li>
-<li>A private repository or unavailable release cannot provide a public update download.</li>
+<li>This version uses manual updates; it has no in-app release checker or downloader.</li>
+<li>Save your work, quit Mathlidelux, and replace the app in Applications with the newer build.</li>
+<li>Projects and saved settings remain outside the application bundle.</li>
 </ul>
 <h2 id="keep-equations-beside-your-slides">Keep equations beside your slides</h2>
 <ul>
 <li><strong>Always on Top</strong> (<code>⇧⌘P</code>) pins the window.</li>
-<li><strong>Appearance &amp; Window</strong> chooses System/Light/Dark and background opacity.</li>
+<li><strong>Settings → Appearance</strong> chooses System/Light/Dark and background opacity.</li>
 <li>Opacity affects the background; text and equations stay opaque.</li>
 <li><code>⌃⌘F</code> enters native full screen.</li>
 <li>If entering full screen from a pinned window fails, turn pinning off, enter full screen, then re-enable it.</li>

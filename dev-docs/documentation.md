@@ -57,7 +57,7 @@ python3 -m http.server 4174 --bind 127.0.0.1 --directory docs
 - Use synthetic `examples/` content; exclude project-history lists, personal paths, accounts, and desktop notifications.
 - Primary clip: 18-second step-through of real screens, not a continuous recording or an interactive mockup.
 - It shows Library → selected Trajectory/Copy SVG → a real pasted/resized PowerPoint graphic.
-- Current captures: prototype 0.10.0, integration commit `7b0205a`, macOS 26; core workflow also exists on the `main` baseline.
+- Existing media shows the retired Swift prototype 0.10.0, commit `7b0205a`, macOS 26. Label it as earlier workflow footage; it is not evidence of current UI or clipboard validation.
 - Capture recipe: [asset notes](../docs/assets/README.md).
 - Use H.264 MP4, a JPEG poster, and WebVTT captions; retain matching text steps.
 - Native playback controls; no autoplay or automatic loops; `preload="none"`; no motion until requested.

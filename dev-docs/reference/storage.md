@@ -2,37 +2,48 @@
 
 ## Stable identity
 
-- Display/app/executable name: `Mathlidelux`; Swift target: `SlideMath`.
-- Bundle ID: `local.slidemath.prototype`; support directory: `~/Library/Application Support/Slide Math`.
-- Preserve existing keys and paths across branding changes; saved roots can contain absolute paths.
-- Source: [AppIdentity.swift](../../macos-app/Sources/SlideMath/AppIdentity.swift), [ProjectStorage.swift](../../macos-app/Sources/SlideMath/ProjectStorage.swift).
+- Display/app/executable: `Mathlidelux`; bundle ID: `local.slidemath.prototype`.
+- Preserve `~/Library/Application Support/Slide Math` and existing absolute source/cache paths.
+- Current metadata directory: `~/Library/Application Support/Slide Math/Rust Preview/`.
+- The internal preview directory name stays unchanged to preserve already-saved work after promotion.
+- Sources: [storage.rs](../../desktop-app/src-tauri/src/storage.rs), [files.rs](../../desktop-app/src-tauri/src/files.rs), [settings.rs](../../desktop-app/src-tauri/src/settings.rs).
 
 ## Locations
 
-| Location under Application Support/Slide Math | Contents |
+| Location under the current metadata directory | Contents |
 | --- | --- |
-| `Projects/<project-id>/project.json` | Settings, cards, order, outline, labels, export options |
-| `Projects/<project-id>/Cache/` | SVG/PDF/PNG and compiler logs |
+| `Projects/<project-id>/project.json` | Cards, labels, outline, export settings and compatible unknown fields |
+| `Projects/<project-id>/Cache/` | Rendered images, previews and logs |
 | `Projects/<project-id>/Exports/` | Images at selected export sizes |
-| `Projects/<project-id>/Documents/` | Compiled PDFs and navigation snapshots; older snapshots can accumulate |
-| `Imports/` | Extracted ZIP projects |
-| `Sources/` | Legacy app-created source projects; existing roots remain valid |
-| `Settings/` | Shortcut and theme JSON with last-valid recovery files |
-| `SourceDrafts/` | Recoverable unsaved source buffers |
+| `Projects/<project-id>/Documents/` | Compiled PDFs and navigation snapshots |
+| `Settings/` | Preferences, shortcuts and theme JSON; last-valid recovery copies |
+| `SourceDrafts/` | Recoverable source buffers |
+| `MigratedSwiftDrafts/` | Original Swift draft backups and import markers |
 | `templates.json` | User templates |
 
-- Library project ID: first 24 hex characters of the root-path SHA-256; draft storage uses the full root hash.
+- Project ID: first 24 hex characters of the canonical root-path SHA-256; draft filename uses the full hash.
 - Opened folders stay in place; opening a main file uses its containing folder.
-- New projects default to `~/Documents/Mathlidelux`; existing roots are not automatically migrated.
-- [Settings files](settings-files.md) documents the schemas and legacy shortcut migration.
+- New projects and ZIP extraction use `~/Documents/Mathlidelux/`.
+- Existing legacy `Sources/` and `Imports/` folders remain valid and are not moved/deleted.
+
+## Import from Swift and previews
+
+- Existing current-directory metadata wins; missing projects are read from the legacy support root.
+- Match saved root aliases as well as IDs so variants survive canonical path changes.
+- Copy missing templates/theme/shortcut files and recovery copies; keep originals untouched.
+- When no current preferences exist, import Swift appearance, opacity, pinning and auto-save mode from its preferences plist.
+- Import Swift drafts once per project: decode original bytes, preserve conflict hashes, BOM and CRLF.
+- Current drafts win path collisions; back up all Swift drafts and report collisions with the backup location.
+- Imported drafts never overwrite source files automatically. Saving checks the old source revision.
+- Corrupt recovery data produces an error and is kept; it must not be replaced by an empty editor session.
+- Manual Library order metadata is retained; the current UI displays source order.
+- Do not edit one project simultaneously in old and new apps; their Library metadata is not synchronized.
 
 ## Boundaries
 
-- Library edit → custom presentation variant in metadata; original source card/manuscript stays intact.
-- Source edit → actual project file; compare original bytes before atomic write.
-- Recovered drafts → no automatic write until edited or explicitly saved.
-- ZIP import → validate paths, symlinks, and size before extraction.
-- Compiler render → temporary project copy; preserve imports, packages, and relative paths.
-- Avoid resetting old projects because a new optional field is missing; preserve compatible decoding defaults.
-- Test migrations on disposable copies with older metadata and settings.
-- Reference: [SemVer public API requirement](https://semver.org/lang/ja/); project compatibility policy: [releasing](../releasing.md#versioning).
+- Library edit → presentation variant in metadata; source card/manuscript unchanged.
+- Source edit → actual file; original-byte conflict check before atomic write.
+- ZIP import → validate paths, symlinks and size before extraction.
+- Compiler → temporary copy preserving imports and relative resources; do not follow symlinks outside the snapshot.
+- Test migrations on disposable data, including conflicting drafts and external edits.
+- [Settings schemas](settings-files.md); [versioning](../releasing.md#versioning).
