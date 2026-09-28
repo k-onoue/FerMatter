@@ -17,6 +17,35 @@ impl SettingsFiles {
             revisions: Mutex::new(HashMap::new()),
         }
     }
+    #[cfg(target_os = "macos")]
+    pub fn import_swift_preferences(&self, path: &Path) -> Result<()> {
+        if self.dir.join("preferences.json").exists()
+            || self.dir.join(".last-valid-preferences.json").exists()
+            || !path.is_file()
+        {
+            return Ok(());
+        }
+        let old = plist::Value::from_file(path).map_err(err)?;
+        let mut prefs = default_document("preferences.json");
+        if let Some(v) = old.as_dictionary() {
+            if let Some(appearance) = v.get("appearance").and_then(plist::Value::as_string) {
+                if ["system", "light", "dark"].contains(&appearance) {
+                    prefs["appearance"] = json!(appearance);
+                }
+            }
+            if let Some(opacity) = v.get("opacity").and_then(plist::Value::as_real) {
+                prefs["opacity"] = json!(opacity.clamp(0.45, 1.));
+            }
+            prefs["autoSave"] =
+                json!(v.get("sourceSaveMode").and_then(plist::Value::as_string) != Some("manual"));
+            prefs["pinned"] = json!(v
+                .get("pinned")
+                .and_then(plist::Value::as_boolean)
+                .unwrap_or(false));
+        }
+        validate("preferences.json", &prefs)?;
+        json_write(&self.dir.join("preferences.json"), &prefs)
+    }
     pub fn load(&self, name: &str) -> Result<Value> {
         valid_name(name)?;
         let path = self.dir.join(name);
@@ -286,6 +315,33 @@ pub fn validate_templates(value: &Value) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn swift_preferences_import_preserves_preview_settings() {
+        let dir = tempfile::tempdir().unwrap();
+        let legacy = dir.path().join("legacy.plist");
+        let mut dict = plist::Dictionary::new();
+        dict.insert("appearance".into(), plist::Value::String("light".into()));
+        dict.insert("opacity".into(), plist::Value::Real(0.72));
+        dict.insert(
+            "sourceSaveMode".into(),
+            plist::Value::String("manual".into()),
+        );
+        dict.insert("pinned".into(), plist::Value::Boolean(true));
+        plist::Value::Dictionary(dict).to_file_xml(&legacy).unwrap();
+        let settings = SettingsFiles::new(dir.path());
+        settings.import_swift_preferences(&legacy).unwrap();
+        let prefs = settings.load("preferences.json").unwrap();
+        assert_eq!(prefs["appearance"], "light");
+        assert_eq!(prefs["opacity"], 0.72);
+        assert_eq!(prefs["autoSave"], false);
+        assert_eq!(prefs["pinned"], true);
+        let changed = json!({"appearance":"dark","opacity":0.9,"autoSave":true});
+        settings.save("preferences.json", &changed).unwrap();
+        settings.import_swift_preferences(&legacy).unwrap();
+        assert_eq!(settings.load("preferences.json").unwrap(), changed);
+        assert!(legacy.exists());
+    }
     #[test]
     fn preserves_extension_and_recovers_invalid_theme() {
         let d = tempfile::tempdir().unwrap();

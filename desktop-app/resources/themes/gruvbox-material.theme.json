@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "mathlidelux.theme",
+  "id": "org.mathlidelux.gruvbox-material",
+  "name": "Gruvbox Material",
+  "light": {
+    "accent": "#6C782E",
+    "windowBackground": "#FBF1C7",
+    "surfaceBackground": "#FBF1C7",
+    "text": "#654735",
+    "command": "#C14A4A",
+    "delimiter": "#654735",
+    "number": "#945E80",
+    "comment": "#928374"
+  },
+  "dark": {
+    "accent": "#A9B665",
+    "windowBackground": "#292828",
+    "surfaceBackground": "#292828",
+    "text": "#D4BE98",
+    "command": "#EA6962",
+    "delimiter": "#D4BE98",
+    "number": "#D3869B",
+    "comment": "#928374"
+  },
+  "extensions": {
+    "org.mathlidelux.theme-source": {
+      "variants": {
+        "light": "Gruvbox Material Light",
+        "dark": "Gruvbox Material Dark"
+      },
+      "sources": [
+        {
+          "repository": "https://github.com/sainnhe/gruvbox-material-vscode",
+          "revision": "91ff2deaecd2e89ec95ab488f4aee3f614f54031",
+          "files": [
+            "themes/gruvbox-material-light.json",
+            "themes/gruvbox-material-dark.json"
+          ],
+          "license": "MIT",
+          "licenseFile": "Licenses/sainnhe-gruvbox-material-vscode.txt"
+        }
+      ],
+      "adaptation": "Editor/sidebar backgrounds, keyword commands, punctuation/operator delimiters, numeric constants, and comments; missing punctuation uses text. Accent uses links (Night Owl uses keyword). All RGB colors are opaque; upstream alpha is removed, not applied to text. Native glass and artwork rendering are unchanged."
+    }
+  }
+}

@@ -149,6 +149,62 @@ impl Storage {
             .join("SourceDrafts")
             .join(format!("{}.json", hash(path_string(&self.root(ident)?)))))
     }
+    pub fn read_drafts(&self, ident: &str) -> Result<Value> {
+        use base64::{engine::general_purpose::STANDARD, Engine};
+        let path = self.draft_path(ident)?;
+        // A corrupt recovery file must never be replaced by an empty editor session.
+        let mut drafts = if path.exists() {
+            json_read(&path)?
+        } else {
+            json!({})
+        };
+        let buffers = drafts
+            .as_object_mut()
+            .ok_or("Invalid source draft file; it has been kept.")?;
+        let legacy = self
+            .legacy
+            .join("SourceDrafts")
+            .join(path.file_name().unwrap());
+        let backup = self
+            .home
+            .join("MigratedSwiftDrafts")
+            .join(path.file_name().unwrap());
+        let marker = backup.with_extension("imported");
+        let mut warnings = Vec::new();
+        if legacy.is_file() && !marker.exists() {
+            let original = fs::read(&legacy).map_err(err)?;
+            let old: Value = serde_json::from_slice(&original).map_err(err)?;
+            let old = old
+                .as_array()
+                .ok_or("Invalid Swift source drafts; originals have been kept.")?;
+            for buffer in old {
+                let name = string(buffer, "path");
+                relative(name)?;
+                let text = buffer["text"].as_str().ok_or("Invalid Swift draft text")?;
+                let bytes = STANDARD.decode(string(buffer, "original")).map_err(err)?;
+                let bom = buffer["hasBOM"]
+                    .as_bool()
+                    .ok_or("Invalid Swift draft encoding")?;
+                let crlf = buffer["crlf"]
+                    .as_bool()
+                    .ok_or("Invalid Swift draft line endings")?;
+                let converted = json!({"path":name,"text":text.replace("\r\n", "\n"),"revision":hash(bytes),"bom":bom,"newline":if crlf {"\r\n"} else {"\n"}});
+                if let Some(current) = buffers.get(name) {
+                    if current["text"] != converted["text"] {
+                        warnings.push(format!("A different Swift draft for {name} is preserved in {}. The current draft is open.", backup.display()));
+                    }
+                } else {
+                    buffers.insert(name.into(), converted);
+                }
+            }
+            // Backup first, then the merged recovery data, and commit the marker last.
+            // Originals stay untouched; repeat startup never resurrects saved drafts.
+            atomic(&backup, &original)?;
+            json_write(&path, &drafts)?;
+            atomic(&marker, b"1\n")?;
+        }
+        Ok(json!({"buffers":drafts,"warnings":warnings}))
+    }
 }
 fn path_string(path: &Path) -> String {
     path.to_string_lossy().into_owned()
@@ -241,6 +297,68 @@ pub fn import_zip(archive: &Path, parent: &Path) -> Result<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use base64::{engine::general_purpose::STANDARD, Engine};
+    #[test]
+    fn swift_drafts_migrate_once_without_writing_source() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("source");
+        fs::create_dir_all(&root).unwrap();
+        let bytes = "\u{feff}$ old $\r\n".as_bytes();
+        fs::write(root.join("main.typ"), bytes).unwrap();
+        let store = Storage::new(dir.path().join("new"), dir.path().join("old")).unwrap();
+        let ident = store.register(&root).unwrap();
+        let path = store.draft_path(&ident).unwrap();
+        let legacy = store
+            .legacy
+            .join("SourceDrafts")
+            .join(path.file_name().unwrap());
+        let old = json!([{"path":"main.typ","text":"$ edited $\r\n","original":STANDARD.encode(bytes),"hasBOM":true,"crlf":true}]);
+        json_write(&legacy, &old).unwrap();
+        let migrated = store.read_drafts(&ident).unwrap();
+        let buffer = &migrated["buffers"]["main.typ"];
+        assert_eq!(buffer["text"], "$ edited $\n");
+        assert_eq!(buffer["revision"], hash(bytes));
+        assert_eq!(buffer["bom"], true);
+        assert_eq!(buffer["newline"], "\r\n");
+        assert_eq!(fs::read(root.join("main.typ")).unwrap(), bytes);
+        assert_eq!(json_read(&legacy).unwrap(), old);
+        fs::write(root.join("main.typ"), "$ external change $").unwrap();
+        assert!(save_buffer(&root.canonicalize().unwrap(), buffer).is_err());
+        json_write(&path, &json!({})).unwrap();
+        assert_eq!(store.read_drafts(&ident).unwrap()["buffers"], json!({}));
+    }
+    #[test]
+    fn draft_collisions_keep_both_versions_and_invalid_data_is_not_overwritten() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Storage::new(dir.path().join("new"), dir.path().join("old")).unwrap();
+        let ident = store.register(dir.path()).unwrap();
+        let path = store.draft_path(&ident).unwrap();
+        let legacy = store
+            .legacy
+            .join("SourceDrafts")
+            .join(path.file_name().unwrap());
+        let old = json!([{"path":"main.typ","text":"Swift edit","original":STANDARD.encode("old"),"hasBOM":false,"crlf":false}]);
+        json_write(&legacy, &old).unwrap();
+        let current = json!({"main.typ":{"path":"main.typ","text":"Current edit","revision":hash("old"),"bom":false,"newline":"\n"}});
+        json_write(&path, &current).unwrap();
+        let result = store.read_drafts(&ident).unwrap();
+        assert_eq!(result["buffers"], current);
+        assert_eq!(result["warnings"].as_array().unwrap().len(), 1);
+        assert_eq!(
+            json_read(
+                &store
+                    .home
+                    .join("MigratedSwiftDrafts")
+                    .join(path.file_name().unwrap())
+            )
+            .unwrap(),
+            old
+        );
+        fs::write(&path, "invalid json").unwrap();
+        assert!(store.read_drafts(&ident).is_err());
+        assert_eq!(fs::read_to_string(&path).unwrap(), "invalid json");
+        assert_eq!(json_read(&legacy).unwrap(), old);
+    }
     #[test]
     fn scan_preserves_variants_and_labels() {
         let p = json!({"cards":[{"id":"a","origin":"source","name":"Named","exportFontSize":24},{"id":"custom-1","origin":"custom","tex":"x"}],"sectionAssignments":{"a":"section"},"extensions":{"future":1}});

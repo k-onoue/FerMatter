@@ -81,7 +81,12 @@ fn dispatch(
                 fs::copy(store.legacy.join("templates.json"), &templates).map_err(err)?;
             }
             let settings = store.home.join("Settings");
-            for file in ["theme.json", "keybindings.json"] {
+            for file in [
+                "theme.json",
+                "keybindings.json",
+                ".last-valid-theme.json",
+                ".last-valid-keybindings.json",
+            ] {
                 let dest = settings.join(file);
                 let legacy = store.legacy.join("Settings").join(file);
                 if !dest.exists() && legacy.exists() {
@@ -92,8 +97,7 @@ fn dispatch(
             let themes_path = if themes_path.is_dir() {
                 themes_path
             } else {
-                PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("../../macos-app/Sources/SlideMath/Themes")
+                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../resources/themes")
             };
             let themes: Vec<_> = fs::read_dir(themes_path)
                 .map_err(err)?
@@ -171,7 +175,10 @@ fn dispatch(
             let _guard = store.writes.lock().unwrap();
             save_buffer(&store.root(ident)?, &v["buffer"])
         }
-        "read_drafts" => Ok(json_read(&store.draft_path(ident)?).unwrap_or(json!({}))),
+        "read_drafts" => {
+            let _guard = store.writes.lock().unwrap();
+            store.read_drafts(ident)
+        }
         "save_drafts" => {
             let _guard = store.writes.lock().unwrap();
             json_write(&store.draft_path(ident)?, &v["value"])?;
@@ -501,8 +508,17 @@ pub fn run() {
                 legacy
             };
             let store = storage::Storage::new(home, legacy)?;
+            let settings = settings::SettingsFiles::new(&store.home);
+            #[cfg(target_os = "macos")]
+            if override_home.is_none() {
+                if let Some(home) = dirs::home_dir() {
+                    settings.import_swift_preferences(
+                        &home.join("Library/Preferences/local.slidemath.prototype.plist"),
+                    )?;
+                }
+            }
             app.manage(Arc::new(Runtime {
-                settings: settings::SettingsFiles::new(&store.home),
+                settings,
                 store,
                 jobs: Mutex::new(HashMap::new()),
             }));

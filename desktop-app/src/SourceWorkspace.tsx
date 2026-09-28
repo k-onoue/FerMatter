@@ -241,21 +241,26 @@ export function SourceWorkspace({
   useEffect(() => {
     mounted.current = true;
     void refresh();
-    void rpc<Record<string, Buffer>>("read_drafts", {
-      project: project.id,
-    })
-      .then(async (drafts) => {
+    void rpc<{ buffers: Record<string, Buffer>; warnings: string[] }>(
+      "read_drafts",
+      {
+        project: project.id,
+      },
+    )
+      .then(async ({ buffers: drafts, warnings }) => {
         if (!mounted.current) return;
-        setBuffers(
-          Object.fromEntries(
-            Object.entries(drafts).map(([k, v]) => [
-              k,
-              { ...v, dirty: true, recovered: true },
-            ]),
-          ),
+        const recovered = Object.fromEntries(
+          Object.entries(drafts).map(([k, v]) => [
+            k,
+            { ...v, dirty: true, recovered: true },
+          ]),
         );
+        refs.current.buffers = recovered;
+        setBuffers(recovered);
+        if (warnings.length) onError(warnings.join("\n"));
         draftsHydrated.current = true;
         setDraftsLoaded(true);
+        for (const path of Object.keys(recovered)) await open(path);
         await open(project.main);
       })
       .catch(fail);

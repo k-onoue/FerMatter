@@ -504,7 +504,7 @@ export function Settings({
                 Reveal in Finder
               </button>
             </div>
-            <div className="muted">Mathlidelux Rust · macOS preview</div>
+            <div className="muted">Mathlidelux</div>
           </>
         )}
       </div>

@@ -22,6 +22,8 @@
 
 ### Changed
 
+- Adopt the desktop app as Mathlidelux, remove the Rust badge, preserve the original bundle identity and preview data, and import Swift source drafts without overwriting manuscripts. Prototype DMG/PKG tooling now targets the desktop app.
+
 - Rust preview: background-only translucency and active-display full-screen wallpaper; single-click PDF, Library, and Source equation navigation with visible selection.
 - Make shortcut settings easier to scan with larger, spaced key symbols and alternating rows.
 - Use a single theme background across each project card and its equation preview.

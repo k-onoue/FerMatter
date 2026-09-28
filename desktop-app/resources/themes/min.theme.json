@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "mathlidelux.theme",
+  "id": "org.mathlidelux.min",
+  "name": "Min",
+  "light": {
+    "accent": "#6F42C1",
+    "windowBackground": "#FFFFFF",
+    "surfaceBackground": "#F6F6F6",
+    "text": "#212121",
+    "command": "#D32F2F",
+    "delimiter": "#212121",
+    "number": "#1976D2",
+    "comment": "#C2C3C5"
+  },
+  "dark": {
+    "accent": "#B392F0",
+    "windowBackground": "#1F1F1F",
+    "surfaceBackground": "#1A1A1A",
+    "text": "#E0E0E0",
+    "command": "#F97583",
+    "delimiter": "#E0E0E0",
+    "number": "#F8F8F8",
+    "comment": "#6B737C"
+  },
+  "extensions": {
+    "org.mathlidelux.theme-source": {
+      "variants": {
+        "light": "Min Light",
+        "dark": "Min Dark"
+      },
+      "sources": [
+        {
+          "repository": "https://github.com/miguelsolorio/min-theme",
+          "revision": "dd796c3f294daecfb7f10ed277ffdc30517d59cf",
+          "files": [
+            "themes/min-light.json",
+            "themes/min-dark.json"
+          ],
+          "license": "MIT",
+          "licenseFile": "Licenses/miguelsolorio-min-theme.txt"
+        }
+      ],
+      "adaptation": "Editor/sidebar backgrounds, purple function accent, keyword commands, text delimiters, numeric constants, and comments. Min Dark uses input.foreground for neutral editor text. All RGB colors are opaque; upstream alpha is removed, not applied to text. Native glass and artwork rendering are unchanged."
+    }
+  }
+}

@@ -1,8 +1,8 @@
-# Mathlidelux Rust — macOS port
+# Mathlidelux desktop
 
-- Parallel desktop implementation: Tauri 2, Rust, React/TypeScript, Monaco, PDF.js.
-- App name: **Mathlidelux Rust**. Bundle ID: `local.slidemath.prototype.rust-preview`.
-- Existing Swift app: [`macos-app/`](../macos-app/); unchanged by this port.
+- Desktop application: Tauri 2, Rust, React/TypeScript, Monaco, PDF.js.
+- App name: **Mathlidelux**. Bundle ID: `local.slidemath.prototype` (preserved from the Swift app).
+- This implementation replaces the Swift/Python app. The old source is retained temporarily until its removal PR.
 - Runtime: no Python, Node.js, Rust, Swift SDK, or Xcode installation required by app users.
 - Compilers remain external: Typst; or TeX/`latexmk`, `pdfcrop`, `pdf2svg`, `pdftocairo`, `pdfinfo`, and `synctex`. See [requirements](../user-docs/requirements.md).
 
@@ -17,12 +17,12 @@ cd desktop-app
 npm ci
 ./scripts/dev.sh
 ./scripts/build.sh
-open 'src-tauri/target/release/bundle/macos/Mathlidelux Rust.app'
+open 'src-tauri/target/release/bundle/macos/Mathlidelux.app'
 ```
 
 - `./scripts/build.sh --debug`: faster local bundle under `target/debug/bundle/macos/`.
 - Local bundles use ad hoc signing. No public release, Developer ID signing, or notarization is implied.
-- `npm run tauri build -- --bundles app,dmg`: optional local DMG; use the same Rust environment as the build script.
+- `./scripts/package.sh`: verified local DMG and PKG; artifacts remain unnotarized prototypes.
 - Dependency notices are generated into `public/vendor/` and included in the bundle. Theme source notices remain with the bundled theme files.
 
 ## Implemented paths
@@ -41,14 +41,15 @@ open 'src-tauri/target/release/bundle/macos/Mathlidelux Rust.app'
 
 ## Compatibility boundaries
 
-- Preview metadata: `~/Library/Application Support/Slide Math/Rust Preview/`.
+- Metadata: `~/Library/Application Support/Slide Math/Rust Preview/`.
 - Existing project metadata and theme/shortcut files are read/copied on first use; original Swift storage is preserved.
 - Old card IDs, variant metadata, labels, and unknown project fields are retained. Source scans preserve presentation variants.
-- Library edits save to Rust preview metadata. They do not modify the manuscript or synchronize back into the Swift library.
+- Library edits save to the existing internal `Rust Preview` directory. Keeping this name preserves earlier preview edits and cached paths; Swift metadata remains a read-only import source.
 - Source edits modify the selected real project files. Avoid editing the same files in both apps simultaneously; saves check the original bytes for conflicts.
 - New source folders: `~/Documents/Mathlidelux/`. ZIP imports also extract there.
-- Recovered Rust drafts wait for an edit or explicit save. Swift's unsaved drafts remain in Swift storage; they are not automatically adopted.
-- Preview settings use the existing version-1 theme/shortcut schemas; extension metadata survives edits.
+- Swift drafts are imported once, preserving original-byte conflict checks, BOM and line endings. Current drafts win collisions; the complete Swift draft file is backed up under `MigratedSwiftDrafts/` and collisions are reported.
+- Recovered drafts wait for an edit or explicit save; originals and source files are not changed during import.
+- Settings use the existing version-1 theme/shortcut schemas; extension metadata survives edits.
 - Extraction is literal/static. Symlinked resources are excluded from compilation snapshots; dynamic TeX/Typst programs are not full semantic extraction.
 - PDF navigation uses the compiled snapshot. Rebuild the PDF after changing source text; Library variants navigate to their original equation.
 - When SyncTeX reports several inline equations on one line without a column, Library selects those candidates; Source navigates to the line.
@@ -56,10 +57,10 @@ open 'src-tauri/target/release/bundle/macos/Mathlidelux Rust.app'
 
 ## Remaining release gates
 
-- Complete native macOS interaction verification before treating this as a replacement for the Swift app: Undo/Redo, IME, file operations, native clipboard/drag into presentation software.
+- The maintainer verified the current UI and approved the replacement. Broader native checks remain before public release: Undo/Redo, IME, file operations, clipboard/drag into presentation software.
 - External-monitor changes and clamshell transitions still need physical verification. Full-screen wallpaper and background-opacity changes have been checked on the current screen.
-- Existing manual library ordering and Swift draft migration are not replacement-complete.
-- Rust release updates need their own signed release artifacts/feed. The preview does not offer Swift builds as Rust updates.
+- Existing manual Library order metadata is retained; editing that order is not currently exposed.
+- In-app release checks/downloads are not yet implemented in this app; install newer builds manually. Signed updates need a separate release feed/artifact setup.
 - Intel macOS, Ubuntu, and Windows have not been built or tested. Native clipboard, reveal, and no-overwrite rename adapters currently target macOS.
 - Public signing/notarization and installer/update verification remain release work.
 

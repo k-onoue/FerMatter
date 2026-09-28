@@ -163,6 +163,12 @@ export default function App() {
       .then((data) => {
         setProjects(data.projects);
         setSettings({ ...initialPreferences, ...data.settings });
+        if (data.settings.pinned === true) {
+          void getCurrentWindow()
+            .setAlwaysOnTop(true)
+            .then(() => setPin(true))
+            .catch(report);
+        }
         setThemes(data.themes);
         if (data.theme) setTheme(data.theme);
         try {
@@ -751,6 +757,7 @@ export default function App() {
     if (id === "pin") {
       await getCurrentWindow().setAlwaysOnTop(!pin);
       setPin(!pin);
+      await updateSettings({ ...settings, pinned: !pin });
       return;
     }
     if (id === "fullScreen") {
@@ -817,9 +824,7 @@ export default function App() {
         />
       )}
       <div className="titlebar" data-tauri-drag-region>
-        <span data-tauri-drag-region>
-          Mathlidelux <span className="preview-tag">Rust</span>
-        </span>
+        <span data-tauri-drag-region>Mathlidelux</span>
       </div>
       {!ready ? (
         <div className="empty">

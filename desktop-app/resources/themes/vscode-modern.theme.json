@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "kind": "mathlidelux.theme",
+  "id": "org.mathlidelux.vscode-modern",
+  "name": "VS Code Modern",
+  "light": {
+    "accent": "#005FB8",
+    "windowBackground": "#FFFFFF",
+    "surfaceBackground": "#F8F8F8",
+    "text": "#3B3B3B",
+    "command": "#0000FF",
+    "delimiter": "#000000",
+    "number": "#098658",
+    "comment": "#008000"
+  },
+  "dark": {
+    "accent": "#4DAAFC",
+    "windowBackground": "#1F1F1F",
+    "surfaceBackground": "#181818",
+    "text": "#CCCCCC",
+    "command": "#569CD6",
+    "delimiter": "#D4D4D4",
+    "number": "#B5CEA8",
+    "comment": "#6A9955"
+  },
+  "extensions": {
+    "org.mathlidelux.theme-source": {
+      "variants": {
+        "light": "Light Modern",
+        "dark": "Dark Modern"
+      },
+      "sources": [
+        {
+          "repository": "https://github.com/microsoft/vscode",
+          "revision": "101c86fe138844c24b14ccb1a6636986f68e9bd2",
+          "files": [
+            "extensions/theme-defaults/themes/light_modern.json",
+            "extensions/theme-defaults/themes/dark_modern.json",
+            "extensions/theme-defaults/themes/light_plus.json",
+            "extensions/theme-defaults/themes/light_vs.json",
+            "extensions/theme-defaults/themes/dark_plus.json",
+            "extensions/theme-defaults/themes/dark_vs.json"
+          ],
+          "license": "MIT",
+          "licenseFile": "Licenses/microsoft-vscode.txt"
+        }
+      ],
+      "adaptation": "Editor/sidebar backgrounds, keyword commands, punctuation/operator delimiters, numeric constants, and comments; missing punctuation uses text. Accent uses links (Night Owl uses keyword). All RGB colors are opaque; upstream alpha is removed, not applied to text. Native glass and artwork rendering are unchanged."
+    }
+  }
+}

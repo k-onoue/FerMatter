@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "mathlidelux.theme",
+  "id": "org.mathlidelux.ayu",
+  "name": "Ayu",
+  "light": {
+    "accent": "#F29718",
+    "windowBackground": "#FCFCFC",
+    "surfaceBackground": "#F8F9FA",
+    "text": "#5C6166",
+    "command": "#FA8532",
+    "delimiter": "#E59645",
+    "number": "#A37ACC",
+    "comment": "#ADAEB1"
+  },
+  "dark": {
+    "accent": "#E6B450",
+    "windowBackground": "#10141C",
+    "surfaceBackground": "#0D1017",
+    "text": "#BFBDB6",
+    "command": "#FF8F40",
+    "delimiter": "#F29668",
+    "number": "#D2A6FF",
+    "comment": "#5A6673"
+  },
+  "extensions": {
+    "org.mathlidelux.theme-source": {
+      "variants": {
+        "light": "Ayu Light",
+        "dark": "Ayu Dark"
+      },
+      "sources": [
+        {
+          "repository": "https://github.com/ayu-theme/ayu-colors",
+          "revision": "38fc9f521ed30c130a7acd8261de2239e8b1989e",
+          "files": [
+            "themes/light.yaml",
+            "themes/dark.yaml"
+          ],
+          "license": "MIT",
+          "licenseFile": "Licenses/ayu-theme-ayu-colors.txt"
+        }
+      ],
+      "adaptation": "Official Ayu base palette hues without generated luminance variants: accent.tint, editor background/text, surface.base, orange keywords, peach/pink operators, purple numbers, gray comments. All RGB colors are opaque; upstream alpha is removed, not applied to text. Native glass and artwork rendering are unchanged."
+    }
+  }
+}

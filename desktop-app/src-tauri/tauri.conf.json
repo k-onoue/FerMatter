@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Mathlidelux Rust",
+  "productName": "Mathlidelux",
   "version": "0.10.0",
-  "identifier": "local.slidemath.prototype.rust-preview",
+  "identifier": "local.slidemath.prototype",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://127.0.0.1:1420",
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Mathlidelux Rust",
+        "title": "Mathlidelux",
         "width": 1360,
         "height": 880,
         "minWidth": 850,
@@ -42,12 +42,14 @@
     ],
     "macOS": {
       "minimumSystemVersion": "14.0",
-      "signingIdentity": "-"
+      "signingIdentity": "-",
+      "bundleVersion": "11"
     },
     "resources": {
-      "../../macos-app/Sources/SlideMath/Themes/": "themes/",
       "../../LICENSE": "LICENSE",
-      "../../NOTICE": "NOTICE"
+      "../../NOTICE": "NOTICE",
+      "../resources/themes/": "themes/"
     }
-  }
+  },
+  "mainBinaryName": "Mathlidelux"
 }
