@@ -47,3 +47,10 @@ git diff --check
 - Historical experiments: [history](history/validation-2026-09.md); do not copy old counts into a new validation claim.
 - User-facing changes: [CHANGELOG.md](../CHANGELOG.md), not the test log.
 - Reference: [Reviewing tests](https://google.github.io/eng-practices/review/reviewer/looking-for.html#tests).
+
+## Cache lifetime regression checks
+
+- Synthetic small-budget Rust fixtures cover repeated publication, competing producers, active PDF/work-directory leases, clipboard retention, grace expiry, recovery/Undo references, and original/draft preservation.
+- Frontend drag tests distinguish invoke completion from native drag completion; early unmount releases only after lease acquisition.
+- The compiler verifier enables cache admission in its isolated data directory and regenerates deliberately removed Typst SVG/PNG/PDF artifacts.
+- No long-running user dataset, real Finder drag, or PowerPoint session is changed by these checks.

@@ -6,7 +6,7 @@ import { dropSVG, openSVG } from "./svgImport";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { save } from "@tauri-apps/plugin-dialog";
-import { startDrag } from "@crabnebula/tauri-plugin-drag";
+import { startDrag, useCardArtifacts } from "./artifactLease";
 import {
   ClipboardCopy,
   ClipboardPaste,
@@ -98,6 +98,7 @@ export default function InstantWindow() {
     throw new Error("Wait for Instant to finish loading before closing it.");
   });
   draftRef.current = draft;
+  useCardArtifacts(rendered?.card, rendered?.path);
   const report = (e: unknown) => {
     if (String(e) !== "Cancelled") setError(String(e));
   };

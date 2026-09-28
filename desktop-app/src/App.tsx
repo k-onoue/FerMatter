@@ -7,7 +7,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useDesktopBackground } from "./useDesktopBackground";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { startDrag } from "@crabnebula/tauri-plugin-drag";
+import { startDrag, useCardArtifacts } from "./artifactLease";
 import {
   ArrowLeft,
   ClipboardCopy,
@@ -150,6 +150,7 @@ export default function App() {
   const [editing, setEditing] = useState<Card | null>(null);
   const [editPreview, setEditPreview] = useState<Card | null>(null);
   const [editBusy, setEditBusy] = useState(false);
+  useCardArtifacts(editPreview);
   const [newProject, setNewProject] = useState(false);
   const [templates, setTemplates] =
     useState<TemplateConfiguration>(initialTemplates);
@@ -531,6 +532,14 @@ export default function App() {
       }
     }
   }
+  function closePdf() {
+    jobs.current.delete("document");
+    const id = projectRef.current?.id;
+    if (id) void rpc("cancel", { key: `${id}:document` }).catch(report);
+    setPdfOpen(false);
+    setPdf(null);
+    setPdfBusy(false);
+  }
   async function buildPdf() {
     const p = projectRef.current;
     if (!p) return;
@@ -540,6 +549,11 @@ export default function App() {
     setPdfOpen(true);
     try {
       await writer.current.flush();
+      if (
+        jobs.current.get("document") !== ticket ||
+        projectRef.current?.id !== p.id
+      )
+        return;
       const result = await rpc<DocumentPDF>("document", {
         project: p.id,
         key: `${p.id}:document`,
@@ -946,8 +960,8 @@ export default function App() {
       return;
     }
     if (id === "togglePDF") {
-      setPdfOpen(!pdfOpen);
-      if (!pdf && !pdfOpen) void buildPdf();
+      if (pdfOpen) closePdf();
+      else void buildPdf();
       return;
     }
     if (id === "rebuildPDF") return buildPdf();
@@ -1513,7 +1527,7 @@ export default function App() {
                   project={project}
                   building={pdfBusy}
                   onBuild={() => void buildPdf()}
-                  onClose={() => setPdfOpen(false)}
+                  onClose={closePdf}
                   target={pdfTarget}
                   onSource={(file, line) => {
                     const matches = targetsAtLine(

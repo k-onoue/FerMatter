@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
-import { startDrag } from "@crabnebula/tauri-plugin-drag";
+import { startDrag, useCardArtifacts } from "./artifactLease";
 import { GripVertical, LoaderCircle } from "lucide-react";
 import { rpc } from "./api";
 import { artworkAtPoint, artworkBounds } from "./navigation";
@@ -95,6 +95,7 @@ export function PdfArtworkDrag({
     null,
   );
   const [error, setError] = useState("");
+  useCardArtifacts(prepared?.card, prepared?.path);
   const dragged = useRef(false);
   const name =
     document.targets.find((t) => t.id === anchor.targetID)?.name || "Equation";

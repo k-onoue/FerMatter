@@ -34,6 +34,7 @@ use std::{
 use tauri::{Emitter, Manager};
 struct Runtime {
     store: storage::Storage,
+    cache: Arc<cache::Cache>,
     settings: settings::SettingsFiles,
     jobs: Mutex<HashMap<String, compiler::Cancellation>>,
     tools: Mutex<Arc<toolchain::Toolchain>>,
@@ -48,6 +49,7 @@ fn job(runtime: &Runtime, key: &str) -> compiler::Cancellation {
 }
 fn close_jobs(runtime: &Runtime, label: &str) {
     let prefix = format!("{label}::");
+    runtime.cache.release_window(&prefix);
     runtime.jobs.lock().unwrap().retain(|key, job| {
         if key.starts_with(&prefix) {
             job.cancel();
@@ -147,8 +149,32 @@ async fn request(
     } else {
         None
     };
+    let window_label = string(&payload, "window").to_owned();
+    let output_key = format!("{window_label}::result::{operation}");
+    let generation = matches!(
+        operation.as_str(),
+        "document"
+            | "source_preview"
+            | "instant_render"
+            | "preview_export"
+            | "pdf_prepare_drag"
+            | "export"
+    )
+    .then(|| runtime.cache.begin_result(&output_key));
     tauri::async_runtime::spawn_blocking(move || {
-        dispatch(&app, &runtime, &operation, payload, cancellation)
+        let _lease = cache::Lease::new(&runtime.store.home, &payload);
+        let result = dispatch(&app, &runtime, &operation, payload, cancellation.clone());
+        if app.get_webview_window(&window_label).is_some()
+            && cancellation.as_ref().is_none_or(|c| c.check().is_ok())
+        {
+            if let (Some(generation), Ok(value)) = (generation, &result) {
+                runtime.cache.result(&output_key, generation, value);
+            }
+        }
+        if let Err(error) = runtime.cache.idle() {
+            eprintln!("Cache maintenance skipped: {error}");
+        }
+        result
     })
     .await
     .map_err(err)?
@@ -349,6 +375,16 @@ fn dispatch(
             }
             json_read(path)
         }
+        "artifact_lease" => {
+            let paths = v["paths"]
+                .as_array()
+                .ok_or("Missing artifact paths")?
+                .iter()
+                .map(|p| store.allowed_artifact(Path::new(p.as_str().unwrap_or(""))))
+                .collect::<Result<Vec<_>>>()?;
+            runtime.cache.lease(string(&v, "key"), &json!(paths));
+            Ok(Value::Null)
+        }
         "artifact" => {
             use base64::Engine;
             let p = store.allowed_artifact(Path::new(string(&v, "path")))?;
@@ -408,13 +444,15 @@ fn dispatch(
                 .iter()
                 .map(|p| store.allowed_artifact(Path::new(p.as_str().unwrap_or(""))))
                 .collect::<Result<Vec<_>>>()?;
-            cache::remember_clipboard(&store.home, &paths)?;
-            let (tx, rx) = std::sync::mpsc::sync_channel(1);
-            app.run_on_main_thread(move || {
-                let _ = tx.send(native::clipboard(&paths));
-            })
-            .map_err(err)?;
-            rx.recv().map_err(err)??;
+            cache::copy_images(&store.home, &paths, || {
+                let owned = paths.clone();
+                let (tx, rx) = std::sync::mpsc::sync_channel(1);
+                app.run_on_main_thread(move || {
+                    let _ = tx.send(native::clipboard(&owned));
+                })
+                .map_err(err)?;
+                rx.recv().map_err(err)?
+            })?;
             Ok(Value::Null)
         }
         "scan" | "render" | "source_preview" | "document" => {
@@ -677,7 +715,19 @@ pub fn run() {
             }
             let tools_snapshot = settings.snapshot("tools.json", false)?;
             let tools = toolchain::Toolchain::from_value(&tools_snapshot["value"])?;
+            let cache = cache::Cache::new(&store.home);
+            let idle_cache = Arc::downgrade(&cache);
+            std::thread::spawn(move || loop {
+                std::thread::sleep(std::time::Duration::from_secs(60));
+                let Some(cache) = idle_cache.upgrade() else {
+                    break;
+                };
+                if let Err(error) = cache.idle() {
+                    eprintln!("Cache maintenance skipped: {error}");
+                }
+            });
             app.manage(Arc::new(Runtime {
+                cache,
                 settings,
                 store,
                 jobs: Mutex::new(HashMap::new()),
@@ -777,6 +827,7 @@ mod request_tests {
     fn closing_instant_does_not_cancel_project_work() {
         let temp = tempfile::tempdir().unwrap();
         let runtime = Runtime {
+            cache: cache::Cache::new(&temp.path().join("data")),
             store: storage::Storage::new(temp.path().join("data"), temp.path().join("legacy"))
                 .unwrap(),
             settings: settings::SettingsFiles::new(temp.path()),
