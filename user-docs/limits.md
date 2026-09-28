@@ -14,19 +14,21 @@
 
 - Check the [required tools](requirements.md), main file, compiler, packages, fonts, and relative imports.
 - Open the equation/compiler log for the specific error.
-- A failed PDF build retains the old PDF but disables navigation until rebuilding succeeds.
+- A failed PDF build retains the old PDF and its navigation snapshot; rebuild successfully to navigate current edits.
 - Generated content can lack a PDF/source target; LaTeX equations on the same source line can share a target.
 - Use an explicit input mode if [Auto](new-project.md) misidentifies pasted text.
 
 ## Not available
 
 - PDF/OCR input, cloud sync, and automatic rescanning of externally edited sources.
-- Fully bundled runtime dependencies and a signed/notarized public installer.
+- Bundled compiler tools and a signed/notarized public installer.
+- In-app update downloads, manual Library ordering controls, tree drag/import and file-operation Undo from the earlier Swift app.
 - Guaranteed drag compatibility with every presentation app; try copy/paste or an exported file.
 
 ## Local data
 
-- Opened folders stay where they are; ZIPs are extracted into local app storage.
-- Metadata, caches, exports, and drafts live under `~/Library/Application Support/Slide Math`.
-- The legacy folder name preserves existing projects after the Mathlidelux rename.
+- Opened folders stay where they are; new projects and ZIP extraction use Documents/Mathlidelux.
+- Current metadata, caches, exports, and drafts live under `~/Library/Application Support/Slide Math/Rust Preview`.
+- This internal folder name is kept for compatibility; existing Swift data stays in the parent folder and is imported as needed.
+- Swift drafts are imported once without saving source files. Competing drafts are preserved with a backup and a warning.
 - Removing the app does not remove your project sources or support data.

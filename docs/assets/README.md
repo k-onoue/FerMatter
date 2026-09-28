@@ -1,13 +1,14 @@
 # Public assets
 
-- `app-light.jpg` / `app-dark.jpg`: native app, synthetic `examples/demo-paper/`, opaque background.
+- `app-light.jpg` / `app-dark.jpg`: earlier Swift app, synthetic `examples/demo-paper/`, opaque background.
 - `trajectory.svg`: demo equation rendered by the TeX worker; glyphs are paths.
-- `icon.png`: unchanged approved artwork from `macos-app/Resources/AppIcon.icon/Assets/AppIcon.png`; same source as PR #6.
+- `icon.png`: unchanged approved artwork from `desktop-app/resources/AppIcon.icon/Assets/AppIcon.png`; same source as PR #6.
 - Never capture private manuscripts, project-history lists, accounts, or desktop notifications.
 
 ## Paper-to-slides tutorial
 
 - Files: `tutorials/paper-to-slides.mp4`, `.jpg` poster, `.vtt` captions.
+- Historical Swift workflow; current desktop controls differ.
 - Date: 2026-09-28; Mathlidelux 0.10.0; integration commit `7b0205a`; macOS 26.
 - Form: three real application stills held for six seconds each; a step-through, not continuous screen recording.
 - Source material: the synthetic `examples/demo-paper/` project; a newly created blank PowerPoint presentation.

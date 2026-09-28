@@ -1,14 +1,15 @@
 # Settings files
 
-**Settings → Shortcuts** and **Settings → Appearance** provide Open File, Show in
-Finder, Reload, Import, Export, and Restore Defaults. Files live in
-`~/Library/Application Support/Slide Math/Settings/`:
+**Settings → Shortcuts** and **Settings → Appearance** provide Edit JSON, Reload,
+Import and Export. Shortcuts can be reset; choose Default to reset the theme.
+**Settings → Tools** reveals the storage folder. Files live in
+`~/Library/Application Support/Slide Math/Rust Preview/Settings/`:
 
 - `keybindings.json` contains shortcut overrides. Recording or clearing a shortcut
   saves the file immediately.
 - `theme.json` contains the active theme, including both light and dark palettes.
 
-Open File uses the system's default JSON editor. Save external edits, then choose
+Edit JSON opens the built-in editor. For external edits, save the file and choose
 Reload. Import validates a local JSON file and copies it into the settings folder;
 future changes to the imported source do not affect the active settings. Export
 copies the active settings to a chosen file. Import and Restore Defaults explicitly
@@ -16,9 +17,9 @@ replace the active file. Keep exported themes to switch between them using Impor
 
 - **Appearance → Color Theme** also offers Default and fifteen bundled light/dark pairs; see the [theme list](../../user-docs/preferences.md#color-themes).
 - Selecting a preset writes its complete document to `theme.json`; no theme download is needed at runtime.
-- A modified/imported document appears as **Custom**, even if it retains a preset's ID. Export it before switching to keep a reusable copy.
+- Export modified/imported themes before switching presets to keep a reusable copy; the picker identifies presets by ID.
 - Preset selection refuses to overwrite external edits until Reload accepts them.
-- Bundled JSON, pinned source revisions, and MIT licenses: [Themes](../../macos-app/Sources/SlideMath/Themes/README.md).
+- Bundled JSON, pinned source revisions, and MIT licenses: [Themes](../../desktop-app/resources/themes/README.md).
 
 An invalid file leaves the current settings in use. The app retains hidden
 `.last-valid-*.json` recovery files, so invalid edits also retain the last valid
@@ -27,10 +28,11 @@ the recovery copy. The shortcut recorder refuses to overwrite external edits unt
 Reload accepts them. A failed file write leaves the active settings unchanged.
 Files are limited to 1 MB and writes use atomic replacement.
 
-The first launch with file settings migrates the previous `keyboardShortcuts`
-UserDefaults value. That value remains as a backup; the JSON file takes precedence
-from then on. Appearance mode, background opacity, and window pinning retain their
-existing preferences and behavior.
+The desktop app copies missing Swift JSON settings and recovery files on first
+use. Current preview settings take precedence. Appearance, opacity, pinning and
+auto-save mode migrate from Swift preferences when current preferences are absent.
+The much older `keyboardShortcuts` UserDefaults blob is retained by macOS but is
+not imported directly; export it through a Swift build first if needed.
 
 ## Keyboard shortcuts, version 1
 
@@ -107,7 +109,7 @@ System appearance switches palettes automatically; Light/Dark choose one explici
 | `number` | Source numeric literals |
 | `comment` | Source comments |
 
-Liquid Glass and native material surfaces keep their native rendering. Themes do
+Background opacity remains independent of theme colors. Themes do
 not recolor rendered equations, figures, PDF pages, or exported artwork. Choose
 light and dark colors with enough contrast for the backgrounds and opacity you use.
 
@@ -125,10 +127,10 @@ shortcut edits. For example:
 
 Only declared fields and supported command/color tokens affect the app. Unknown
 commands, unknown color tokens, and unsupported schema versions are rejected.
-Additional metadata belongs inside `extensions`; unrelated top-level fields are
-ignored and are not retained. Restore Defaults intentionally clears extensions.
+Additional metadata belongs inside `extensions`; unrelated top-level fields have
+no rendering behavior. Restore Defaults intentionally clears extensions.
 
-`SettingsDocument`, `SettingsFile`, and the separate shortcut/theme models provide
+`SettingsFiles` and the separate shortcut/theme documents provide
 a validation and persistence boundary for future declarative contributions.
 Future command providers can register stable IDs before their bindings are used;
 new document meanings require explicit compatibility handling. A future plugin

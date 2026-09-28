@@ -2,13 +2,13 @@
 
 - Desktop application: Tauri 2, Rust, React/TypeScript, Monaco, PDF.js.
 - App name: **Mathlidelux**. Bundle ID: `local.slidemath.prototype` (preserved from the Swift app).
-- This implementation replaces the Swift/Python app. The old source is retained temporarily until its removal PR.
+- This is the maintained implementation. The retired Swift/Python source remains available in Git history.
 - Runtime: no Python, Node.js, Rust, Swift SDK, or Xcode installation required by app users.
 - Compilers remain external: Typst; or TeX/`latexmk`, `pdfcrop`, `pdf2svg`, `pdftocairo`, `pdfinfo`, and `synctex`. See [requirements](../user-docs/requirements.md).
 
 ## Build and run
 
-- macOS / Apple Silicon development build; Rust stable, Node.js 22+, Xcode command-line tools.
+- Apple Silicon development build; macOS 14+ deployment target, verified on macOS 26. Rust stable, Node.js 22+, Xcode command-line tools.
 - Verified development toolchain: Rust 1.98.1, Node.js 26.5.0, macOS 26.5.2.
 - A project-local toolchain at `build/rustup/` is optional; scripts otherwise use the installed Rust toolchain.
 
@@ -59,7 +59,7 @@ open 'src-tauri/target/release/bundle/macos/Mathlidelux.app'
 
 - The maintainer verified the current UI and approved the replacement. Broader native checks remain before public release: Undo/Redo, IME, file operations, clipboard/drag into presentation software.
 - External-monitor changes and clamshell transitions still need physical verification. Full-screen wallpaper and background-opacity changes have been checked on the current screen.
-- Existing manual Library order metadata is retained; editing that order is not currently exposed.
+- Existing manual Library order metadata is retained; the current UI displays source order and does not expose manual ordering.
 - In-app release checks/downloads are not yet implemented in this app; install newer builds manually. Signed updates need a separate release feed/artifact setup.
 - Intel macOS, Ubuntu, and Windows have not been built or tested. Native clipboard, reveal, and no-overwrite rename adapters currently target macOS.
 - Public signing/notarization and installer/update verification remain release work.
@@ -68,8 +68,7 @@ open 'src-tauri/target/release/bundle/macos/Mathlidelux.app'
 
 ```sh
 ./desktop-app/scripts/check.sh
-./macos-app/scripts/check.sh
-./macos-app/scripts/build.sh
+./desktop-app/scripts/build.sh
 .venv-docs/bin/python scripts/build-guides.py --check
 python3 -B scripts/check-publication.py
 git diff --check

@@ -24,23 +24,23 @@
 
     <article class="guide-content" aria-label="Guide instructions"><ol>
 <li>Open your project and choose <strong>PDF</strong> (<code>⌥⌘P</code>).</li>
-<li>Select an outline heading or equation card to reveal its location.</li>
-<li>Command-click an equation/figure in the PDF to select its source card.</li>
+<li>Use the outline to narrow the Library, then select an equation card to reveal and highlight its PDF location.</li>
+<li>Click an equation/figure in the PDF to select its Library card or Source range.</li>
 <li>Copy the selected equation or <a href="edit-equation.html">edit a presentation version</a>.</li>
 </ol>
 <ul>
 <li>The outline follows headings across included files; parent headings include descendants.</li>
 <li>Labels are manual groups, separate from the document outline.</li>
-<li>Source mode opens the matching file and line.</li>
+<li>Source mode opens the matching file and equation range. Placing the caret in an equation also highlights its PDF target.</li>
 <li>Custom variants navigate to their original source; newly created equations have no paper location.</li>
-<li>Resize the PDF/inspector using their dividers; widths are remembered.</li>
+<li>Resize the PDF with its divider; its width is remembered.</li>
 </ul>
 <h2 id="refresh-and-troubleshoot">Refresh and troubleshoot</h2>
 <ul>
-<li>After external source edits: <strong>Rescan</strong>; a visible PDF rebuilds too.</li>
+<li>After external source edits, choose <strong>Rescan</strong> and then <strong>Rebuild PDF</strong>. Navigation uses the last compiled snapshot.</li>
 <li><strong>Rebuild PDF</strong> (<code>⇧⌘R</code>) rebuilds only the document.</li>
-<li>A failed rebuild retains the last PDF; navigation waits for a successful build.</li>
-<li>LaTeX requires SyncTeX; several equations on one source line can resolve to the first card.</li>
+<li>A failed rebuild retains the last PDF and its snapshot; it does not represent the latest edits.</li>
+<li>LaTeX requires SyncTeX. If several equations share a source line, Library selects the candidates; Source navigates to the line.</li>
 <li>Generated content may have no navigation target; see <a href="limits.html">limits</a>.</li>
 <li>Previous/next page: <code>⌘[</code> / <code>⌘]</code>; zoom: <code>⌘+</code> / <code>⌘−</code>; fit: <code>⌘0</code>.</li>
 </ul></article>

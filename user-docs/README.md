@@ -1,7 +1,7 @@
 # Use Mathlidelux
 
 - Start with [paper to slides](paper-to-slides.md): choose an equation, copy it, and paste it into your presentation.
-- Development prototype for macOS 26+ on Apple Silicon; [requirements](requirements.md).
+- Development prototype for Apple Silicon Mac; [requirements](requirements.md).
 
 ## Make your first slide
 

@@ -1,9 +1,10 @@
 # Requirements
 
 - Development prototype; no signed, notarized public download yet.
-- macOS 26+; Apple Silicon.
-- Python 3, plus the tools for your project format; runtimes are not bundled.
-- Xcode with the macOS 26 SDK is required to build from source, not to run a packaged app.
+- Apple Silicon Mac. The app targets macOS 14+ and has been verified on macOS 26.
+- No Python, Node.js, Rust toolchain, Swift SDK, or Xcode installation is needed to run the packaged app.
+- Install the external compiler tools for your project format.
+- Building from source requires Rust, Node.js 22+ and Xcode command-line tools.
 - Open projects you trust: TeX and `latexmkrc` can execute code; this prototype is not an OS sandbox.
 
 ## Typst projects
@@ -24,7 +25,6 @@
 
 ## Tool discovery
 
-- Python locations: `/opt/homebrew/bin/python3`, `/usr/local/bin/python3`, `/usr/bin/python3`.
 - Compiler/tool search includes `/Library/TeX/texbin`, `/opt/homebrew/bin`, `/usr/local/bin`, and system paths.
 - In **Project Settings**, choose the main file and compiler when automatic selection is insufficient.
 - [Extraction limits and troubleshooting](limits.md).

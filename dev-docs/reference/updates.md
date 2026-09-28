@@ -1,10 +1,11 @@
-# Updates — integration reference
+# Updates — future integration contract
 
-- Available in the packaged app through Settings → Updates.
-- Detailed behavior/tests: [update specification](../../macos-app/UPDATES.md).
+- The current desktop app has no in-app release checker/downloader; install newer builds manually.
+- The Swift implementation was retired. Its [historical specification](https://github.com/k-onoue/mathlidelux/blob/629ec5445e09880e2aa1796603157f5bd73d8ab5/macos-app/UPDATES.md) remains a reference, not a current feature.
+- The requirements below describe a future implementation; do not enable it against unnotarized prototype artifacts.
 - Repository was private at inspection; unauthenticated public release access must be verified before release activation.
 
-## User behavior
+## Proposed user behavior
 
 - Automatic check at most once per 24 hours, including failures; Settings can disable it.
 - Manual check bypasses the interval; automatic failures stay quiet.

@@ -1,8 +1,8 @@
 # From your paper to a slide
 
-1. Choose **Open Project** (`⌘O`); select your LaTeX/Typst folder, ZIP, or main file.
+1. Choose **Open Project** (`⌘O`); select your LaTeX/Typst folder. Use **Open file or ZIP** for an archive or main file.
 2. Select an equation; use the outline, search, or **Block** filter to find it.
-3. Choose **SVG** and **Copy SVG** (`⇧⌘C`).
+3. Choose **SVG** and **Copy image** (`⇧⌘C`).
 4. In PowerPoint, paste (`⌘V`), then position and size the equation on your slide.
 
 ## Before you start

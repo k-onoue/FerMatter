@@ -9,29 +9,28 @@
 
 ## Save and recover
 
-- Default auto-save delay: 800 ms; change delay or choose Manual in **Settings → Editor**.
+- Auto save runs after about 700 ms of inactivity; choose After changes or Manually in **Settings → Editor**.
 - Unsaved buffers survive tab/project changes and relaunches.
 - Recovered drafts wait for an edit or explicit save before being written.
-- External changes block saving; use **Reload…**, **Save Copy…**, or **Revert File…** as appropriate.
-- UTF-8 text only, up to 2 MB; original BOM/CRLF conventions are preserved.
+- External changes block saving. Keep a copy of your draft before using **Reload…** to accept the disk version.
+- UTF-8 text only, up to 10 MB; original BOM/CRLF conventions are preserved.
 - For a ZIP project, edits affect its extracted copy.
 
 ## Files and panes
 
-- `⌘N`: new file; Return/F2: rename; `⌘⌫`: Move to Trash.
-- Tree context menu: copy, cut, paste, duplicate, reveal, and open with another app.
-- Drag within the tree to move; Option-drag to copy; drag from Finder to import copies.
-- Name collisions receive a numbered suffix; source import references need manual updates after moving files.
-- `⌘Z` / `⇧⌘Z`: text Undo in the editor; file-operation Undo in the tree.
+- Use the tree context menu for New File/Folder, Rename, Duplicate, Copy/Cut/Paste, Reveal in Finder, Copy Path and Move to Trash.
+- Existing destination names are protected; choose another name when a collision is reported.
+- Source imports need manual updates after renaming or moving files.
+- `⌘Z` / `⇧⌘Z`: text Undo/Redo in the editor; file-operation Undo is not available.
 - `⌃Tab` / `⌃⇧Tab`: next/previous source tab.
 - `⌘\` / `⌥⌘\`: split right/down; tab edge-drops also split; center-drop moves a tab.
-- Closing the last unsaved tab offers Save / Don't Save / Cancel.
-- Current File outline follows unsaved headings; Document outline uses the last scan.
+- Closing a tab retains its buffer and recovery draft; reopen the file to continue.
+- Source **Outline** follows the current file's unsaved headings; the Library outline uses the document scan.
 
 ## Preview at the caret
 
 - Place the caret inside an equation, TikZ picture, or CeTZ canvas; pause briefly for its preview.
-- Drag the preview to your slide or Finder, or use **Copy**. Its menu selects SVG, PNG, JPEG, or PDF.
+- Drag the preview to your slide or Finder, or use **Copy**. The Library export setting selects SVG, PNG, JPEG, or PDF.
 - Preview includes open unsaved drafts and project imports; it compiles a temporary copy without saving source files.
 - Move outside the item or press Escape to dismiss; moving away cancels obsolete compilation.
 - The same [source-extraction limits](limits.md) apply; generated math may need the full document preview.

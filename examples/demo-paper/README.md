@@ -18,5 +18,5 @@ To compile the whole note independently:
 latexmk main.tex
 ```
 
-Mathlidelux also needs its rendering dependencies listed in `macos-app/README.md`
+Mathlidelux also needs its rendering dependencies listed in `user-docs/requirements.md`
 in the repository. Its extracted equations use the same preamble as this document.

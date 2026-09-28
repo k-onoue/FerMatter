@@ -33,29 +33,28 @@
 </ol>
 <h2 id="save-and-recover">Save and recover</h2>
 <ul>
-<li>Default auto-save delay: 800 ms; change delay or choose Manual in <strong>Settings → Editor</strong>.</li>
+<li>Auto save runs after about 700 ms of inactivity; choose After changes or Manually in <strong>Settings → Editor</strong>.</li>
 <li>Unsaved buffers survive tab/project changes and relaunches.</li>
 <li>Recovered drafts wait for an edit or explicit save before being written.</li>
-<li>External changes block saving; use <strong>Reload…</strong>, <strong>Save Copy…</strong>, or <strong>Revert File…</strong> as appropriate.</li>
-<li>UTF-8 text only, up to 2 MB; original BOM/CRLF conventions are preserved.</li>
+<li>External changes block saving. Keep a copy of your draft before using <strong>Reload…</strong> to accept the disk version.</li>
+<li>UTF-8 text only, up to 10 MB; original BOM/CRLF conventions are preserved.</li>
 <li>For a ZIP project, edits affect its extracted copy.</li>
 </ul>
 <h2 id="files-and-panes">Files and panes</h2>
 <ul>
-<li><code>⌘N</code>: new file; Return/F2: rename; <code>⌘⌫</code>: Move to Trash.</li>
-<li>Tree context menu: copy, cut, paste, duplicate, reveal, and open with another app.</li>
-<li>Drag within the tree to move; Option-drag to copy; drag from Finder to import copies.</li>
-<li>Name collisions receive a numbered suffix; source import references need manual updates after moving files.</li>
-<li><code>⌘Z</code> / <code>⇧⌘Z</code>: text Undo in the editor; file-operation Undo in the tree.</li>
+<li>Use the tree context menu for New File/Folder, Rename, Duplicate, Copy/Cut/Paste, Reveal in Finder, Copy Path and Move to Trash.</li>
+<li>Existing destination names are protected; choose another name when a collision is reported.</li>
+<li>Source imports need manual updates after renaming or moving files.</li>
+<li><code>⌘Z</code> / <code>⇧⌘Z</code>: text Undo/Redo in the editor; file-operation Undo is not available.</li>
 <li><code>⌃Tab</code> / <code>⌃⇧Tab</code>: next/previous source tab.</li>
 <li><code>⌘\</code> / <code>⌥⌘\</code>: split right/down; tab edge-drops also split; center-drop moves a tab.</li>
-<li>Closing the last unsaved tab offers Save / Don't Save / Cancel.</li>
-<li>Current File outline follows unsaved headings; Document outline uses the last scan.</li>
+<li>Closing a tab retains its buffer and recovery draft; reopen the file to continue.</li>
+<li>Source <strong>Outline</strong> follows the current file's unsaved headings; the Library outline uses the document scan.</li>
 </ul>
 <h2 id="preview-at-the-caret">Preview at the caret</h2>
 <ul>
 <li>Place the caret inside an equation, TikZ picture, or CeTZ canvas; pause briefly for its preview.</li>
-<li>Drag the preview to your slide or Finder, or use <strong>Copy</strong>. Its menu selects SVG, PNG, JPEG, or PDF.</li>
+<li>Drag the preview to your slide or Finder, or use <strong>Copy</strong>. The Library export setting selects SVG, PNG, JPEG, or PDF.</li>
 <li>Preview includes open unsaved drafts and project imports; it compiles a temporary copy without saving source files.</li>
 <li>Move outside the item or press Escape to dismiss; moving away cancels obsolete compilation.</li>
 <li>The same <a href="limits.html">source-extraction limits</a> apply; generated math may need the full document preview.</li>

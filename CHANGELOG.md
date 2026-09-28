@@ -10,13 +10,12 @@
 
 ### Added
 
-- Parallel macOS port in Rust and TypeScript, with a Python-free backend, shared Monaco editors, equation/figure exports and PDF navigation; kept separate from the Swift app while replacement verification continues.
+- Desktop implementation in Rust and TypeScript, with a Python-free backend, shared Monaco editors, equation/figure exports and PDF navigation.
 
 - Task-based user guides, maintained in Markdown and available on the product site.
 - Shared contributor and agent documentation with review and release checklists.
 - File-managed shortcuts and declarative color themes, with import/export and recovery.
 - Fifteen bundled light/dark theme pairs with a picker and previews, including GitHub, Catppuccin, Solarized, Atom One, and Rosé Pine.
-- Stable-release notifications and accepted update downloads.
 - Draggable equation and figure previews at the Source editor caret.
 - Prototype DMG and PKG packaging with verification and checksums.
 
@@ -24,7 +23,7 @@
 
 - Adopt the desktop app as Mathlidelux, remove the Rust badge, preserve the original bundle identity and preview data, and import Swift source drafts without overwriting manuscripts. Prototype DMG/PKG tooling now targets the desktop app.
 
-- Rust preview: background-only translucency and active-display full-screen wallpaper; single-click PDF, Library, and Source equation navigation with visible selection.
+- Background rendering: background-only translucency and active-display full-screen wallpaper; single-click PDF, Library, and Source equation navigation with visible selection.
 - Make shortcut settings easier to scan with larger, spaced key symbols and alternating rows.
 - Use a single theme background across each project card and its equation preview.
 - Simplify the product page around moving an equation from a paper to a slide.
@@ -32,6 +31,9 @@
 - Save newly created projects in Documents/Mathlidelux and reveal their source folders in Finder.
 
 ### Removed
+
+- Retired Swift app and Python workers; the maintained implementation and packaging live in `desktop-app/`. Old source remains in Git history; user data is preserved.
+- Swift in-app update downloader; use manual app replacement until a new signed-update integration is available.
 
 - Obsolete web UI prototype; retain the native app and product site.
 
