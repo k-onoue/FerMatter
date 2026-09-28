@@ -10,6 +10,8 @@
 
 ### Added
 
+- Editable compiler and conversion-tool paths in Settings and first-launch setup, with automatic detection, executable checks, and recoverable file-managed configuration.
+
 - Required first-launch project-folder selection, with four bundled editable demos and preservation of existing sample variants, drafts, and Instant history.
 
 - Project cards and list rows include an Instant Mode shortcut.

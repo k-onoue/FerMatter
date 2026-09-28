@@ -120,6 +120,7 @@ fn valid_name(name: &str) -> Result<()> {
         "theme.json",
         "keybindings.json",
         "instant.json",
+        "tools.json",
     ]
     .contains(&name)
     {
@@ -130,6 +131,7 @@ fn valid_name(name: &str) -> Result<()> {
 }
 fn default_document(name: &str) -> Value {
     match name {
+        "tools.json" => crate::toolchain::defaults(),
         "instant.json" => crate::instant_settings::defaults(),
         "theme.json" => {
             json!({"schemaVersion":1,"kind":"mathlidelux.theme","id":"org.mathlidelux.default","name":"Default","light":{},"dark":{}})
@@ -147,6 +149,7 @@ pub fn validate(name: &str, v: &Value) -> Result<()> {
         return Err("Settings must be a JSON object.".into());
     }
     match name {
+        "tools.json" => crate::toolchain::validate(v),
         "instant.json" => crate::instant_settings::validate(v),
         "theme.json" => theme(v),
         "keybindings.json" => keybindings(v),

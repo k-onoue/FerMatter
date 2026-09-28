@@ -25,6 +25,9 @@
 
 ## Tool discovery
 
+- First-launch setup and **Settings → Tools** let you choose compiler/converter executables; blank paths use automatic detection.
 - Compiler/tool search includes `/Library/TeX/texbin`, `/opt/homebrew/bin`, `/usr/local/bin`, and system paths.
+- Custom executable folders are searched first for companion tools. Exact overrides take precedence for commands invoked by name, including engines launched by `latexmk`; a project's explicit absolute commands in `latexmkrc` remain authoritative.
+- Paths are saved in `tools.json`; no shell configuration changes are needed. [Tool settings](preferences.md#compiler-tools).
 - In **Project Settings**, choose the main file and compiler when automatic selection is insufficient.
 - [Extraction limits and troubleshooting](limits.md).

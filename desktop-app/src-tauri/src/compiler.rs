@@ -4,7 +4,7 @@ use std::{
     fs,
     io::Read,
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::Stdio,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
@@ -15,8 +15,12 @@ use std::{
 pub struct Cancellation(
     pub Arc<AtomicBool>,
     Arc<Mutex<std::collections::HashSet<u32>>>,
+    Arc<crate::toolchain::Toolchain>,
 );
 impl Cancellation {
+    pub fn with_tools(tools: Arc<crate::toolchain::Toolchain>) -> Self {
+        Self(Arc::default(), Arc::default(), tools)
+    }
     pub fn cancel(&self) {
         self.0.store(true, Ordering::SeqCst);
         for id in self.1.lock().unwrap().iter() {
@@ -49,17 +53,10 @@ impl Drop for ProcessRegistration {
 pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) -> Result<String> {
     cancel.check()?;
     let mut log = tempfile::tempfile().map_err(err)?;
-    let mut command = Command::new(program);
+    let mut command = cancel.2.command(program)?;
     command
         .args(args)
         .current_dir(cwd)
-        .env(
-            "PATH",
-            format!(
-                "/Library/TeX/texbin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:{}",
-                std::env::var("PATH").unwrap_or_default()
-            ),
-        )
         .env_remove("SYNCTEX_EDITOR")
         .env_remove("SYNCTEX_VIEWER")
         .stdin(Stdio::null())
@@ -267,10 +264,11 @@ pub fn render(
         run("latexmk", &args(&["-v"]), root, c)?
     };
     let mut pending = vec![];
+    let toolchain = c.2.fingerprint();
     for card in cards {
         c.check()?;
         let mut cache_key = format!(
-            "rust-1|{stamp}|{main}|{engine}|{version}|{}|{}|{}",
+            "rust-1|{stamp}|{main}|{engine}|{version}|{toolchain}|{}|{}|{}",
             card["kind"], card["tex"], card["typstContext"]
         );
         if let Some(color) = card["instantColor"].as_str() {

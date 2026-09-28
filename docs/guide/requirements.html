@@ -48,7 +48,10 @@
 </ul>
 <h2 id="tool-discovery">Tool discovery</h2>
 <ul>
+<li>First-launch setup and <strong>Settings → Tools</strong> let you choose compiler/converter executables; blank paths use automatic detection.</li>
 <li>Compiler/tool search includes <code>/Library/TeX/texbin</code>, <code>/opt/homebrew/bin</code>, <code>/usr/local/bin</code>, and system paths.</li>
+<li>Custom executable folders are searched first for companion tools. Exact overrides take precedence for commands invoked by name, including engines launched by <code>latexmk</code>; a project's explicit absolute commands in <code>latexmkrc</code> remain authoritative.</li>
+<li>Paths are saved in <code>tools.json</code>; no shell configuration changes are needed. <a href="preferences.html#compiler-tools">Tool settings</a>.</li>
 <li>In <strong>Project Settings</strong>, choose the main file and compiler when automatic selection is insufficient.</li>
 <li><a href="limits.html">Extraction limits and troubleshooting</a>.</li>
 </ul></article>

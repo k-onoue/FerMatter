@@ -5,6 +5,7 @@ import { FolderOpen, RotateCcw } from "lucide-react";
 import { rpc } from "./api";
 import { Modal } from "./ui";
 import { CodeEditor } from "./editor";
+import { CompilerTools } from "./CompilerTools";
 import type { Keybindings, Preferences, Theme } from "./types";
 import {
   commands,
@@ -39,7 +40,6 @@ export function Settings({
   const [tab, setTab] = useState("Appearance");
   const [record, setRecord] = useState("");
   const [json, setJson] = useState<{ file: string; text: string } | null>(null);
-  const [tools, setTools] = useState<Record<string, string> | null>(null);
   const [search, setSearch] = useState("");
   const bindings = effectiveBindings(keys);
   const update = (patch: Partial<Preferences>) =>
@@ -365,25 +365,7 @@ export function Settings({
         )}
         {tab === "Tools" && (
           <>
-            <div className="setting-row">
-              <span>Compiler tools</span>
-              <button
-                onClick={() =>
-                  void rpc<Record<string, string>>("tools")
-                    .then(setTools)
-                    .catch((e) => onError(String(e)))
-                }
-              >
-                Check
-              </button>
-            </div>
-            {tools &&
-              Object.entries(tools).map(([name, result]) => (
-                <div className="tool-result" key={name}>
-                  <strong>{name}</strong>
-                  <pre>{result.trim() || "Available"}</pre>
-                </div>
-              ))}
+            <CompilerTools />
             <div className="setting-row">
               <span>Settings folder</span>
               <button onClick={() => void rpc("reveal")}>

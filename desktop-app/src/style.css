@@ -171,7 +171,7 @@ small,
   padding: 32px;
 }
 .project-setup section {
-  width: min(100%, 540px);
+  width: min(100%, 640px);
   padding: 36px;
   border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
   border-radius: 24px;
@@ -1351,16 +1351,45 @@ kbd {
   display: flex;
   margin: 0 16px;
 }
-.tool-result {
-  margin-top: 17px;
+.compiler-tools {
+  width: 100%;
+  min-width: 0;
 }
-.tool-result pre {
-  font-size: 10px;
-  max-height: 120px;
-  overflow: auto;
-  background: var(--surfaceBackground);
-  padding: 10px;
-  border-radius: 8px;
+.compiler-tools > p {
+  margin: 12px 0;
+}
+.compiler-tool {
+  margin: 14px 0;
+}
+.compiler-tool label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.compiler-path {
+  display: flex;
+  gap: 6px;
+}
+.compiler-path input {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+.compiler-tool small {
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+.compiler-tools summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.compiler-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
 }
 .variant-title {
   display: flex;

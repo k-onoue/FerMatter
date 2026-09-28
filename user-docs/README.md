@@ -5,7 +5,8 @@
 
 ## First launch
 
-- Choose a project folder, then **Continue**. This step is required once, including when upgrading from an older prototype.
+- Choose a project folder, then **Next**. Review **Compiler tools** and select **Finish Setup**. This setup runs once; existing completed setups are retained.
+- Detected executable paths appear automatically. Enter a full path or use the folder button to choose another executable. Missing tools can be installed later; only the tools for your project format are needed.
 - New projects, ZIP imports, dropped folders, and duplicates use this location. Change it later in **Settings → Projects**.
 - Four editable demos are added under **Demos**: LaTeX, Typst, TikZ, and CeTZ. An existing Demos folder is kept; a numbered folder is used instead.
 - Recognized, unchanged sample sources move to their new copies in Projects, retaining Library edits, Source drafts, and Instant history. Original files and modified projects stay intact.
