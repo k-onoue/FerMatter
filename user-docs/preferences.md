@@ -7,6 +7,16 @@
 - **Editor → Save files**: choose After changes or Manually (`⌘S`).
 - **New Project → Edit Template**: customize the setup for [new projects](new-project.md).
 
+## Compiler tools
+
+- Review tool paths during first-launch setup or later in **Settings → Tools**.
+- Enter an absolute executable path or use its folder button; choose **Apply** to save.
+- Empty fields use automatic detection. The reset arrow clears an override; choose **Apply** to restore detection.
+- **Additional tools** includes PDF converters, SyncTeX, and Ghostscript. **Check paths** checks executable availability without running the tools.
+- Paths apply to subsequent Library renders, Source previews, PDF builds/navigation, and both Instant modes. Use **Rescan** or rebuild the PDF to refresh existing results.
+- Edit `tools.json` in the revealed Settings folder and choose **Reload** to accept external changes. Invalid JSON keeps the last valid configuration; invalid executable paths are reported without falling back to another binary.
+- Tool installation and the per-project main file/compiler choice remain separate: see [requirements](requirements.md).
+
 ## Window zoom
 
 - `⌘+` or `⌘=` enlarges the interface; `⌘−` reduces it; `⌘0` restores 100%.

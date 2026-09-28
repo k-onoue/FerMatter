@@ -30,6 +30,16 @@
 <li><strong>Editor → Save files</strong>: choose After changes or Manually (<code>⌘S</code>).</li>
 <li><strong>New Project → Edit Template</strong>: customize the setup for <a href="new-project.html">new projects</a>.</li>
 </ul>
+<h2 id="compiler-tools">Compiler tools</h2>
+<ul>
+<li>Review tool paths during first-launch setup or later in <strong>Settings → Tools</strong>.</li>
+<li>Enter an absolute executable path or use its folder button; choose <strong>Apply</strong> to save.</li>
+<li>Empty fields use automatic detection. The reset arrow clears an override; choose <strong>Apply</strong> to restore detection.</li>
+<li><strong>Additional tools</strong> includes PDF converters, SyncTeX, and Ghostscript. <strong>Check paths</strong> checks executable availability without running the tools.</li>
+<li>Paths apply to subsequent Library renders, Source previews, PDF builds/navigation, and both Instant modes. Use <strong>Rescan</strong> or rebuild the PDF to refresh existing results.</li>
+<li>Edit <code>tools.json</code> in the revealed Settings folder and choose <strong>Reload</strong> to accept external changes. Invalid JSON keeps the last valid configuration; invalid executable paths are reported without falling back to another binary.</li>
+<li>Tool installation and the per-project main file/compiler choice remain separate: see <a href="requirements.html">requirements</a>.</li>
+</ul>
 <h2 id="window-zoom">Window zoom</h2>
 <ul>
 <li><code>⌘+</code> or <code>⌘=</code> enlarges the interface; <code>⌘−</code> reduces it; <code>⌘0</code> restores 100%.</li>

@@ -10,6 +10,7 @@ Import and Export. Shortcuts can be reset; choose Default to reset the theme.
 - `theme.json` contains the active theme, including both light and dark palettes.
 - `preferences.json` stores appearance, auto-save and window preferences. `projectView` is `grid` (default) or `list`; older files without it keep the grid view. Optional `projectDirectory` is an absolute path; missing/empty uses Documents/Mathlidelux. **Settings → Projects** changes it without moving existing projects.
 - `instant.json` stores reusable global Instant defaults; edit through the settings of Instant opened from Projects, or the revealed JSON file. Drafts/history are separate.
+- `tools.json` stores compiler/converter executable overrides; first-launch setup and **Settings → Tools** edit it. Apply saves changes; Reload accepts external edits.
 
 Edit JSON opens the built-in editor. For external edits, save the file and choose
 Reload. Import validates a local JSON file and copies it into the settings folder;
@@ -81,6 +82,30 @@ they operate on the currently selected export format.
 - Saved overrides take precedence over these six zoom defaults without rewriting their JSON. An implicit zoom default that conflicts with an override is shown as unassigned; explicit duplicate assignments are still rejected.
 - Window zoom is per launch (50–200%); it uses the [Tauri webview zoom API](https://v2.tauri.app/reference/javascript/api/namespacewebview/#setzoom) and leaves export scale unchanged.
 - `instant` defaults to `⇧⌘K`: global from Projects, local from a project. Its implicit default also yields to saved overrides.
+
+## Compiler tools, version 1
+
+```json
+{
+  "schemaVersion": 1,
+  "kind": "mathlidelux.tools",
+  "paths": {
+    "typst": "/opt/homebrew/bin/typst",
+    "pdflatex": "/Library/TeX/texbin/pdflatex"
+  }
+}
+```
+
+- Supported keys: `typst`, `latexmk`, `pdflatex`, `xelatex`, `lualatex`, `latex`, `pdftex`, `pdfcrop`, `pdf2svg`, `pdfinfo`, `pdftocairo`, `synctex`, `dvips`, `ps2pdf`, `gs`.
+- Values: absolute executable paths; omitted/empty entries use automatic detection. Paths are literal, without arguments, `~`, or environment-variable expansion.
+- Apply checks explicit overrides are executable files. Reload validates the schema and shows unavailable paths; an unavailable explicit override never falls back to an automatic choice.
+- Search: configured executable parents, standard TeX/Homebrew/system directories, inherited absolute PATH entries.
+- Each compiler request retains its configuration snapshot. Per-command PATH launchers also route child commands such as `latexmk` → `pdflatex`; the app never mutates process-global PATH.
+- Shell launchers quote literal paths and forward arguments unchanged. TeX symlinks retain their original names because these select the engine format.
+- Project `latexmkrc` commands with explicit absolute paths bypass name-based overrides. Package/font discovery remains the selected installation's responsibility.
+- Configuration changes invalidate equation render-cache keys. Existing jobs finish with their original configuration; subsequent renders/builds use the applied settings.
+- Startup uses the last valid settings/recovery file; external edits require Reload while the app is running. Compiler requests do not reset external-edit conflict tracking.
+- First-launch folder selection is followed by tool configuration; no missing auto-detected tool blocks setup. Existing completed setups are not repeated.
 
 ## Global Instant, version 1
 

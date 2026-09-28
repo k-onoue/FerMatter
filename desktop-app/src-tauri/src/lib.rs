@@ -13,6 +13,7 @@ mod scan;
 mod settings;
 mod source_commands;
 mod storage;
+mod toolchain;
 pub mod verification;
 #[cfg(target_os = "macos")]
 mod wallpaper;
@@ -29,9 +30,10 @@ struct Runtime {
     store: storage::Storage,
     settings: settings::SettingsFiles,
     jobs: Mutex<HashMap<String, compiler::Cancellation>>,
+    tools: Mutex<Arc<toolchain::Toolchain>>,
 }
 fn job(runtime: &Runtime, key: &str) -> compiler::Cancellation {
-    let c = compiler::Cancellation::default();
+    let c = compiler::Cancellation::with_tools(runtime.tools.lock().unwrap().clone());
     if let Some(old) = runtime.jobs.lock().unwrap().insert(key.into(), c.clone()) {
         old.cancel()
     }
@@ -492,21 +494,47 @@ fn dispatch(
                 &store.project_dir(ident)?.join("Exports")
             )?))
         }
-        "tools" => {
-            let root = store.home.clone();
-            let c = compiler::Cancellation::default();
-            let mut result = serde_json::Map::new();
-            for (name, flag) in [
-                ("typst", "--version"),
-                ("latexmk", "-v"),
-                ("pdf2svg", "--version"),
-                ("pdfcrop", "--version"),
-                ("pdftocairo", "-v"),
-            ] {
-                let value = compiler::run(name, &compiler::args(&[flag]), &root, &c);
-                result.insert(name.into(), json!(value.unwrap_or_else(|e| e)));
+        "choose_tool" => {
+            let name = string(&v, "name").to_owned();
+            let initial = string(&v, "path").to_owned();
+            toolchain::validate(
+                &json!({"schemaVersion":1,"kind":"mathlidelux.tools","paths":{name.clone():""}}),
+            )?;
+            #[cfg(target_os = "macos")]
+            {
+                let (tx, rx) = std::sync::mpsc::sync_channel(1);
+                app.run_on_main_thread(move || {
+                    let _ = tx.send(native::choose_executable(&name, &initial));
+                })
+                .map_err(err)?;
+                Ok(json!(rx.recv().map_err(err)??))
             }
-            Ok(Value::Object(result))
+            #[cfg(not(target_os = "macos"))]
+            {
+                use tauri_plugin_dialog::DialogExt;
+                let path = app
+                    .dialog()
+                    .file()
+                    .set_title(format!("Choose {name} executable"))
+                    .blocking_pick_file();
+                Ok(json!(path.map(|path| path.to_string())))
+            }
+        }
+        "tools" => Ok(runtime.tools.lock().unwrap().status()),
+        "check_tools" => Ok(toolchain::Toolchain::from_value(&v["value"])?.status()),
+        "save_tools" | "reload_tools" => {
+            let _guard = store.writes.lock().unwrap();
+            let tools = if op == "save_tools" {
+                let tools = toolchain::Toolchain::from_value(&v["value"])?;
+                tools.check_overrides()?;
+                runtime.settings.save("tools.json", &v["value"])?;
+                tools
+            } else {
+                toolchain::Toolchain::from_value(&runtime.settings.reload("tools.json")?)?
+            };
+            let result = tools.status();
+            *runtime.tools.lock().unwrap() = Arc::new(tools);
+            Ok(result)
         }
         _ => Err(format!("Unknown operation: {op}")),
     }
@@ -538,10 +566,12 @@ pub fn run() {
                     )?;
                 }
             }
+            let tools = toolchain::Toolchain::from_value(&settings.load("tools.json")?)?;
             app.manage(Arc::new(Runtime {
                 settings,
                 store,
                 jobs: Mutex::new(HashMap::new()),
+                tools: Mutex::new(Arc::new(tools)),
             }));
             let menu = tauri::menu::Menu::default(app.handle())?;
             for item in menu.items()? {
@@ -611,6 +641,7 @@ mod request_tests {
                 .unwrap(),
             settings: settings::SettingsFiles::new(temp.path()),
             jobs: Mutex::new(HashMap::new()),
+            tools: Mutex::new(Arc::default()),
         };
         let main = job(&runtime, "main::render");
         let old = job(&runtime, "instant::render");

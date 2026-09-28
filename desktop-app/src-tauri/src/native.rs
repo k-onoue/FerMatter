@@ -4,6 +4,48 @@ use crate::files::*;
 use std::path::PathBuf;
 
 #[cfg(target_os = "macos")]
+pub fn choose_executable(name: &str, initial: &str) -> Result<Option<String>> {
+    use objc::{class, msg_send, runtime::Object, sel, sel_impl};
+    use std::ffi::CStr;
+    unsafe fn ns(text: &str) -> *mut Object {
+        let value: *mut Object = msg_send![class!(NSString), alloc];
+        let value: *mut Object =
+            msg_send![value,initWithBytes:text.as_ptr() length:text.len() encoding:4usize];
+        let _: *mut Object = msg_send![value, autorelease];
+        value
+    }
+    unsafe {
+        let pool: *mut Object = msg_send![class!(NSAutoreleasePool), new];
+        let panel: *mut Object = msg_send![class!(NSOpenPanel), openPanel];
+        let _: () = msg_send![panel, setCanChooseFiles:true];
+        let _: () = msg_send![panel, setCanChooseDirectories:false];
+        let _: () = msg_send![panel, setAllowsMultipleSelection:false];
+        // Resolving pdflatex -> pdftex changes the format selected by argv[0].
+        let _: () = msg_send![panel, setResolvesAliases:false];
+        let _: () = msg_send![panel, setTitle:ns(&format!("Choose {name} executable"))];
+        if let Some(parent) = std::path::Path::new(initial)
+            .parent()
+            .filter(|p| p.is_absolute() && p.is_dir())
+        {
+            let url: *mut Object =
+                msg_send![class!(NSURL), fileURLWithPath:ns(&parent.to_string_lossy())];
+            let _: () = msg_send![panel, setDirectoryURL:url];
+        }
+        let response: isize = msg_send![panel, runModal];
+        let value = if response == 1 {
+            let url: *mut Object = msg_send![panel, URL];
+            let path: *mut Object = msg_send![url, path];
+            let bytes: *const std::os::raw::c_char = msg_send![path, UTF8String];
+            Some(CStr::from_ptr(bytes).to_string_lossy().into_owned())
+        } else {
+            None
+        };
+        let _: () = msg_send![pool, drain];
+        Ok(value)
+    }
+}
+
+#[cfg(target_os = "macos")]
 pub fn trash_project(path: &std::path::Path) -> Result<PathBuf> {
     use objc::{class, msg_send, runtime::Object, sel, sel_impl};
     use std::ffi::CStr;

@@ -4,6 +4,7 @@ import { FolderOpen, LoaderCircle } from "lucide-react";
 import { rpc } from "./api";
 import type { Preferences, Project } from "./types";
 import icon from "../src-tauri/icons/icon.png";
+import { CompilerToolFields, useCompilerTools } from "./CompilerTools";
 
 type SetupResult = { settings: Preferences; projects: Project[] };
 
@@ -17,6 +18,8 @@ export function ProjectSetup({
   const [directory, setDirectory] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [step, setStep] = useState<"folder" | "tools">("folder");
+  const tools = useCompilerTools();
   async function choose() {
     setError("");
     try {
@@ -36,6 +39,7 @@ export function ProjectSetup({
     setBusy(true);
     setError("");
     try {
+      if (!(await tools.save())) return;
       onComplete(
         await rpc<SetupResult>("complete_project_setup", { directory }),
       );
@@ -49,33 +53,70 @@ export function ProjectSetup({
     <main className="project-setup">
       <section aria-labelledby="setup-title">
         <img className="setup-icon" src={icon} alt="" />
-        <h1 id="setup-title">Choose your project folder</h1>
-        <p>New projects and imports will be saved here.</p>
-        <button disabled={busy} onClick={() => void choose()}>
-          <FolderOpen size={18} />
-          Choose Folder…
-        </button>
-        {directory && (
-          <div className="setup-path" title={directory}>
-            {directory}
-          </div>
+        <h1 id="setup-title">
+          {step === "folder" ? "Choose your project folder" : "Compiler tools"}
+        </h1>
+        {step === "folder" ? (
+          <>
+            <p>New projects and imports will be saved here.</p>
+            <button disabled={busy} onClick={() => void choose()}>
+              <FolderOpen size={18} />
+              Choose Folder…
+            </button>
+            {directory && (
+              <div className="setup-path" title={directory}>
+                {directory}
+              </div>
+            )}
+            <p className="setup-demos">
+              LaTeX, Typst, TikZ, and CeTZ demos will be added to a Demos
+              folder.
+            </p>
+            {error && (
+              <p role="alert" className="setup-error">
+                {error}
+              </p>
+            )}
+            <button
+              className="primary"
+              disabled={!directory}
+              onClick={() => setStep("tools")}
+            >
+              Next
+            </button>
+          </>
+        ) : (
+          <>
+            <CompilerToolFields state={tools} disabled={busy} />
+            {error && (
+              <p role="alert" className="setup-error">
+                {error}
+              </p>
+            )}
+            <div className="compiler-actions">
+              <button
+                disabled={busy || tools.busy}
+                onClick={() => setStep("folder")}
+              >
+                Back
+              </button>
+              <button
+                disabled={busy || tools.busy || !tools.draft}
+                onClick={() => void tools.check()}
+              >
+                Check paths
+              </button>
+              <button
+                className="primary"
+                disabled={!directory || busy || tools.busy || !tools.draft}
+                onClick={() => void finish()}
+              >
+                {busy && <LoaderCircle size={18} className="spin" />}
+                {busy ? "Setting up…" : "Finish Setup"}
+              </button>
+            </div>
+          </>
         )}
-        <p className="setup-demos">
-          LaTeX, Typst, TikZ, and CeTZ demos will be added to a Demos folder.
-        </p>
-        {error && (
-          <p role="alert" className="setup-error">
-            {error}
-          </p>
-        )}
-        <button
-          className="primary"
-          disabled={!directory || busy}
-          onClick={() => void finish()}
-        >
-          {busy && <LoaderCircle size={18} className="spin" />}
-          {busy ? "Setting up…" : "Continue"}
-        </button>
       </section>
     </main>
   );
