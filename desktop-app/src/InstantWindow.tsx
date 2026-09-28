@@ -77,6 +77,7 @@ export default function InstantWindow() {
   const [details, setDetails] = useState(false),
     [historyOpen, setHistoryOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [importFocus, setImportFocus] = useState<string>();
   const [theme, setTheme] = useState<Theme>(defaults);
   const [dark, setDark] = useState(true),
     [opacity, setOpacity] = useState(0.88),
@@ -239,6 +240,7 @@ export default function InstantWindow() {
           await queue.current;
           if (saveError.current) throw new Error(saveError.current);
           setRendered(null);
+          setImportFocus(item.token);
           setNotice("Source restored. Press Render to preview.");
           item = await rpc("instant_import_pending", { token: item.token });
         }
@@ -814,6 +816,7 @@ export default function InstantWindow() {
                 <section className="instant-editor">
                   <CodeEditor
                     project="instant"
+                    focusRequest={importFocus}
                     path={
                       "equation." +
                       (draft.template.format === "latex" ? "tex" : "typ")

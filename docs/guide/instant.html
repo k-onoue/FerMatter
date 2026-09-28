@@ -106,8 +106,10 @@
 <li>Export or copy <strong>SVG</strong> from Library, Source/PDF previews, or Instant to include editable source and output settings.</li>
 <li>Choose <strong>Open SVG</strong> or <strong>Edit from Clipboard</strong> in Instant or the Mathlidelux menu-bar menu. Dropping an SVG into the app also restores it.</li>
 <li>In Finder, use <strong>Open With → Mathlidelux</strong>, or drop the SVG onto the Dock icon.</li>
-<li>A uniquely matching registered project opens its own Instant. Missing or ambiguous projects open the standalone Instant.</li>
-<li>The current draft is kept in History. Imported source waits for <strong>Render</strong> (<code>⌘Enter</code>); opening a file does not execute its code.</li>
+<li>Drag artwork from PowerPoint or drop an SVG file into Mathlidelux to reopen its source.</li>
+<li>A matching project tab or Instant is reused. If neither is open, dropping into the main window opens a project tab; other entry points open Instant. Missing or ambiguous projects open the standalone Instant.</li>
+<li>A project tab opens the imported source in <strong>Edit Variant</strong>. Its original source files stay unchanged; an existing Library draft is preserved as a variant. Instant keeps the previous draft in History.</li>
+<li>Imported source waits for <strong>Render</strong>; opening a file does not execute its code.</li>
 <li>SVG source includes the equation and template/preamble. Review it before sharing; the complete manuscript and app storage paths are not embedded.</li>
 <li>Project-specific Typst definitions, imported files, packages and fonts may still require the original project. Standalone fallback cannot recreate missing dependencies.</li>
 <li>Other applications may strip SVG metadata when pasting or copying it. Keep the original SVG or use Instant History if the copied artwork has no editable source. SVGs exported by older versions have no restoration metadata.</li>
@@ -118,6 +120,7 @@
 <li><strong>Instant from Anywhere</strong>: <code>⌃⌥⌘N</code>. <strong>Edit SVG from Clipboard</strong>: <code>⌃⌥⌘V</code>.</li>
 <li>Change or disable either shortcut in <strong>Settings → Shortcuts</strong> or <code>keybindings.json</code>. If another app owns a shortcut, choose a different binding.</li>
 <li>Closing the main window keeps the app available. <strong>Quit Mathlidelux</strong> (<code>⌘Q</code>) ends the app after saving recoverable work.</li>
+<li>Reopening Mathlidelux through Spotlight or another app copy reuses the running app and its menu-bar icon.</li>
 <li>Login autostart is not enabled automatically.</li>
 </ul>
 <h2 id="current-scope">Current scope</h2>

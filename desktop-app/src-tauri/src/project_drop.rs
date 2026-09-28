@@ -8,86 +8,193 @@ use serde_json::Value;
 mod mac {
     use super::*;
     use objc::{
-        class, msg_send,
-        runtime::{method_setImplementation, Imp, Method, Object, Sel, BOOL, NO},
+        msg_send,
+        runtime::{
+            class_addMethod, method_setImplementation, Class, Imp, Method, Object, Sel, BOOL, NO,
+            YES,
+        },
         sel, sel_impl,
     };
     use std::{
-        ffi::CStr,
+        collections::HashMap,
         path::PathBuf,
-        sync::{
-            atomic::{AtomicUsize, Ordering},
-            Mutex, OnceLock,
-        },
+        sync::{Mutex, OnceLock},
         time::{Duration, Instant},
     };
 
+    extern "C" {
+        fn method_getTypeEncoding(method: *const Method) -> *const std::ffi::c_char;
+    }
     struct Drop {
         paths: Vec<PathBuf>,
         time: Instant,
     }
     static DROP: Mutex<Option<Drop>> = Mutex::new(None);
-    static MAIN_VIEW: AtomicUsize = AtomicUsize::new(0);
+    #[derive(Clone)]
+    struct Target {
+        label: String,
+        app: Option<tauri::AppHandle>,
+    }
+    static VIEWS: OnceLock<Mutex<HashMap<usize, Target>>> = OnceLock::new();
+    fn views() -> &'static Mutex<HashMap<usize, Target>> {
+        VIEWS.get_or_init(Mutex::default)
+    }
+    static ENTERED: OnceLock<Imp> = OnceLock::new();
+    static UPDATED: OnceLock<Imp> = OnceLock::new();
     static ORIGINAL: OnceLock<Imp> = OnceLock::new();
+    static PREPARED: OnceLock<Imp> = OnceLock::new();
     #[cfg(test)]
     unsafe fn ns(text: &str) -> *mut Object {
-        let value: *mut Object = msg_send![class!(NSString), alloc];
+        let value: *mut Object = msg_send![objc::class!(NSString), alloc];
         let value: *mut Object =
             msg_send![value, initWithBytes:text.as_ptr() length:text.len() encoding:4usize];
         let _: *mut Object = msg_send![value, autorelease];
         value
     }
     unsafe fn read_board(board: *mut Object) -> Vec<PathBuf> {
-        if board.is_null() {
-            return vec![];
+        crate::native_import::mac::file_paths(board)
+    }
+    fn target(this: &Object) -> Option<Target> {
+        views()
+            .lock()
+            .ok()?
+            .get(&(this as *const Object as usize))
+            .cloned()
+    }
+    unsafe fn external(info: *mut Object) -> bool {
+        let supports: BOOL = msg_send![info, respondsToSelector:sel!(draggingSource)];
+        if supports == NO {
+            return true;
         }
-        let classes: *mut Object = msg_send![class!(NSArray), arrayWithObject:class!(NSURL)];
-        let urls: *mut Object =
-            msg_send![board, readObjectsForClasses:classes options:std::ptr::null::<Object>()];
-        let count: usize = msg_send![urls, count];
-        let mut paths = Vec::new();
-        for index in 0..count {
-            let url: *mut Object = msg_send![urls, objectAtIndex:index];
-            let file: BOOL = msg_send![url, isFileURL];
-            if file == NO {
-                continue;
-            }
-            let path: *mut Object = msg_send![url, path];
-            let bytes: *const std::ffi::c_char = msg_send![path, UTF8String];
-            if !bytes.is_null() {
-                paths.push(PathBuf::from(
-                    CStr::from_ptr(bytes).to_string_lossy().into_owned(),
-                ));
-            }
+        let source: *mut Object = msg_send![info, draggingSource];
+        source.is_null()
+    }
+    unsafe fn explicit_svg(info: *mut Object) -> bool {
+        if !external(info) {
+            return false;
         }
-        paths
+        let board: *mut Object = msg_send![info, draggingPasteboard];
+        crate::native_import::mac::types(board).iter().any(|kind| {
+            let lower = kind.to_ascii_lowercase();
+            lower.contains("svg") || lower == "com.microsoft.art--gvml-clipformat"
+        })
+    }
+    extern "C" fn entered(this: &Object, selector: Sel, info: *mut Object) -> usize {
+        unsafe {
+            if target(this).is_some() && explicit_svg(info) {
+                return 1;
+            } // NSDragOperationCopy
+            let original: unsafe extern "C" fn(&Object, Sel, *mut Object) -> usize =
+                std::mem::transmute(*ENTERED.get().unwrap());
+            original(this, selector, info)
+        }
+    }
+    extern "C" fn updated(this: &Object, selector: Sel, info: *mut Object) -> usize {
+        unsafe {
+            if target(this).is_some() && explicit_svg(info) {
+                return 1;
+            }
+            let original: unsafe extern "C" fn(&Object, Sel, *mut Object) -> usize =
+                std::mem::transmute(*UPDATED.get().unwrap());
+            original(this, selector, info)
+        }
+    }
+    extern "C" fn prepare(this: &Object, selector: Sel, info: *mut Object) -> BOOL {
+        unsafe {
+            if target(this).is_some() && explicit_svg(info) {
+                return YES;
+            }
+            let original: unsafe extern "C" fn(&Object, Sel, *mut Object) -> BOOL =
+                std::mem::transmute(*PREPARED.get().unwrap());
+            original(this, selector, info)
+        }
     }
     extern "C" fn perform(this: &Object, selector: Sel, info: *mut Object) -> BOOL {
         unsafe {
-            if this as *const Object as usize == MAIN_VIEW.load(Ordering::Relaxed) {
+            if let Some(target) = target(this) {
                 let board: *mut Object = msg_send![info, draggingPasteboard];
-                if let Ok(mut captured) = DROP.lock() {
-                    *captured = Some(Drop {
-                        paths: read_board(board),
-                        time: Instant::now(),
-                    });
+                if std::env::var("MATHLIDELUX_DROP_DIAGNOSTICS").as_deref() == Ok("1") {
+                    let kinds = crate::native_import::mac::types(board);
+                    eprintln!(
+                        "Mathlidelux drop: {} types {:?}; internal={}",
+                        kinds.len(),
+                        kinds,
+                        !external(info)
+                    );
+                }
+                // Internal cards/tabs retain HTML drag semantics. The event's
+                // actual pasteboard, never the general clipboard, is authoritative.
+                if external(info) {
+                    if let Some(app) = target.app {
+                        match crate::native_import::mac::svg(board) {
+                            Ok(sources) if !sources.is_empty() => {
+                                let destination = if target.label == "main" {
+                                    "workspace".to_owned()
+                                } else {
+                                    target.label.clone()
+                                };
+                                tauri::async_runtime::spawn_blocking(move || {
+                                    if let Err(error) =
+                                        crate::resident::import_svg_to(&app, &sources, &destination)
+                                    {
+                                        crate::resident::report(&app, error);
+                                    }
+                                });
+                                // WebKit must not import the same external SVG a second time.
+                                return YES;
+                            }
+                            Err(error) if explicit_svg(info) => {
+                                crate::resident::report(&app, error);
+                                return YES;
+                            }
+                            _ => {}
+                        }
+                    }
+                    if target.label == "main" {
+                        if let Ok(mut captured) = DROP.lock() {
+                            *captured = Some(Drop {
+                                paths: read_board(board),
+                                time: Instant::now(),
+                            });
+                        }
+                    }
                 }
             }
-            // Forward directly to Wry's original implementation. Changing the
-            // view's class after creation breaks AppKit's safe-area cache on macOS 26.
+            // Preserve Wry/WebKit's implementation and the AppKit view identity.
             let original: unsafe extern "C" fn(&Object, Sel, *mut Object) -> BOOL =
                 std::mem::transmute(*ORIGINAL.get().unwrap());
             original(this, selector, info)
         }
     }
     pub fn install(window: &tauri::WebviewWindow) -> tauri::Result<()> {
-        window.with_webview(|webview| unsafe {
+        use tauri::Manager;
+        let target = Target {
+            label: window.label().to_owned(),
+            app: Some(window.app_handle().clone()),
+        };
+        window.with_webview(move |webview| unsafe {
             let view = webview.inner().cast::<Object>();
-            install_view(view);
+            install_view(view, target);
+            // Add, rather than replace, WebKit's existing HTML and file types.
+            let current: *mut Object = msg_send![view, registeredDraggedTypes];
+            let types: *mut Object = if current.is_null() {
+                msg_send![objc::class!(NSMutableArray), new]
+            } else {
+                msg_send![current, mutableCopy]
+            };
+            for kind in [
+                "public.svg-image",
+                "image/svg+xml",
+                "com.microsoft.image-svg-xml",
+                "com.microsoft.Art--GVML-ClipFormat",
+            ] {
+                let _: () = msg_send![types, addObject:crate::native_import::mac::ns(kind)];
+            }
+            let _: () = msg_send![view, registerForDraggedTypes:types];
+            let _: () = msg_send![types, release];
         })
     }
-    unsafe fn install_view(view: *mut Object) {
-        // Only hook the app-owned Wry class, never WKWebView or NSView.
+    unsafe fn install_view(view: *mut Object, target: Target) {
         let mut class = Some((*view).class());
         let mut wry = None;
         while let Some(candidate) = class {
@@ -97,12 +204,14 @@ mod mac {
             }
             class = candidate.superclass();
         }
-        let Some(method) = wry.and_then(|class| class.instance_method(sel!(performDragOperation:)))
-        else {
+        let Some(wry) = wry else {
             eprintln!(
-                "Finder import hook unavailable for {}",
+                "Native import hook unavailable for {}",
                 (*view).class().name()
             );
+            return;
+        };
+        let Some(method) = wry.instance_method(sel!(performDragOperation:)) else {
             return;
         };
         ORIGINAL.get_or_init(|| {
@@ -113,12 +222,51 @@ mod mac {
                 ),
             )
         });
-        MAIN_VIEW.store(view as usize, Ordering::Relaxed);
+        for (selector, saved, replacement) in [
+            (
+                sel!(draggingEntered:),
+                &ENTERED,
+                entered as extern "C" fn(&Object, Sel, *mut Object) -> usize,
+            ),
+            (sel!(draggingUpdated:), &UPDATED, updated),
+        ] {
+            if let Some(method) = wry.instance_method(selector) {
+                saved.get_or_init(|| method_setImplementation(method as *const Method as *mut Method,
+                    std::mem::transmute::<extern "C" fn(&Object, Sel, *mut Object) -> usize, Imp>(replacement)));
+            }
+        }
+        if let Some(method) = wry.instance_method(sel!(prepareForDragOperation:)) {
+            PREPARED.get_or_init(|| {
+                let original = method.implementation();
+                let replacement = std::mem::transmute::<
+                    extern "C" fn(&Object, Sel, *mut Object) -> BOOL,
+                    Imp,
+                >(prepare);
+                // prepare is normally inherited from WKWebView: override on Wry
+                // instead of changing WebKit's implementation for every app view.
+                if class_addMethod(
+                    wry as *const Class as *mut Class,
+                    sel!(prepareForDragOperation:),
+                    replacement,
+                    method_getTypeEncoding(method as *const Method as *mut Method),
+                ) == NO
+                {
+                    method_setImplementation(method as *const Method as *mut Method, replacement);
+                }
+                original
+            });
+        }
+        views().lock().unwrap().insert(view as usize, target);
     }
-    pub fn clear() {
-        MAIN_VIEW.store(0, Ordering::Relaxed);
-        if let Ok(mut captured) = DROP.lock() {
-            *captured = None;
+    pub fn clear(label: &str) {
+        views()
+            .lock()
+            .unwrap()
+            .retain(|_, target| target.label != label);
+        if label == "main" {
+            if let Ok(mut captured) = DROP.lock() {
+                *captured = None;
+            }
         }
     }
     fn consume(captured: &mut Option<Drop>, names: &Value) -> Result<Value> {
@@ -157,6 +305,7 @@ mod mac {
     #[cfg(test)]
     mod tests {
         use super::*;
+        use objc::class;
         use serde_json::json;
         unsafe fn test_board() -> *mut Object {
             // Keep parallel AppKit tests on explicitly different pasteboards.
@@ -172,13 +321,35 @@ mod mac {
             extern "C" fn original(_: &Object, _: Sel, _: *mut Object) -> BOOL {
                 YES
             }
+            extern "C" fn rejected(_: &Object, _: Sel, _: *mut Object) -> BOOL {
+                NO
+            }
+            extern "C" fn no_operation(_: &Object, _: Sel, _: *mut Object) -> usize {
+                0
+            }
+            extern "C" fn source(this: &Object, _: Sel) -> *mut Object {
+                unsafe { *this.get_ivar::<*mut Object>("source") }
+            }
             extern "C" fn board(this: &Object, _: Sel) -> *mut Object {
                 unsafe { *this.get_ivar::<*mut Object>("board") }
             }
             unsafe {
                 let pool: *mut Object = msg_send![class!(NSAutoreleasePool), new];
+                let mut parent =
+                    ClassDecl::new("MathlideluxTestWebKitParent", class!(NSObject)).unwrap();
+                parent.add_method(
+                    sel!(prepareForDragOperation:),
+                    rejected as extern "C" fn(&Object, Sel, *mut Object) -> BOOL,
+                );
+                let parent = parent.register();
                 let mut declaration =
-                    ClassDecl::new("wry::test::WryWebView0.57.0", class!(NSObject)).unwrap();
+                    ClassDecl::new("wry::test::WryWebView0.57.0", parent).unwrap();
+                for selector in [sel!(draggingEntered:), sel!(draggingUpdated:)] {
+                    declaration.add_method(
+                        selector,
+                        no_operation as extern "C" fn(&Object, Sel, *mut Object) -> usize,
+                    );
+                }
                 declaration.add_method(
                     sel!(performDragOperation:),
                     original as extern "C" fn(&Object, Sel, *mut Object) -> BOOL,
@@ -189,6 +360,11 @@ mod mac {
                 let mut declaration =
                     ClassDecl::new("MathlideluxTestDragInfo", class!(NSObject)).unwrap();
                 declaration.add_ivar::<*mut Object>("board");
+                declaration.add_ivar::<*mut Object>("source");
+                declaration.add_method(
+                    sel!(draggingSource),
+                    source as extern "C" fn(&Object, Sel) -> *mut Object,
+                );
                 declaration.add_method(
                     sel!(draggingPasteboard),
                     board as extern "C" fn(&Object, Sel) -> *mut Object,
@@ -201,7 +377,13 @@ mod mac {
                 let urls: *mut Object = msg_send![class!(NSArray), arrayWithObject:url];
                 let _: BOOL = msg_send![pasteboard, writeObjects:urls];
                 (*info).set_ivar("board", pasteboard);
-                install_view(view);
+                install_view(
+                    view,
+                    Target {
+                        label: "main".into(),
+                        app: None,
+                    },
+                );
                 assert_eq!((*view).class(), class);
                 let forwarded: BOOL = msg_send![view, performDragOperation:info];
                 assert_eq!(forwarded, YES);
@@ -212,7 +394,22 @@ mod mac {
                 let forwarded: BOOL = msg_send![other, performDragOperation:info];
                 assert_eq!(forwarded, YES);
                 assert!(paths(&json!(["Test folder"])).is_err());
-                clear();
+                let _: i64 = msg_send![pasteboard, clearContents];
+                let bytes = b"<svg></svg>";
+                let data: *mut Object =
+                    msg_send![class!(NSData), dataWithBytes:bytes.as_ptr() length:bytes.len()];
+                let _: BOOL =
+                    msg_send![pasteboard, setData:data forType:ns("com.microsoft.image-svg-xml")];
+                let accepted: usize = msg_send![view, draggingEntered:info];
+                let prepared: BOOL = msg_send![view, prepareForDragOperation:info];
+                assert_eq!((accepted, prepared), (1, YES));
+                let untouched: BOOL = msg_send![other, prepareForDragOperation:info];
+                assert_eq!(untouched, NO);
+                (*info).set_ivar("source", view);
+                let accepted: usize = msg_send![view, draggingEntered:info];
+                let prepared: BOOL = msg_send![view, prepareForDragOperation:info];
+                assert_eq!((accepted, prepared), (0, NO));
+                clear("main");
                 let _: () = msg_send![info, release];
                 let _: () = msg_send![view, release];
                 let _: () = msg_send![other, release];

@@ -224,9 +224,14 @@ pub fn fallback_template(project: &Value, root: &Path) -> Value {
 
 pub fn card_recipe(store: &Storage, p: &Value, card: &Value, size: f64) -> Result<Value> {
     let root = store.root(string(p, "id"))?;
+    let color = crate::compiler::card_color(card)?.unwrap_or("000000");
+    let context = ["restoredContextFile", "file"]
+        .iter()
+        .find_map(|key| card[*key].as_str().filter(|s| !s.is_empty()))
+        .unwrap_or_else(|| string(p, "main"));
     let draft = json!({"source":card["tex"],"kind":card["kind"],
         "template":fallback_template(p,&root),"fontSize":if size > 0. {size} else {card["sourceFontSize"].as_f64().unwrap_or(11.)},
-        "color":"#000000","exportFormat":"svg","contextFile":card.get("file").unwrap_or(&p["main"])});
+        "color":format!("#{color}"),"exportFormat":"svg","contextFile":context});
     let value = recipe(&draft, reference(store, p)?);
     validate(&value)?;
     Ok(value)
@@ -271,6 +276,27 @@ mod tests {
     use super::*;
     fn draft() -> Value {
         json!({"source":"a < b & x_{日}","kind":"block","fontSize":24,"color":"#123456","exportFormat":"svg","template":{"id":"latex","name":"LaTeX","format":"latex","compiler":"pdflatex","source":"\\documentclass{article}\n\\begin{document}\n{{content}}\n\\end{document}"}})
+    }
+    #[test]
+    fn restored_variant_recipe_preserves_color_size_and_context() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("project");
+        fs::create_dir(&root).unwrap();
+        fs::write(root.join("main.typ"), "$x$").unwrap();
+        fs::write(root.join("definitions.typ"), "#let answer = 42").unwrap();
+        let store = Storage::new(temp.path().join("data"), temp.path().join("legacy")).unwrap();
+        let project = store.open(&root, Some("main.typ")).unwrap();
+        let mut card = json!({"tex":"answer","kind":"inline","file":"main.typ","restoredContextFile":"definitions.typ","instantColor":"Ab1234","sourceFontSize":11});
+        let recipe = card_recipe(&store, &project, &card, 24.).unwrap();
+        assert_eq!(recipe["draft"]["color"], "#Ab1234");
+        assert_eq!(recipe["draft"]["contextFile"], "definitions.typ");
+        assert_eq!(recipe["draft"]["fontSize"], 24.);
+        card.as_object_mut().unwrap().remove("restoredContextFile");
+        card.as_object_mut().unwrap().remove("instantColor");
+        card["file"] = Value::Null;
+        let ordinary = card_recipe(&store, &project, &card, 0.).unwrap();
+        assert_eq!(ordinary["draft"]["color"], "#000000");
+        assert_eq!(ordinary["draft"]["contextFile"], "main.typ");
     }
     #[test]
     fn svg_preserves_source_settings_and_rejects_invalid_recipes() {

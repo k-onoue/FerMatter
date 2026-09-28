@@ -12,6 +12,7 @@ export function VariantEditor({
   onClose,
   onSave,
   onDrag,
+  onRender,
 }: {
   project: Project;
   editing: Card;
@@ -21,6 +22,7 @@ export function VariantEditor({
   onClose: () => void;
   onSave: () => void;
   onDrag: (card: Card) => void;
+  onRender: () => void;
 }) {
   return (
     <Modal title="Edit Variant" onClose={onClose} wide>
@@ -43,8 +45,15 @@ export function VariantEditor({
         </select>
       </div>
       <div className="variant-preview">
+        {editing.requiresRender === true && (
+          <button className="primary" onClick={onRender}>
+            Render
+          </button>
+        )}
         {editBusy && <LoaderCircle size={15} className="spin" />}
-        <ImagePreview card={editPreview || editing} onDrag={onDrag} />
+        {editing.requiresRender !== true && (
+          <ImagePreview card={editPreview || editing} onDrag={onDrag} />
+        )}
         {editPreview?.error && (
           <pre className="error-box">{editPreview.error}</pre>
         )}
@@ -52,6 +61,7 @@ export function VariantEditor({
       <div className="variant-editor">
         <CodeEditor
           project={project.id}
+          focusRequest={editing.restoredContextFile ? editing.id : undefined}
           path={
             "library/" +
             editing.id +

@@ -12,6 +12,7 @@
 | Project selection, imports, duplication and undo | `src/ProjectsPage.tsx`, `src/projectSelection.ts`, `src-tauri/src/project_commands.rs`, `src-tauri/src/project_location.rs`, `src-tauri/src/project_history.rs` |
 | First-launch folder choice and demo migration | `src/ProjectSetup.tsx`, `src-tauri/src/project_setup.rs` |
 | Workflows, selection, Library variants | `src/App.tsx`, `src/variants.ts` |
+| Project workspace tabs and retained view state | `src/workspaces.ts`, `src/WorkspaceTabs.tsx` |
 | Library outline/labels and variant editor | `src/LibraryNavigation.tsx`, `src/VariantEditor.tsx` |
 | Shared Monaco models, coloring, completion | `src/editor.tsx` |
 | Source buffers, file tree, tabs and split panes | `src/SourceWorkspace.tsx`, `src/panes.ts` |

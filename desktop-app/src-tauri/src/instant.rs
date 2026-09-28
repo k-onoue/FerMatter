@@ -327,6 +327,8 @@ fn open_window(app: &tauri::AppHandle, project: Option<&Value>) -> tauri::Result
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         .hidden_title(true);
     let window = builder.build()?;
+    #[cfg(target_os = "macos")]
+    crate::project_drop::install(&window)?;
     window.set_background_color(Some(tauri::utils::config::Color(0, 0, 0, 0)))?;
     Ok(())
 }

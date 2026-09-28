@@ -1,31 +1,34 @@
 import type { DragEvent } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { rpc } from "./api";
+import { acceptsSVG, readSVGTransfer } from "./svgTransfer";
 
-export async function openSVG() {
+export async function openSVG(target?: "workspace") {
   const path = await open({
     multiple: false,
     filters: [{ name: "SVG", extensions: ["svg"] }],
   });
-  if (typeof path === "string") await rpc("import_svg", { path });
+  if (typeof path === "string") await rpc("import_svg", { path, target });
 }
 
-export function dropSVG(event: DragEvent, report: (error: unknown) => void) {
-  const files = Array.from(event.dataTransfer.files);
-  if (
-    !files.length ||
-    !files.every((file) => file.name.toLowerCase().endsWith(".svg"))
-  )
-    return false;
+export function dropSVG(
+  event: DragEvent,
+  report: (error: unknown) => void,
+  target?: "workspace",
+) {
+  // The drag data store becomes protected when the synchronous event ends.
+  const transfer = {
+    files: Array.from(event.dataTransfer.files),
+    svg: event.dataTransfer.getData("image/svg+xml"),
+    html: event.dataTransfer.getData("text/html"),
+    text: event.dataTransfer.getData("text/plain"),
+  };
+  if (!acceptsSVG(transfer)) return false;
   event.preventDefault();
   event.stopPropagation();
   void (async () => {
-    if (files.length > 16 || files.some((file) => file.size > 16 * 1024 * 1024))
-      throw new Error("Drop up to 16 SVG files, each smaller than 16 MB.");
-    if (files.reduce((bytes, file) => bytes + file.size, 0) > 64 * 1024 * 1024)
-      throw new Error("SVG selection exceeds 64 MB.");
-    for (const file of files)
-      await rpc("import_svg", { svg: await file.text() });
+    const sources = await readSVGTransfer(transfer);
+    await rpc("import_svg", { sources, target });
   })().catch(report);
   return true;
 }

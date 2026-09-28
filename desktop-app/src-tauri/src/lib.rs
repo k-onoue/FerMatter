@@ -17,8 +17,11 @@ mod resident;
 mod roundtrip;
 mod scan;
 mod settings;
+#[cfg(unix)]
+mod single_instance;
 mod source_commands;
 mod storage;
+mod svg_payload;
 mod toolchain;
 pub mod verification;
 #[cfg(target_os = "macos")]
@@ -81,23 +84,48 @@ async fn request(
     if operation != "desktop_background" {
         payload["key"] = json!(format!("{}::{}", window.label(), string(&payload, "key")));
     }
-    if operation == "instant_import_pending" {
+    if operation == "resident_workspace" {
+        resident::workspace(&app, window.label(), &payload["projects"])?;
+        return Ok(Value::Null);
+    }
+    if operation == "instant_import_pending" || operation == "incoming_import" {
         return resident::incoming(&app, window.label(), string(&payload, "token"));
     }
     if operation == "import_svg" {
-        let sources = if let Some(svg) = payload["svg"].as_str() {
+        let sources = if let Some(sources) = payload["sources"].as_array() {
+            sources
+                .iter()
+                .map(|v| {
+                    v.as_str()
+                        .map(str::to_owned)
+                        .ok_or_else(|| "Invalid SVG batch.".to_string())
+                })
+                .collect::<Result<Vec<_>>>()?
+        } else if let Some(svg) = payload["svg"].as_str() {
             vec![svg.to_owned()]
         } else {
             vec![roundtrip::read_svg(Path::new(string(&payload, "path")))?]
         };
-        resident::import_svg(&app, &sources)?;
+        let target = if string(&payload, "target") == "workspace" {
+            "workspace"
+        } else if window.label().starts_with("instant") {
+            window.label()
+        } else {
+            ""
+        };
+        resident::import_svg_to(&app, &sources, target)?;
         return Ok(Value::Null);
     }
     if operation == "instant_clipboard" {
         let (tx, rx) = std::sync::mpsc::sync_channel(1);
         let handle = app.clone();
+        let target = if window.label() == "main" {
+            "workspace".to_owned()
+        } else {
+            window.label().to_owned()
+        };
         app.run_on_main_thread(move || {
-            let _ = tx.send(resident::from_clipboard(&handle));
+            let _ = tx.send(resident::from_clipboard_to(&handle, &target));
         })
         .map_err(err)?;
         rx.recv().map_err(err)??;
@@ -675,7 +703,23 @@ fn dispatch(
     }
 }
 pub fn run() {
-    tauri::Builder::default()
+    let context = tauri::generate_context!();
+    #[cfg(unix)]
+    let guard = match single_instance::claim(&context.config().identifier) {
+        Ok(single_instance::Claim::Primary(guard)) => guard,
+        Ok(single_instance::Claim::Secondary(socket)) => {
+            single_instance::secondary(context, socket);
+            return;
+        }
+        Err(error) => {
+            eprintln!("Unable to establish the Mathlidelux resident: {error}");
+            return;
+        }
+    };
+    let builder = tauri::Builder::default();
+    #[cfg(unix)]
+    let builder = builder.manage(guard);
+    builder
         .manage(resident::Resident::default())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
@@ -735,6 +779,8 @@ pub fn run() {
                 tools_revision: Mutex::new(string(&tools_snapshot, "revision").to_owned()),
             }));
             app.manage(lifecycle::Lifecycle::default());
+            #[cfg(unix)]
+            app.state::<single_instance::Guard>().listen(app.handle())?;
             let menu = tauri::menu::Menu::default(app.handle())?;
             for item in menu.items()? {
                 if let Some(submenu) = item.as_submenu() {
@@ -792,17 +838,17 @@ pub fn run() {
             }
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 #[cfg(target_os = "macos")]
-                if window.label() == "main" {
-                    project_drop::clear();
-                }
+                project_drop::clear(window.label());
                 let runtime = window.state::<Arc<Runtime>>();
                 close_jobs(&runtime, window.label());
             }
         })
         .invoke_handler(tauri::generate_handler![request])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("Unable to start Mathlidelux")
         .run(|app, event| match event {
+            #[cfg(unix)]
+            tauri::RunEvent::Ready => single_instance::primary_arguments(app),
             #[cfg(target_os = "macos")]
             tauri::RunEvent::Opened { urls } => resident::open_files(
                 app,

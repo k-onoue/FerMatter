@@ -12,6 +12,8 @@
 
 ### Added
 
+- Project workspace tabs that retain Library, Source and PDF state independently.
+- Restore SVG artwork dragged from PowerPoint into an existing project tab or Instant, opening the appropriate editor when needed.
 - Fresh-input release verification, recorded dependency audits and an explicit signed/notarized packaging path with validation manifests.
 - Editable source recipes in SVG exports, project-aware Instant restoration, macOS Open With/Dock import, a menu-bar entry and configurable global Instant shortcuts.
 
@@ -39,6 +41,7 @@
 
 ### Changed
 
+- Reuse the running macOS app when launched again, including from another app copy, to prevent duplicate menu-bar icons.
 - Protect settings against stale-window overwrites and preserve rapid preference changes with ordered saves and explicit reload after conflicts.
 - Stream large project snapshots and hashes with cancellation, bound image allocations and avoid loading every selected image when copying multiple items.
 - Reclaim eligible old render/export/PDF caches at startup while preserving saved work and clipboard references.

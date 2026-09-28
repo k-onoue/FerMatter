@@ -18,6 +18,12 @@ import { stepZoom } from "./scrollZoom";
 import { useControlScroll } from "./useControlScroll";
 import { PdfArtworkDrag, usePdfArtworkHover } from "./PdfArtworkDrag";
 pdfjs.GlobalWorkerOptions.workerSrc = workerURL;
+export interface PdfViewState {
+  path: string;
+  page: number;
+  zoom: number;
+  fit: boolean;
+}
 export function PdfPane({
   document,
   project,
@@ -27,6 +33,8 @@ export function PdfPane({
   onNavigate,
   onSource,
   target,
+  initialView,
+  onView,
 }: {
   document: DocumentPDF | null;
   project: Project;
@@ -36,6 +44,8 @@ export function PdfPane({
   onNavigate: (anchor: Anchor) => void;
   onSource: (file: string, line: number) => void;
   target?: string;
+  initialView?: PdfViewState;
+  onView?: (view: PdfViewState) => void;
 }) {
   useEffect(() => {
     if (!document) return;
@@ -46,8 +56,19 @@ export function PdfPane({
     };
   }, [document?.pdfPath, document?.sourceRoot]);
   const [pdf, setPdf] = useState<pdfjs.PDFDocumentProxy | null>(null);
-  const [page, setPage] = useState(1);
-  const [{ zoom, fit }, setView] = useState({ zoom: 1, fit: true });
+  const restored = useRef(
+    initialView?.path === document?.pdfPath ? initialView : undefined,
+  );
+  const originalTarget = useRef(target);
+  const restoring = useRef(!!restored.current);
+  const [page, setPage] = useState(restored.current?.page || 1);
+  const [{ zoom, fit }, setView] = useState({
+    zoom: restored.current?.zoom || 1,
+    fit: restored.current?.fit ?? true,
+  });
+  useEffect(() => {
+    if (document) onView?.({ path: document.pdfPath, page, zoom, fit });
+  }, [document?.pdfPath, page, zoom, fit]);
   const [width, setWidth] = useState(400);
   const [error, setError] = useState("");
   const [pageSize, setPageSize] = useState({ width: 1, height: 1, scale: 1 });
@@ -134,7 +155,11 @@ export function PdfPane({
         .then((p) => {
           if (p && !gone) {
             setPdf(p);
-            setPage(1);
+            setPage(
+              restored.current?.path === document?.pdfPath
+                ? Math.min(restored.current.page, p.numPages)
+                : 1,
+            );
           }
         })
         .catch((e) => !gone && setError(String(e)));
@@ -145,6 +170,11 @@ export function PdfPane({
     };
   }, [document?.pdfPath]);
   useEffect(() => {
+    if (restoring.current && restored.current?.path === document?.pdfPath) {
+      if (!pdf) return;
+      restoring.current = false;
+      if (target === originalTarget.current) return;
+    }
     const a = document?.anchors.find((a) => a.targetID === target);
     if (a) setPage(a.page);
   }, [target, document, pdf]);
