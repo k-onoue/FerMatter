@@ -1,5 +1,10 @@
 import { expect, it } from "vitest";
-import { anchorAtPoint, targetAtSource, targetsAtLine } from "./navigation";
+import {
+  anchorAtPoint,
+  artworkAtPoint,
+  targetAtSource,
+  targetsAtLine,
+} from "./navigation";
 import type { SourceTarget } from "./types";
 const targets = [
   {
@@ -48,4 +53,33 @@ it("prioritizes the clicked PDF line, rejects blank regions, and respects figure
   expect(anchorAtPoint(anchors, 1, 145, 101)?.targetID).toBe("a");
   expect(anchorAtPoint(anchors, 1, 145, 250)).toBeUndefined();
   expect(anchorAtPoint(anchors, 2, 150, 200)?.targetID).toBe("figure");
+});
+it("offers PDF artwork only inside a mapped target, excluding headings and distant prose", () => {
+  const anchors = [
+    { targetID: "a", page: 1, x: 100, y: 100 },
+    { targetID: "heading", page: 1, x: 400, y: 100 },
+    { targetID: "c", page: 2, x: 50, y: 50, width: 200, height: 200 },
+  ];
+  expect(artworkAtPoint(anchors, targets, 1, 110, 100, "typst")?.targetID).toBe(
+    "a",
+  );
+  expect(
+    artworkAtPoint(anchors, targets, 1, 600, 100, "typst"),
+  ).toBeUndefined();
+  expect(
+    artworkAtPoint(anchors, targets, 1, 405, 100, "typst"),
+  ).toBeUndefined();
+  expect(artworkAtPoint(anchors, targets, 2, 240, 240, "typst")?.targetID).toBe(
+    "c",
+  );
+  expect(
+    artworkAtPoint(anchors, targets, 1, 240, 240, "typst"),
+  ).toBeUndefined();
+  // A SyncTeX line containing two equations cannot safely identify one image.
+  expect(
+    artworkAtPoint(anchors, targets, 1, 110, 100, "latex"),
+  ).toBeUndefined();
+  expect(artworkAtPoint(anchors, targets, 2, 240, 240, "latex")?.targetID).toBe(
+    "c",
+  );
 });

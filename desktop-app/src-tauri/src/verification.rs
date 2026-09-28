@@ -78,6 +78,34 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
             &Value::Null,
             &c,
         )?;
+        // PDF drags must use the compiled snapshot, even when live sources
+        // have since changed. Also catches Typst navigation metadata leaking
+        // into the snapshot used to render its standalone artwork.
+        let drag_card = cards
+            .iter()
+            .find(|card| string(card, "kind") == "figure")
+            .unwrap_or(&cards[0]);
+        let entry = root.join(main);
+        let original = fs::read(&entry).map_err(err)?;
+        fs::write(
+            &entry,
+            "deliberately invalid live source for PDF drag verification",
+        )
+        .map_err(err)?;
+        let artwork = compiler::document_artwork(
+            &document,
+            string(drag_card, "id"),
+            &cache.join("PDFArtwork"),
+            &c,
+        );
+        fs::write(&entry, original).map_err(err)?;
+        let artwork = artwork?;
+        if artwork["tex"] != drag_card["tex"] || artwork["status"] != "ready" {
+            return Err("PDF drag did not preserve its compiled source".into());
+        }
+        for format in ["svg", "png", "jpeg", "pdf"] {
+            crate::export::image_file(&artwork, format, 24., &project_dir.join("Exports"))?;
+        }
         for card in &cards {
             for format in ["svg", "png", "jpeg", "pdf"] {
                 let path =
@@ -128,6 +156,19 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
                     return Err(format!(
                         "SyncTeX equation round trip failed: {} -> {}",
                         card["name"], reverse
+                    ));
+                }
+                let hit = compiler::drag_target(
+                    &document,
+                    &json!({"reverse":true,"page":anchor["page"],
+                    "x":anchor["x"].as_f64().unwrap() + anchor["width"].as_f64().unwrap() / 2.,
+                    "y":anchor["y"].as_f64().unwrap() + anchor["height"].as_f64().unwrap() / 2.}),
+                    &c,
+                )?;
+                if hit["targetID"] != card["id"] {
+                    return Err(format!(
+                        "PDF drag target mismatch: {} -> {}",
+                        card["id"], hit
                     ));
                 }
             }

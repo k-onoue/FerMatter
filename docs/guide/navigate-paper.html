@@ -26,7 +26,7 @@
 <li>Open your project and choose <strong>PDF</strong> (<code>⌥⌘P</code>).</li>
 <li>Use the outline to narrow the Library, then select an equation card to reveal and highlight its PDF location.</li>
 <li>Click an equation/figure in the PDF to select its Library card or Source range.</li>
-<li>Copy the selected equation or <a href="edit-equation.html">edit a presentation version</a>.</li>
+<li>Hover over a mapped equation/figure in the PDF. Once the grab handle appears, drag it into your slide; alternatively copy its card or <a href="edit-equation.html">edit a presentation version</a>.</li>
 </ol>
 <ul>
 <li>The outline follows headings across included files; parent headings include descendants.</li>
@@ -34,6 +34,8 @@
 <li>Source mode opens the matching file and equation range. Placing the caret in an equation also highlights its PDF target.</li>
 <li>Custom variants navigate to their original source; newly created equations have no paper location.</li>
 <li>Resize the PDF with its divider; its width is remembered.</li>
+<li>PDF drags use the displayed document's compiled source snapshot and the project's export format/size. They work in both Library and Source mode.</li>
+<li>A short spinner means the image is being prepared. Text and headings are not exported as equation images.</li>
 </ul>
 <h2 id="refresh-and-troubleshoot">Refresh and troubleshoot</h2>
 <ul>
@@ -41,8 +43,9 @@
 <li><strong>Rebuild PDF</strong> (<code>⇧⌘R</code>) rebuilds only the document.</li>
 <li>A failed rebuild retains the last PDF and its snapshot; it does not represent the latest edits.</li>
 <li>LaTeX requires SyncTeX. If several equations share a source line, Library selects the candidates; Source navigates to the line.</li>
+<li>Ambiguous LaTeX locations cannot be dragged directly; use the matching Library card or Source preview.</li>
 <li>Generated content may have no navigation target; see <a href="limits.html">limits</a>.</li>
-<li>Previous/next page: <code>⌘[</code> / <code>⌘]</code>; zoom: <code>⌘+</code> / <code>⌘−</code>; fit: <code>⌘0</code>.</li>
+<li>Previous/next page: <code>⌘[</code> / <code>⌘]</code>; PDF zoom: <code>⌃⌘+</code> / <code>⌃⌘−</code> or Control-scroll over the PDF; fit: <code>⌃⌘0</code>.</li>
 </ul></article>
   </main>
   <footer class="site-footer"><a href="index.html">All guides</a><a href="requirements.html">Requirements</a><a href="why.html">Why Mathlidelux</a></footer>
