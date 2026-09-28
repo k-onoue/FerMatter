@@ -28,7 +28,15 @@ import {
   Zap,
 } from "lucide-react";
 import { rpc, uid, projectName } from "./api";
-import { setProjectCompletions } from "./editor";
+import { setProjectCompletions, disposeProjectModels } from "./editor";
+import {
+  SnapshotWriter,
+  registerWindowFlush,
+  flushWindow,
+  lockWindowInteraction,
+} from "./persistence";
+import { installWindowPersistence } from "./windowPersistence";
+import { mergeScan, mergeRenderedCard } from "./projectUpdates";
 import { SourceWorkspace } from "./SourceWorkspace";
 import { PdfPane } from "./PdfPane";
 import { OutputSizeOptions } from "./OutputSizeOptions";
@@ -158,7 +166,15 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const projectRef = useRef(project);
   projectRef.current = project;
-  const writeQueue = useRef(Promise.resolve());
+  const writer = useRef(
+    new SnapshotWriter<Project>((next) =>
+      rpc("save_project", { project: next.id, value: next }),
+    ),
+  );
+  const editingRef = useRef(editing);
+  editingRef.current = editing;
+  const closeFlush = useRef(async () => {});
+  const projectTransition = useRef(0);
   const jobs = useRef(new Map<string, string>());
   const editJob = useRef(0);
   const selectedAnchor = useRef<string | undefined>(undefined);
@@ -242,7 +258,7 @@ export default function App() {
           ? {
               ...p,
               cards: p.cards.map((c) =>
-                c.id === e.card.id ? { ...c, ...e.card } : c,
+                c.id === e.card.id ? mergeRenderedCard(c, e.card) : c,
               ),
             }
           : p,
@@ -265,12 +281,45 @@ export default function App() {
     setProject(next);
     projectRef.current = next;
     setProjects((all) => [next, ...all.filter((p) => p.id !== next.id)]);
-    writeQueue.current = writeQueue.current
-      .then(() => rpc("save_project", { project: next.id, value: next }))
-      .then(() => {})
-      .catch(report);
-    return writeQueue.current;
+    const operation = writer.current.save(next);
+    void operation.catch(report);
+    return operation;
   }
+  closeFlush.current = async () => {
+    const current = projectRef.current;
+    if (current) {
+      let draft;
+      do {
+        draft = editingRef.current;
+        if (draft)
+          await persist({ ...projectRef.current!, libraryDraft: draft });
+      } while (draft !== editingRef.current);
+    }
+    await Promise.all([
+      writer.current.flush(),
+      preferencesDocument.flush(),
+      themeDocument.flush(),
+      keysDocument.flush(),
+    ]);
+  };
+  useEffect(() => {
+    const unregister = registerWindowFlush("library", () =>
+      closeFlush.current(),
+    );
+    let gone = false;
+    let cleanup: (() => void) | undefined;
+    void installWindowPersistence(report)
+      .then((stop) => {
+        if (gone) stop();
+        else cleanup = stop;
+      })
+      .catch(report);
+    return () => {
+      gone = true;
+      cleanup?.();
+      unregister();
+    };
+  }, []);
   async function updateSettings(next: Partial<Preferences>) {
     try {
       await preferencesDocument.patch(next);
@@ -329,27 +378,49 @@ export default function App() {
     setBusy("");
     setPdfBusy(false);
   }
-  async function activate(p: Project) {
-    await cancelJobs();
-    await writeQueue.current;
-    projectRef.current = p;
-    setProject(p);
-    setProjects((all) => [p, ...all.filter((x) => x.id !== p.id)]);
-    setMode("library");
-    setLibraryStale(false);
-    setSourceMounted(false);
-    setPdf(null);
-    setPdfOpen(false);
-    setSelected(new Set());
-    setSearch("");
-    setFilter("all");
-    setKind("all");
-    setDrafts({});
-    setEditing(null);
-    setError("");
-    if (!p.cards?.length) void rescan(p);
+  async function activate(
+    p: Project,
+    transition = ++projectTransition.current,
+  ) {
+    if (transition !== projectTransition.current) return;
+    const release = lockWindowInteraction();
+    try {
+      await flushWindow();
+      if (transition !== projectTransition.current) return;
+      await cancelJobs();
+      if (transition !== projectTransition.current) return;
+      if (projectRef.current?.id === p.id)
+        p = {
+          ...p,
+          ...projectRef.current,
+          main: p.main,
+          format: p.format,
+          candidates: p.candidates,
+        };
+      if (projectRef.current) disposeProjectModels(projectRef.current.id);
+      projectRef.current = p;
+      setProject(p);
+      setProjects((all) => [p, ...all.filter((x) => x.id !== p.id)]);
+      setMode("library");
+      setLibraryStale(false);
+      setSourceMounted(false);
+      setPdf(null);
+      setPdfOpen(false);
+      setSelected(new Set());
+      setSearch("");
+      setFilter("all");
+      setKind("all");
+      setDrafts({});
+      setEditing((p.libraryDraft as Card | undefined) || null);
+      setEditPreview(null);
+      setError("");
+      if (!p.cards?.length) void rescan(p);
+    } finally {
+      release();
+    }
   }
   async function openProject(type = "folder") {
+    const transition = ++projectTransition.current;
     try {
       const path = await open({
         directory: type === "folder",
@@ -362,15 +433,17 @@ export default function App() {
               : undefined,
       });
       if (typeof path !== "string") return;
-      await activate(await rpc<Project>("open_project", { path }));
+      await activate(await rpc<Project>("open_project", { path }), transition);
     } catch (e) {
       report(e);
     }
   }
   async function openRecent(p: Project) {
+    const transition = ++projectTransition.current;
     try {
       await activate(
         await rpc<Project>("open_project", { path: p.root, main: p.main }),
+        transition,
       );
     } catch (e) {
       report(e);
@@ -381,7 +454,7 @@ export default function App() {
     jobs.current.set("render", ticket);
     setBusy("Rendering…");
     try {
-      await writeQueue.current;
+      await writer.current.flush();
       const results = await rpc<Partial<Card>[]>("render", {
         project: p.id,
         key: `${p.id}:render`,
@@ -397,7 +470,9 @@ export default function App() {
       const byID = new Map(results.map((c) => [c.id, c]));
       await persist({
         ...current,
-        cards: current.cards.map((card) => ({ ...card, ...byID.get(card.id) })),
+        cards: current.cards.map((card) =>
+          mergeRenderedCard(card, byID.get(card.id)),
+        ),
       });
     } catch (e) {
       if (jobs.current.get("render") === ticket) report(e);
@@ -415,7 +490,7 @@ export default function App() {
     jobs.current.set("scan", ticket);
     setBusy("Scanning…");
     try {
-      await writeQueue.current;
+      await writer.current.flush();
       const next = await rpc<Project>("scan", {
         project: p.id,
         key: `${p.id}:scan`,
@@ -426,8 +501,16 @@ export default function App() {
         projectRef.current?.id !== p.id
       )
         return;
-      await persist(next);
-      await renderCards(next);
+      if (
+        projectRef.current.main !== p.main ||
+        projectRef.current.engine !== p.engine
+      ) {
+        void rescan(projectRef.current);
+        return;
+      }
+      const merged = mergeScan(projectRef.current, next);
+      await persist(merged);
+      await renderCards(merged);
     } catch (e) {
       if (
         jobs.current.get("scan") === ticket &&
@@ -446,7 +529,7 @@ export default function App() {
     setPdfBusy(true);
     setPdfOpen(true);
     try {
-      await writeQueue.current;
+      await writer.current.flush();
       const result = await rpc<DocumentPDF>("document", {
         project: p.id,
         key: `${p.id}:document`,
@@ -539,6 +622,9 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [editing?.tex, editing?.kind, editing?.id]);
   function closeEditor() {
+    if (projectRef.current?.libraryDraft)
+      void persist({ ...projectRef.current, libraryDraft: null });
+    editingRef.current = null;
     editJob.current++;
     if (project) void rpc("cancel", { key: `${project.id}:edit` });
     setEditing(null);
@@ -546,15 +632,19 @@ export default function App() {
   }
   async function saveVariant() {
     if (!project || !editing) return;
+    const draft = editing;
     const card = savedVariant(editing, editPreview);
     const exists = project.cards.some((c) => c.id === card.id);
     const next = {
       ...project,
+      libraryDraft: null,
       cards: exists
         ? project.cards.map((c) => (c.id === card.id ? card : c))
         : [...project.cards, card],
     };
     await persist(next);
+    if (projectRef.current?.id !== next.id || editingRef.current !== draft)
+      return;
     setSelected(new Set([card.id]));
     closeEditor();
     if (card.status !== "ready") void renderCards(next, [card]);
@@ -562,7 +652,7 @@ export default function App() {
   async function exported(ids = [...selected]) {
     if (!project) throw new Error("Open a project.");
     if (!ids.length) throw new Error("Select an equation or figure.");
-    await writeQueue.current;
+    await writer.current.flush();
     return rpc<string[]>("export", {
       project: project.id,
       ids,
@@ -597,7 +687,7 @@ export default function App() {
         filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
       });
       if (!dest) return;
-      await writeQueue.current;
+      await writer.current.flush();
       await rpc("export", {
         project: project.id,
         ids: [[...selected][0]],
@@ -711,6 +801,7 @@ export default function App() {
   }, [pdf?.pdfPath, pdfTarget]);
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
+      if (document.documentElement.inert) return;
       const target = event.target as HTMLElement;
       if (event.isComposing || target.closest(".key-recorder")) return;
       const command = commandForEvent(event, keys);
@@ -787,7 +878,7 @@ export default function App() {
         return;
       event.preventDefault();
       event.stopPropagation();
-      void execute(command);
+      void execute(command).catch(report);
     };
     window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);
@@ -814,10 +905,19 @@ export default function App() {
       return;
     }
     if (id === "projects") {
-      await cancelJobs();
-      await writeQueue.current;
-      setProject(null);
-      projectRef.current = null;
+      const transition = ++projectTransition.current;
+      const release = lockWindowInteraction();
+      try {
+        await flushWindow();
+        if (transition !== projectTransition.current) return;
+        await cancelJobs();
+        if (transition !== projectTransition.current) return;
+        if (projectRef.current) disposeProjectModels(projectRef.current.id);
+        setProject(null);
+        projectRef.current = null;
+      } finally {
+        release();
+      }
       return;
     }
     if (id === "projectSource") {
@@ -940,7 +1040,10 @@ export default function App() {
       ) : (
         <div className="workspace">
           <aside className="sidebar">
-            <button className="back" onClick={() => void execute("projects")}>
+            <button
+              className="back"
+              onClick={() => void execute("projects").catch(report)}
+            >
               <ArrowLeft size={17} />
               Projects
             </button>
@@ -1274,6 +1377,21 @@ export default function App() {
                         );
                         if (target) setPdfTarget(target.id);
                       }}
+                      beforeMutation={async () => {
+                        await cancelJobs();
+                        await writer.current.flush();
+                      }}
+                      onProjectChanged={(patch) => {
+                        if (!projectRef.current) return;
+                        const next = { ...projectRef.current, ...patch };
+                        projectRef.current = next;
+                        setProject(next);
+                        setProjects((all) =>
+                          all.map((item) =>
+                            item.id === next.id ? next : item,
+                          ),
+                        );
+                      }}
                       onSaved={() => {
                         setPdf(null);
                         setLibraryStale(true);
@@ -1556,7 +1674,7 @@ export default function App() {
           editPreview={editPreview}
           editBusy={editBusy}
           onClose={closeEditor}
-          onSave={() => void saveVariant()}
+          onSave={() => void saveVariant().catch(report)}
           onDrag={(card) =>
             void rpc<string>("preview_export", {
               project: project.id,

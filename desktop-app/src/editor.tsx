@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import * as monaco from "monaco-editor";
 import EditorWorker from "monaco-editor/editor/editor.worker.js?worker";
 import type { Palette } from "./types";
+import { ModelOwnership } from "./modelOwnership";
 (self as unknown as { MonacoEnvironment: unknown }).MonacoEnvironment = {
   getWorker: () => new EditorWorker(),
 };
@@ -218,16 +219,21 @@ export function configureTheme(colors: Palette, dark: boolean) {
   monaco.editor.setTheme("mathlidelux");
 }
 const states = new Map<string, monaco.editor.ICodeEditorViewState>();
-export function projectModels(project: string) {
-  return monaco.editor.getModels().filter((m) => m.uri.authority === project);
-}
+const ownership = new ModelOwnership<monaco.editor.ITextModel>((model, key) => {
+  model.dispose();
+  for (const state of states.keys())
+    if (state.startsWith(key + "::")) states.delete(state);
+});
 export function disposeProjectModels(project: string) {
-  projectModels(project).forEach((m) => m.dispose());
+  ownership.releaseProject(project);
   projectWords.delete(project);
 }
 export interface EditorProps {
   project: string;
   path: string;
+  modelKey?: string;
+  retainModel?: boolean;
+  readOnly?: boolean;
   value: string;
   format: string;
   pane?: string;
@@ -253,7 +259,7 @@ export function CodeEditor(props: EditorProps) {
     const uri = monaco.Uri.from({
       scheme: "mathlidelux",
       authority: props.project,
-      path: "/" + props.path,
+      path: "/" + (props.modelKey || props.path),
     });
     let model = monaco.editor.getModel(uri);
     if (!model) {
@@ -269,6 +275,13 @@ export function CodeEditor(props: EditorProps) {
         uri,
       );
     }
+    const modelKey = uri.toString();
+    const release = ownership.acquire(
+      props.project,
+      modelKey,
+      model,
+      !!props.retainModel,
+    );
     const editor = monaco.editor.create(node, {
       model,
       theme: "mathlidelux",
@@ -293,7 +306,7 @@ export function CodeEditor(props: EditorProps) {
       hideCursorInOverviewRuler: true,
     });
     editorRef.current = editor;
-    const key = props.project + ":" + props.pane + ":" + props.path;
+    const key = modelKey + "::" + props.pane;
     const state = states.get(key);
     if (state) editor.restoreViewState(state);
     const changed = model.onDidChangeContent(() =>
@@ -337,14 +350,23 @@ export function CodeEditor(props: EditorProps) {
       editor.pushUndoStop();
     });
     return () => {
-      states.set(key, editor.saveViewState()!);
+      const viewState = editor.saveViewState();
+      if (viewState) {
+        states.delete(key);
+        states.set(key, viewState);
+        while (states.size > 256) states.delete(states.keys().next().value!);
+      }
       changed.dispose();
       cursor.dispose();
       focus.dispose();
       editor.dispose();
       editorRef.current = null;
+      release();
     };
-  }, [props.project, props.path, props.pane]);
+  }, [props.project, props.modelKey || props.path, props.pane]);
+  useEffect(() => {
+    editorRef.current?.updateOptions({ readOnly: !!props.readOnly });
+  }, [props.readOnly]);
   useEffect(() => {
     const editor = editorRef.current,
       model = editor?.getModel();
