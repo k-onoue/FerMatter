@@ -283,6 +283,13 @@ small,
 .project-view-switch {
   flex-shrink: 0;
 }
+.zoom-level {
+  flex-shrink: 0;
+  min-width: 48px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--comment);
+}
 .project-list {
   display: flex;
   flex-direction: column;

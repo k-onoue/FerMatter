@@ -15,6 +15,14 @@
 - Saved custom shortcuts take precedence over new zoom defaults. A conflicting default appears unassigned until the custom assignment is changed or reset.
 - Window zoom changes the interface, not exported image dimensions or output font sizes.
 
+## Zoom one pane
+
+- Point at Projects, the Library canvas or the PDF pane; hold `Control` and scroll up to enlarge or down to reduce it.
+- Each area keeps its own zoom. Regular scrolling and `⌘+` / `⌘−` window zoom remain available.
+- Projects (grid and list) and the Library canvas support 50–200%; click their percentage to reset to 100%.
+- PDF supports 20–400%. Scrolling from **Fit** starts at the displayed scale; **Fit width** returns to automatic sizing.
+- Pane zoom changes the display only; exported image sizes and source files are unchanged.
+
 ## Color themes
 
 - Open **Settings → Appearance → Color Theme**; choose Default or one of fifteen bundled pairs.

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as pdfjs from "pdfjs-dist";
 import workerURL from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
@@ -13,6 +13,8 @@ import {
 import { asset, rpc } from "./api";
 import type { DocumentPDF, Anchor } from "./types";
 import { anchorAtPoint } from "./navigation";
+import { stepZoom } from "./scrollZoom";
+import { useControlScroll } from "./useControlScroll";
 pdfjs.GlobalWorkerOptions.workerSrc = workerURL;
 export function PdfPane({
   document,
@@ -33,13 +35,19 @@ export function PdfPane({
 }) {
   const [pdf, setPdf] = useState<pdfjs.PDFDocumentProxy | null>(null);
   const [page, setPage] = useState(1);
-  const [zoom, setZoom] = useState(1);
-  const [fit, setFit] = useState(true);
+  const [{ zoom, fit }, setView] = useState({ zoom: 1, fit: true });
   const [width, setWidth] = useState(400);
   const [error, setError] = useState("");
   const [pageSize, setPageSize] = useState({ width: 1, height: 1, scale: 1 });
   const canvas = useRef<HTMLCanvasElement>(null);
+  const pageElement = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
+  const zoomPoint = useRef<{
+    x: number;
+    y: number;
+    clientX: number;
+    clientY: number;
+  } | null>(null);
   const navigation = useRef(0);
   const highlight = useRef<HTMLDivElement>(null);
   const selectedAnchor = document?.anchors.find(
@@ -47,6 +55,33 @@ export function PdfPane({
   );
   const selectedName =
     document?.targets?.find((t) => t.id === target)?.name || "Equation";
+  function zoomBy(steps: number, event?: WheelEvent) {
+    if (
+      event &&
+      stepZoom(fit ? pageSize.scale : zoom, steps, 0.2, 4) ===
+        (fit ? pageSize.scale : zoom)
+    )
+      return;
+    const rect = pageElement.current?.getBoundingClientRect();
+    zoomPoint.current =
+      event && rect
+        ? {
+            x: (event.clientX - rect.left) / pageSize.scale,
+            y: (event.clientY - rect.top) / pageSize.scale,
+            clientX: event.clientX,
+            clientY: event.clientY,
+          }
+        : null;
+    setView((view) => ({
+      fit: false,
+      zoom: stepZoom(view.fit ? pageSize.scale : view.zoom, steps, 0.2, 4),
+    }));
+  }
+  const scrollZoom = useControlScroll((steps, event) => {
+    if (pdf && content.current?.contains(event.target as Node))
+      zoomBy(steps, event);
+    else if (pdf) zoomBy(steps);
+  });
   useEffect(() => {
     const observer = new ResizeObserver((entries) =>
       setWidth(entries[0].contentRect.width),
@@ -141,8 +176,21 @@ export function PdfPane({
       render?.cancel();
     };
   }, [pdf, page, zoom, fit, width]);
-  useEffect(() => {
-    highlight.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  useLayoutEffect(() => {
+    const point = zoomPoint.current;
+    const rect = pageElement.current?.getBoundingClientRect();
+    if (point && rect && content.current) {
+      content.current.scrollLeft +=
+        rect.left + point.x * pageSize.scale - point.clientX;
+      content.current.scrollTop +=
+        rect.top + point.y * pageSize.scale - point.clientY;
+      zoomPoint.current = null;
+    } else {
+      highlight.current?.scrollIntoView({
+        block: "nearest",
+        inline: "nearest",
+      });
+    }
   }, [target, pageSize, document?.anchors]);
   useEffect(() => {
     function command(e: Event) {
@@ -150,21 +198,15 @@ export function PdfPane({
       if (id === "nextPage")
         setPage((p) => Math.min(pdf?.numPages || 1, p + 1));
       if (id === "previousPage") setPage((p) => Math.max(1, p - 1));
-      if (id === "fitPDF") setFit(true);
-      if (id === "zoomIn") {
-        setFit(false);
-        setZoom((z) => Math.min(4, z + 0.1));
-      }
-      if (id === "zoomOut") {
-        setFit(false);
-        setZoom((z) => Math.max(0.2, z - 0.1));
-      }
+      if (id === "fitPDF") setView((view) => ({ ...view, fit: true }));
+      if (id === "zoomIn") zoomBy(1);
+      if (id === "zoomOut") zoomBy(-1);
     }
     window.addEventListener("pdf-command", command);
     return () => window.removeEventListener("pdf-command", command);
-  }, [pdf]);
+  }, [pdf, pageSize.scale]);
   return (
-    <section className="pdf-pane">
+    <section className="pdf-pane" ref={scrollZoom}>
       <header>
         <strong>PDF</strong>
         <span className="spacer" />
@@ -201,6 +243,7 @@ export function PdfPane({
         )}
         <div
           className="pdf-page"
+          ref={pageElement}
           style={{
             display: pdf ? "block" : "none",
             width: pageSize.width,
@@ -263,26 +306,17 @@ export function PdfPane({
         </div>
       </div>
       <footer>
-        <button
-          title="Zoom out"
-          onClick={() => {
-            setFit(false);
-            setZoom((z) => Math.max(0.2, z - 0.1));
-          }}
-        >
+        <button title="Zoom out" onClick={() => zoomBy(-1)}>
           <Minus size={15} />
         </button>
         <span>{fit ? "Fit" : Math.round(zoom * 100) + "%"}</span>
-        <button
-          title="Zoom in"
-          onClick={() => {
-            setFit(false);
-            setZoom((z) => Math.min(4, z + 0.1));
-          }}
-        >
+        <button title="Zoom in" onClick={() => zoomBy(1)}>
           <Plus size={15} />
         </button>
-        <button title="Fit width" onClick={() => setFit(true)}>
+        <button
+          title="Fit width"
+          onClick={() => setView((view) => ({ ...view, fit: true }))}
+        >
           <Maximize size={15} />
         </button>
         {building && <span>Building…</span>}

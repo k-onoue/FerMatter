@@ -36,6 +36,8 @@ import { PdfPane } from "./PdfPane";
 import { ImagePreview, Modal, Prompt, ContextMenu, type Ask } from "./ui";
 import { Settings, defaults, palette } from "./settings";
 import { commandForEvent, validateBindings } from "./shortcuts";
+import { stepZoom } from "./scrollZoom";
+import { useControlScroll } from "./useControlScroll";
 import type {
   Project,
   Card,
@@ -89,6 +91,14 @@ export default function App() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [windowZoom, setWindowZoom] = useState(1);
+  const [projectsZoom, setProjectsZoom] = useState(1);
+  const [canvasZoom, setCanvasZoom] = useState(1);
+  const projectsScroll = useControlScroll((steps) =>
+    setProjectsZoom((zoom) => stepZoom(zoom, steps)),
+  );
+  const canvasScroll = useControlScroll((steps) =>
+    setCanvasZoom((zoom) => stepZoom(zoom, steps)),
+  );
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState("all");
   const [filter, setFilter] = useState("all");
@@ -867,7 +877,7 @@ export default function App() {
           <span>Opening…</span>
         </div>
       ) : !project ? (
-        <main className="projects-page">
+        <main className="projects-page" ref={projectsScroll}>
           <div className="brand">
             <img src={icon} />
             <strong>Mathlidelux</strong>
@@ -890,6 +900,14 @@ export default function App() {
           <header className="projects-heading">
             <h1>Projects</h1>
             <span className="spacer" />
+            <button
+              className="zoom-level"
+              title="Reset project zoom (Ctrl + scroll to zoom)"
+              aria-label={`Project zoom ${Math.round(projectsZoom * 100)}%. Reset to 100%`}
+              onClick={() => setProjectsZoom(1)}
+            >
+              {Math.round(projectsZoom * 100)}%
+            </button>
             <div
               className="segmented project-view-switch"
               role="group"
@@ -946,6 +964,7 @@ export default function App() {
           </header>
           <div
             className={`project-grid ${settings.projectView === "list" ? "project-list" : ""}`}
+            style={{ zoom: projectsZoom }}
           >
             {projects
               .filter((p) =>
@@ -1205,11 +1224,13 @@ export default function App() {
               <div className="central-workspace">
                 <div
                   className="library"
+                  ref={canvasScroll}
                   style={{ display: mode === "library" ? "flex" : "none" }}
                 >
                   <div
                     className="cards-grid"
                     ref={grid}
+                    style={{ zoom: canvasZoom }}
                     tabIndex={-1}
                     onPointerDown={(e) => {
                       e.currentTarget.focus({ preventScroll: true });
@@ -1313,6 +1334,14 @@ export default function App() {
                       </>
                     )}
                     <span className="spacer" />
+                    <button
+                      className="zoom-level"
+                      title="Reset canvas zoom (Ctrl + scroll to zoom)"
+                      aria-label={`Canvas zoom ${Math.round(canvasZoom * 100)}%. Reset to 100%`}
+                      onClick={() => setCanvasZoom(1)}
+                    >
+                      {Math.round(canvasZoom * 100)}%
+                    </button>
                     <select
                       title="Export format"
                       value={project.exportFormat || "svg"}
