@@ -2,7 +2,7 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
     fs,
-    io::Write,
+    io::{Read, Write},
     path::{Component, Path, PathBuf},
 };
 use walkdir::WalkDir;
@@ -71,11 +71,67 @@ pub fn rename_no_replace(source: &Path, destination: &Path) -> Result<()> {
         Err("Safe file moves are currently implemented for macOS.".into())
     }
 }
-pub fn read(path: &Path) -> Result<String> {
-    if fs::metadata(path).map_err(err)?.len() > 10_000_000 {
-        return Err("File exceeds the 10 MB editor limit.".into());
+pub const EDITOR_LIMIT: u64 = 10_000_000;
+pub const ARTIFACT_LIMIT: u64 = 100 * 1024 * 1024;
+pub const PROJECT_LIMIT: u64 = 1024 * 1024 * 1024;
+const CHUNK: usize = 64 * 1024;
+
+/// Open without following a replacement symlink or blocking on a FIFO.
+pub fn regular_file(path: &Path) -> Result<fs::File> {
+    let mut options = fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW);
     }
-    Ok(fs::read_to_string(path)
+    let file = options.open(path).map_err(err)?;
+    if !file.metadata().map_err(err)?.is_file() {
+        return Err("Only regular files can be read.".into());
+    }
+    Ok(file)
+}
+fn chunks(
+    path: &Path,
+    limit: u64,
+    check: &dyn Fn() -> Result<()>,
+    mut visit: impl FnMut(&[u8]) -> Result<()>,
+) -> Result<u64> {
+    check()?;
+    let mut file = regular_file(path)?;
+    if file.metadata().map_err(err)?.len() > limit {
+        return Err(format!(
+            "File exceeds the remaining {} MB limit.",
+            limit / 1024 / 1024
+        ));
+    }
+    let mut buffer = [0; CHUNK];
+    let mut total = 0;
+    loop {
+        check()?;
+        let n = file.read(&mut buffer).map_err(err)?;
+        if n == 0 {
+            break;
+        }
+        total += n as u64;
+        if total > limit {
+            return Err("File grew beyond its size limit while being read.".into());
+        }
+        visit(&buffer[..n])?;
+    }
+    check()?;
+    Ok(total)
+}
+pub fn read_bounded(path: &Path, limit: u64) -> Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+    chunks(path, limit, &|| Ok(()), |chunk| {
+        bytes.extend_from_slice(chunk);
+        Ok(())
+    })?;
+    Ok(bytes)
+}
+pub fn read(path: &Path) -> Result<String> {
+    Ok(String::from_utf8(read_bounded(path, EDITOR_LIMIT)?)
         .map_err(err)?
         .trim_start_matches('\u{feff}')
         .replace("\r\n", "\n"))
@@ -101,11 +157,18 @@ pub fn json_write(path: &Path, value: &Value) -> Result<()> {
     atomic(path, &serde_json::to_vec_pretty(value).map_err(err)?)
 }
 pub fn entries(root: &Path) -> Result<Vec<(String, PathBuf, bool)>> {
+    entries_checked(root, &|| Ok(()))
+}
+pub fn entries_checked(
+    root: &Path,
+    check: &dyn Fn() -> Result<()>,
+) -> Result<Vec<(String, PathBuf, bool)>> {
     let mut result = vec![];
     for entry in WalkDir::new(root)
         .into_iter()
         .filter_entry(|e| e.depth() == 0 || !ignored(&e.file_name().to_string_lossy()))
     {
+        check()?;
         let e = entry.map_err(err)?;
         if e.depth() == 0 {
             continue;
@@ -113,6 +176,12 @@ pub fn entries(root: &Path) -> Result<Vec<(String, PathBuf, bool)>> {
         // A compiler snapshot must never follow a link to a private file outside the selected project.
         if e.file_type().is_symlink() {
             continue;
+        }
+        if !e.file_type().is_dir() && !e.file_type().is_file() {
+            return Err(format!(
+                "Project contains a special file: {}",
+                e.path().display()
+            ));
         }
         result.push((
             e.path()
@@ -131,39 +200,54 @@ pub fn entries(root: &Path) -> Result<Vec<(String, PathBuf, bool)>> {
     Ok(result)
 }
 pub fn snapshot(root: &Path, target: &Path, drafts: &Value) -> Result<()> {
+    snapshot_checked(root, target, drafts, &|| Ok(()))
+}
+pub fn snapshot_checked(
+    root: &Path,
+    target: &Path,
+    drafts: &Value,
+    check: &dyn Fn() -> Result<()>,
+) -> Result<()> {
+    check()?;
     fs::create_dir_all(target).map_err(err)?;
     let mut size = 0;
-    for (name, path, dir) in entries(root)? {
+    for (name, path, dir) in entries_checked(root, check)? {
+        check()?;
         let out = target.join(&name);
         if dir {
             fs::create_dir_all(out).map_err(err)?;
         } else {
-            size += path.metadata().map_err(err)?.len();
-            if size > 1024 * 1024 * 1024 {
-                return Err("Project snapshot exceeds 1 GB.".into());
-            }
-            fs::copy(path, out).map_err(err)?;
+            let mut dest = tempfile::NamedTempFile::new_in(out.parent().unwrap()).map_err(err)?;
+            size += chunks(&path, PROJECT_LIMIT - size, check, |chunk| {
+                dest.write_all(chunk).map_err(err)
+            })?;
+            dest.persist(&out).map_err(err)?;
         }
     }
     if let Some(map) = drafts.as_object() {
         for (name, content) in map {
+            check()?;
             relative(name)?;
-            // Existing files must be inside the source root, even when replacing a link.
             if root.join(name).exists() {
                 safe(root, name)?;
             }
-            let path = target.join(name);
-            if let Some(parent) = path.parent() {
-                fs::create_dir_all(parent).map_err(err)?;
+            let content = content.as_str().ok_or("Invalid draft")?;
+            size += content.len() as u64;
+            if size > PROJECT_LIMIT || content.len() as u64 > EDITOR_LIMIT {
+                return Err("Drafts exceed the project or editor size limit.".into());
             }
-            fs::write(path, content.as_str().ok_or("Invalid draft")?).map_err(err)?;
+            atomic(&target.join(name), content.as_bytes())?;
         }
     }
-    Ok(())
+    check()
 }
 pub fn fingerprint(root: &Path) -> Result<String> {
+    fingerprint_checked(root, &|| Ok(()))
+}
+pub fn fingerprint_checked(root: &Path, check: &dyn Fn() -> Result<()>) -> Result<String> {
     let mut digest = Sha256::new();
-    for (name, path, dir) in entries(root)? {
+    let mut size = 0;
+    for (name, path, dir) in entries_checked(root, check)? {
         if dir
             || matches!(
                 path.extension().and_then(|s| s.to_str()),
@@ -173,16 +257,17 @@ pub fn fingerprint(root: &Path) -> Result<String> {
             continue;
         }
         digest.update(name);
-        digest.update(fs::read(path).map_err(err)?);
+        size += chunks(&path, PROJECT_LIMIT - size, check, |chunk| {
+            digest.update(chunk);
+            Ok(())
+        })?;
     }
+    check()?;
     Ok(format!("{:x}", digest.finalize()))
 }
 pub fn read_buffer(root: &Path, name: &str) -> Result<Value> {
     let path = safe(root, name)?;
-    if path.metadata().map_err(err)?.len() > 10_000_000 {
-        return Err("File exceeds the 10 MB editor limit.".into());
-    }
-    let bytes = fs::read(&path).map_err(err)?;
+    let bytes = read_bounded(&path, EDITOR_LIMIT)?;
     let text = String::from_utf8(bytes.clone()).map_err(|_| "This file is not UTF-8 text.")?;
     if bytes.len() > 10_000_000 || text.contains('\0') {
         return Err("This file cannot be opened in the text editor.".into());
@@ -194,7 +279,7 @@ pub fn read_buffer(root: &Path, name: &str) -> Result<Value> {
 pub fn save_buffer(root: &Path, buffer: &Value) -> Result<Value> {
     let name = string(buffer, "path");
     let path = safe(root, name)?;
-    if hash(fs::read(&path).map_err(err)?) != string(buffer, "revision") {
+    if hash(read_bounded(&path, EDITOR_LIMIT)?) != string(buffer, "revision") {
         return Err(
             "This file changed on disk. Reload it or save your draft to a new file.".into(),
         );
@@ -213,6 +298,85 @@ pub fn save_buffer(root: &Path, buffer: &Value) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn large_streaming_fixture_records_cancel_latency() {
+        let temp = tempfile::tempdir().unwrap();
+        let file = temp.path().join("large.dat");
+        fs::File::create(file)
+            .unwrap()
+            .set_len(256 * 1024 * 1024)
+            .unwrap();
+        let start = std::time::Instant::now();
+        fingerprint(temp.path()).unwrap();
+        let hashed = start.elapsed();
+        let checks = std::cell::Cell::new(0);
+        let start = std::time::Instant::now();
+        let result = fingerprint_checked(temp.path(), &|| {
+            checks.set(checks.get() + 1);
+            if checks.get() > 100 {
+                Err("Cancelled".into())
+            } else {
+                Ok(())
+            }
+        });
+        assert_eq!(result.unwrap_err(), "Cancelled");
+        println!(
+            "256 MiB streaming hash: {hashed:?}; cancellation after 100 checks: {:?}",
+            start.elapsed()
+        );
+    }
+    #[test]
+    fn reads_are_bounded_before_allocation_and_cancel_between_chunks() {
+        use std::cell::Cell;
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("large.dat");
+        fs::write(&path, vec![0; CHUNK * 4]).unwrap();
+        assert_eq!(
+            read_bounded(&path, (CHUNK * 4) as u64).unwrap().len(),
+            CHUNK * 4
+        );
+        assert!(read_bounded(&path, (CHUNK * 4 - 1) as u64).is_err());
+        fs::File::create(&path)
+            .unwrap()
+            .set_len(PROJECT_LIMIT + 1)
+            .unwrap();
+        assert!(fingerprint(temp.path()).is_err());
+        fs::write(&path, vec![0; CHUNK * 4]).unwrap();
+        let checks = Cell::new(0);
+        let cancel = || {
+            let n = checks.get() + 1;
+            checks.set(n);
+            if n >= 4 {
+                Err("Cancelled".into())
+            } else {
+                Ok(())
+            }
+        };
+        assert_eq!(
+            fingerprint_checked(temp.path(), &cancel).unwrap_err(),
+            "Cancelled"
+        );
+        let out = tempfile::tempdir().unwrap();
+        checks.set(0);
+        assert_eq!(
+            snapshot_checked(temp.path(), out.path(), &Value::Null, &cancel).unwrap_err(),
+            "Cancelled"
+        );
+        assert!(!out.path().join("large.dat").exists());
+        assert!(out.path().read_dir().unwrap().next().is_none());
+    }
+    #[cfg(unix)]
+    #[test]
+    fn special_files_cannot_block_reads_or_snapshots() {
+        use std::{ffi::CString, os::unix::ffi::OsStrExt};
+        let temp = tempfile::tempdir().unwrap();
+        let pipe = temp.path().join("source.typ");
+        let name = CString::new(pipe.as_os_str().as_bytes()).unwrap();
+        assert_eq!(unsafe { libc::mkfifo(name.as_ptr(), 0o600) }, 0);
+        assert!(read(&pipe).is_err());
+        assert!(entries(temp.path()).is_err());
+        assert!(fingerprint(temp.path()).is_err());
+    }
     #[test]
     fn conflict_and_encoding() {
         let t = tempfile::tempdir().unwrap();

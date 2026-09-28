@@ -202,10 +202,17 @@ fn code_end(s: &str, start: usize, mut expr: bool) -> usize {
     i
 }
 pub fn tokens(s: &str) -> Vec<Token> {
+    tokens_checked(s, &|| Ok(())).unwrap_or_default()
+}
+pub fn tokens_checked(s: &str, check: &dyn Fn() -> Result<()>) -> Result<Vec<Token>> {
     let mut out = vec![];
     let mut i = 0;
     let mut names = HashSet::from(["cetz.canvas".to_owned()]);
     while i < s.len() {
+        check()?;
+        if out.len() >= 30_000 {
+            return Err("Source exceeds 30,000 syntax items.".into());
+        }
         let end = comment_end(s, i);
         if end > i {
             i = end;
@@ -369,7 +376,7 @@ pub fn tokens(s: &str) -> Vec<Token> {
         }
         i = next(s, i)
     }
-    out
+    Ok(out)
 }
 pub fn setup_before(s: &str, pos: usize) -> String {
     tokens(s)
@@ -379,8 +386,27 @@ pub fn setup_before(s: &str, pos: usize) -> String {
         .collect::<Vec<_>>()
         .join("\n")
 }
+fn context_excerpt(source: &str, skip: usize) -> Vec<String> {
+    let mut remaining = 8192;
+    source
+        .lines()
+        .skip(skip)
+        .take(12)
+        .map(|line| {
+            let mut end = line.len().min(remaining);
+            while !line.is_char_boundary(end) {
+                end -= 1;
+            }
+            remaining -= end;
+            line[..end].to_owned()
+        })
+        .collect()
+}
 #[derive(Default)]
-struct Scan {
+struct Scan<'a> {
+    check: Option<&'a dyn Fn() -> Result<()>>,
+    bytes: u64,
+    extracted_bytes: usize,
     cards: Vec<Value>,
     outline: Vec<Value>,
     stack: Vec<Value>,
@@ -389,7 +415,26 @@ struct Scan {
     counts: HashMap<String, usize>,
     head_counts: HashMap<String, usize>,
 }
-impl Scan {
+impl Scan<'_> {
+    fn check(&self) -> Result<()> {
+        if self.bytes > 100 * 1024 * 1024 {
+            return Err("Source scan exceeds 100 MB.".into());
+        }
+        if self.extracted_bytes > 64 * 1024 * 1024 {
+            return Err("Extracted source text exceeds 64 MB.".into());
+        }
+        if self.cards.len() >= 30_000 || self.outline.len() >= 30_000 {
+            return Err("Source exceeds 30,000 extracted items.".into());
+        }
+        self.check.map_or(Ok(()), |check| check())
+    }
+    fn source(&mut self, path: &Path) -> Result<String> {
+        self.check()?;
+        let text = read(path)?;
+        self.bytes += text.len() as u64;
+        self.check()?;
+        Ok(text)
+    }
     fn heading(&mut self, title: String, level: usize, file: &str, line: usize) {
         while self
             .stack
@@ -479,7 +524,9 @@ impl Scan {
                 "inline" => format!("Inline · {}", body.chars().take(45).collect::<String>()),
                 _ => format!("Equation · {l}"),
             });
-        let mut card = json!({"id":ident,"name":name,"tex":body,"kind":kind,"origin":"source","file":file,"line":l,"endLine":last,"sourceOffset":s[..start].chars().count(),"sourceEnd":s[..end].chars().count(),"startUTF16":s[..start].encode_utf16().count(),"endUTF16":s[..end].encode_utf16().count(),"column":s[..start].rsplit('\n').next().unwrap_or("").chars().count()+1,"endColumn":s[..end].rsplit('\n').next().unwrap_or("").chars().count()+1,"sourceOrder":self.cards.len() as f64,"contextStart":l.saturating_sub(5).max(1),"context":s.lines().skip(l.saturating_sub(6)).take(last+5-l.saturating_sub(6)).collect::<Vec<_>>(),"outlinePath":self.path(),"status":"pending"});
+        let context = context_excerpt(s, l.saturating_sub(6));
+        self.extracted_bytes += body.len() + context.iter().map(String::len).sum::<usize>() + 1024;
+        let mut card = json!({"id":ident,"name":name,"tex":body,"kind":kind,"origin":"source","file":file,"line":l,"endLine":last,"sourceOffset":s[..start].chars().count(),"sourceEnd":s[..end].chars().count(),"startUTF16":s[..start].encode_utf16().count(),"endUTF16":s[..end].encode_utf16().count(),"column":s[..start].rsplit('\n').next().unwrap_or("").chars().count()+1,"endColumn":s[..end].rsplit('\n').next().unwrap_or("").chars().count()+1,"sourceOrder":self.cards.len() as f64,"contextStart":l.saturating_sub(5).max(1),"context":context,"outlinePath":self.path(),"status":"pending"});
         if typst {
             card["typstContext"] = json!(frames)
         }
@@ -498,11 +545,12 @@ impl Scan {
             return Ok(());
         }
         let p = safe(root, name)?;
-        let s = read(&p)?;
+        let s = self.source(&p)?;
         self.files.insert(name.into());
         let mut chain = stack;
         chain.push(name.into());
-        for t in tokens(&s) {
+        for t in tokens_checked(&s, &|| self.check())? {
+            self.check()?;
             match t.kind {
                 "heading" => self.heading(
                     t.extra[1].as_str().unwrap_or("").into(),
@@ -529,6 +577,7 @@ impl Scan {
                             let mut frames = ancestors.clone();
                             frames.push(json!({"file":name,"offset":s[..t.start].chars().count()}));
                             if let Err(e) = self.typst(root, &rel, frames, chain.clone()) {
+                                self.check()?;
                                 self.warnings.push(e)
                             }
                         }
@@ -581,13 +630,14 @@ impl Scan {
             return Ok(());
         }
         let path = safe(root, name)?;
-        let raw = read(&path)?;
+        let raw = self.source(&path)?;
         let text = uncomment(&raw); // Preserve byte offsets, including Unicode comments.
         self.files.insert(name.into());
         let mut chain = stack;
         chain.push(name.into());
         let mut i = start;
         while i < text.len() {
+            self.check()?;
             let tail = &text[i..];
             if !tail.starts_with(['\\', '$']) {
                 i += tail.find(['\\', '$']).unwrap_or(tail.len());
@@ -655,6 +705,7 @@ impl Scan {
                 if let Some(p) = found {
                     let rel = p.strip_prefix(root).unwrap().to_string_lossy().into_owned();
                     if let Err(e) = self.tex(root, &rel, chain.clone(), 0) {
+                        self.check()?;
                         self.warnings.push(e)
                     }
                 } else {
@@ -786,9 +837,21 @@ fn tex_title(s: &str) -> String {
         .replace('~', " ")
 }
 pub fn extract(root: &Path, main: &str, focus: Option<&str>) -> Result<Value> {
+    extract_checked(root, main, focus, &|| Ok(()))
+}
+pub fn extract_checked(
+    root: &Path,
+    main: &str,
+    focus: Option<&str>,
+    check: &dyn Fn() -> Result<()>,
+) -> Result<Value> {
+    check()?;
     let canonical = root.canonicalize().map_err(err)?;
     let root = canonical.as_path();
-    let mut scan = Scan::default();
+    let mut scan = Scan {
+        check: Some(check),
+        ..Scan::default()
+    };
     if main.ends_with(".typ") {
         scan.typst(root, focus.unwrap_or(main), vec![], vec![])?
     } else {
@@ -804,6 +867,7 @@ pub fn extract(root: &Path, main: &str, focus: Option<&str>) -> Result<Value> {
             if focus.is_some() { 0 } else { start },
         )?
     }
+    scan.check()?;
     let mut files: Vec<_> = scan.files.into_iter().collect();
     files.sort();
     Ok(json!({"cards":scan.cards,"outline":scan.outline,"warnings":scan.warnings,"files":files}))
@@ -833,6 +897,18 @@ pub fn candidates(root: &Path) -> Result<Vec<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn scan_budget_errors_propagate_and_context_cannot_duplicate_whole_long_lines() {
+        let scan = Scan {
+            bytes: 100 * 1024 * 1024 + 1,
+            ..Scan::default()
+        };
+        assert!(scan.check().is_err());
+        let long = "界".repeat(100_000);
+        let excerpt = context_excerpt(&long, 0);
+        assert!(excerpt.iter().map(String::len).sum::<usize>() <= 8192);
+        assert!(!excerpt[0].is_empty());
+    }
     #[test]
     fn typst_literals_and_utf16() {
         let d = tempfile::tempdir().unwrap();

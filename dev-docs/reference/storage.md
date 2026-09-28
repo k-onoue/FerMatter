@@ -67,3 +67,13 @@
 - Compiler → temporary copy preserving imports and relative resources; do not follow symlinks outside the snapshot.
 - Test migrations on disposable data, including conflicting drafts and external edits.
 - [Settings schemas](settings-files.md); [versioning](../releasing.md#versioning).
+
+## Cache reclamation
+
+- At startup, reclaim only recognized render/export files and UUID document-snapshot directories inside current application storage; never traverse cache symlinks.
+- Keep saved project artifact references, the last copied image paths recorded in `ClipboardArtifacts.json`, and artifacts younger than 24 hours.
+- Remove other artifacts older than 30 days; above a 2 GiB target, remove the oldest eligible artifacts first. Protected/recent data can exceed the target.
+- `CacheMaintenance.json` records reclaimed/retained bytes and whether protected data exceeds the target. Invalid saved metadata cancels cleanup rather than guessing its references.
+- Drafts, variants/project JSON, SourceDrafts, Instant sessions/history, project undo data, original project folders and legacy storage are never eviction targets.
+- No live-session eviction: visible PDFs and ongoing drags remain untouched. Full live leases and a hard per-session quota remain tracked in [issue #39](https://github.com/k-onoue/mathlidelux/issues/39).
+- Regenerate unreferenced previews from source/history when requested after cleanup.

@@ -1,3 +1,4 @@
+mod cache;
 mod compiler;
 mod export;
 mod files;
@@ -287,10 +288,7 @@ fn dispatch(
         "artifact" => {
             use base64::Engine;
             let p = store.allowed_artifact(Path::new(string(&v, "path")))?;
-            let bytes = fs::read(&p).map_err(err)?;
-            if bytes.len() > 100 * 1024 * 1024 {
-                return Err("Artifact exceeds 100 MB.".into());
-            }
+            let bytes = read_bounded(&p, ARTIFACT_LIMIT)?;
             let mime = match p.extension().and_then(|e| e.to_str()).unwrap_or("") {
                 "svg" => "image/svg+xml",
                 "pdf" => "application/pdf",
@@ -340,6 +338,7 @@ fn dispatch(
                 .iter()
                 .map(|p| store.allowed_artifact(Path::new(p.as_str().unwrap_or(""))))
                 .collect::<Result<Vec<_>>>()?;
+            cache::remember_clipboard(&store.home, &paths)?;
             let (tx, rx) = std::sync::mpsc::sync_channel(1);
             app.run_on_main_thread(move || {
                 let _ = tx.send(native::clipboard(&paths));
@@ -360,7 +359,7 @@ fn dispatch(
             let cache = store.project_dir(ident)?.join("Cache");
             let result = (|| match op {
                 "scan" => {
-                    let scan = scan::extract(&root, main, None)?;
+                    let scan = scan::extract_checked(&root, main, None, &|| c.check())?;
                     c.check()?;
                     Ok(storage::merge_scan(p.clone(), scan))
                 }
@@ -381,12 +380,12 @@ fn dispatch(
                 "source_preview" => {
                     let temp = tempfile::tempdir().map_err(err)?;
                     let stage = temp.path().join("source");
-                    snapshot(&root, &stage, &v["sources"])?;
+                    snapshot_checked(&root, &stage, &v["sources"], &|| c.check())?;
                     let file = string(&v, "file");
                     safe(&stage, file)?;
-                    let mut scan = scan::extract(&stage, main, None)?;
+                    let mut scan = scan::extract_checked(&stage, main, None, &|| c.check())?;
                     if !scan["files"].as_array().unwrap().iter().any(|s| s == file) {
-                        scan = scan::extract(&stage, main, Some(file))?
+                        scan = scan::extract_checked(&stage, main, Some(file), &|| c.check())?
                     }
                     let caret = v["offset"].as_u64().unwrap_or(0);
                     let card = scan["cards"].as_array().unwrap().iter().find(|card| {
@@ -578,6 +577,12 @@ pub fn run() {
                 legacy
             };
             let store = storage::Storage::new(home, legacy)?;
+            match cache::maintain(&store.home) {
+                Ok(report) => {
+                    let _ = json_write(&store.home.join("CacheMaintenance.json"), &report);
+                }
+                Err(error) => eprintln!("Cache cleanup skipped: {error}"),
+            }
             let settings = settings::SettingsFiles::new(&store.home);
             #[cfg(target_os = "macos")]
             if override_home.is_none() {
