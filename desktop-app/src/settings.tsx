@@ -5,13 +5,14 @@ import { FolderOpen, RotateCcw } from "lucide-react";
 import { rpc } from "./api";
 import { Modal } from "./ui";
 import { CodeEditor } from "./editor";
-import type {
-  Binding,
-  Keybindings,
-  Preferences,
-  Theme,
-  Palette,
-} from "./types";
+import type { Keybindings, Preferences, Theme, Palette } from "./types";
+import {
+  commands,
+  eventBinding,
+  validateBindings,
+  bindingKeys,
+  effectiveBindings,
+} from "./shortcuts";
 export const defaults: Theme = {
   schemaVersion: 1,
   kind: "mathlidelux.theme",
@@ -38,126 +39,6 @@ export const defaults: Theme = {
     comment: "#8895A5",
   },
 };
-const shortcut = (key: string, options: Partial<Binding> = {}): Binding => ({
-  key,
-  command: true,
-  control: false,
-  shift: false,
-  option: false,
-  ...options,
-});
-export const commands: { id: string; name: string; binding: Binding }[] = [
-  ["open", "Open Project", shortcut("o")],
-  ["projects", "Projects", shortcut("o", { shift: true })],
-  ["newProject", "New Project", shortcut("n", { shift: true })],
-  ["newEquation", "New Equation", shortcut("n")],
-  ["newFigure", "New Figure", shortcut("n", { option: true })],
-  ["find", "Find", shortcut("f")],
-  ["edit", "Edit Selection", shortcut("e")],
-  ["duplicate", "Duplicate Selection", shortcut("d")],
-  ["saveEquation", "Save", shortcut("s")],
-  ["copySVG", "Copy Image", shortcut("c", { shift: true })],
-  ["exportSVG", "Export Image", shortcut("s", { shift: true })],
-  ["rescan", "Rescan", shortcut("r")],
-  ["togglePDF", "Toggle PDF", shortcut("p", { option: true })],
-  ["rebuildPDF", "Rebuild PDF", shortcut("r", { shift: true })],
-  ["previousPage", "Previous PDF Page", shortcut("[")],
-  ["nextPage", "Next PDF Page", shortcut("]")],
-  ["zoomIn", "Zoom PDF In", shortcut("=", { shift: true })],
-  ["zoomOut", "Zoom PDF Out", shortcut("-")],
-  ["fitPDF", "Fit PDF", shortcut("0")],
-  ["inspector", "Toggle Inspector", shortcut("i", { option: true })],
-  ["pin", "Always on Top", shortcut("p", { shift: true })],
-  ["fullScreen", "Full Screen", shortcut("f", { control: true })],
-  ["projectSource", "Toggle Source", shortcut("e", { option: true })],
-  [
-    "nextSourceTab",
-    "Next Source Tab",
-    shortcut("\t", { command: false, control: true }),
-  ],
-  [
-    "previousSourceTab",
-    "Previous Source Tab",
-    shortcut("\t", { command: false, control: true, shift: true }),
-  ],
-  ["splitSource", "Split Editor Right", shortcut("\\")],
-  ["splitSourceDown", "Split Editor Down", shortcut("\\", { option: true })],
-].map(([id, name, binding]) => ({
-  id: id as string,
-  name: name as string,
-  binding: binding as Binding,
-}));
-export function eventBinding(e: KeyboardEvent | React.KeyboardEvent): Binding {
-  const special: Record<string, string> = {
-    Tab: "\t",
-    ArrowUp: "\uF700",
-    ArrowDown: "\uF701",
-    ArrowLeft: "\uF702",
-    ArrowRight: "\uF703",
-  };
-  let key = special[e.key] || e.key.toLowerCase();
-  const shifted = '~!@#$%^&*()_+{}|:"<>?',
-    plain = "`1234567890-=[]\\;',./";
-  if (e.shiftKey && shifted.includes(key)) key = plain[shifted.indexOf(key)];
-  return {
-    key,
-    command: e.metaKey,
-    control: e.ctrlKey,
-    shift: e.shiftKey,
-    option: e.altKey,
-  };
-}
-export const bindingEqual = (a: Binding, b: Binding) =>
-  a.key === b.key &&
-  a.command === b.command &&
-  a.control === b.control &&
-  a.shift === b.shift &&
-  a.option === b.option;
-export function validateBindings(value: Keybindings) {
-  if (
-    value.schemaVersion !== 1 ||
-    value.kind !== "mathlidelux.keybindings" ||
-    !value.bindings
-  )
-    throw new Error("Invalid keyboard shortcut file.");
-  const seen: Binding[] = [];
-  for (const id of Object.keys(value.bindings))
-    if (!commands.some((c) => c.id === id))
-      throw new Error(`Unknown command: ${id}`);
-  for (const command of commands) {
-    const b = value.bindings[command.id] || command.binding;
-    if (
-      ["command", "control", "shift", "option"].some(
-        (k) => typeof b[k as keyof Binding] !== "boolean",
-      )
-    )
-      throw new Error("Shortcut modifiers must be true or false.");
-    if (!b.key) continue;
-    if (b.key.length !== 1 || (!b.command && !b.control))
-      throw new Error("Use Command or Control with one key.");
-    if (
-      (b.command &&
-        !b.control &&
-        !b.option &&
-        !b.shift &&
-        "qwmh,cvxazp \t".includes(b.key)) ||
-      (b.command && b.shift && !b.control && !b.option && b.key === "z")
-    )
-      throw new Error("Reserved for macOS or text editing.");
-    if (seen.some((a) => bindingEqual(a, b)))
-      throw new Error(`Duplicate shortcut: ${command.name}`);
-    seen.push(b);
-  }
-}
-export function bindingKeys(b: Binding) {
-  return [
-    ...(b.control ? ["⌃"] : []),
-    ...(b.option ? ["⌥"] : []),
-    ...(b.shift ? ["⇧"] : []),
-    ...(b.command ? ["⌘"] : []),
-    b.key === "\t" ? "⇥" : b.key.toUpperCase(),
-  ].filter(Boolean);
-}
 export function palette(theme: Theme | undefined, dark: boolean): Palette {
   const mode = dark ? "dark" : "light";
   const colors = { ...defaults[mode] };
@@ -191,6 +72,7 @@ export function Settings({
   const [json, setJson] = useState<{ file: string; text: string } | null>(null);
   const [tools, setTools] = useState<Record<string, string> | null>(null);
   const [search, setSearch] = useState("");
+  const bindings = effectiveBindings(keys);
   const update = (patch: Partial<Preferences>) =>
     onSettings({ ...settings, ...patch });
   async function importFile(file: string) {
@@ -420,7 +302,7 @@ export function Settings({
                   c.name.toLowerCase().includes(search.toLowerCase()),
                 )
                 .map((c) => {
-                  const binding = keys.bindings[c.id] || c.binding;
+                  const binding = bindings[c.id];
                   return (
                     <div className="shortcut-row" key={c.id}>
                       <span>{c.name}</span>
@@ -456,9 +338,11 @@ export function Settings({
                       >
                         {record === c.id
                           ? "Press keys…"
-                          : bindingKeys(binding).map((key, i) => (
-                              <kbd key={i}>{key}</kbd>
-                            ))}
+                          : !binding.key
+                            ? "Not set"
+                            : bindingKeys(binding).map((key, i) => (
+                                <kbd key={i}>{key}</kbd>
+                              ))}
                       </button>
                       <button
                         title="Reset this shortcut"

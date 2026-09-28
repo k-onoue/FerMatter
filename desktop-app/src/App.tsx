@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useDesktopBackground } from "./useDesktopBackground";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
@@ -33,15 +34,8 @@ import { CodeEditor, configureTheme, setProjectCompletions } from "./editor";
 import { SourceWorkspace } from "./SourceWorkspace";
 import { PdfPane } from "./PdfPane";
 import { ImagePreview, Modal, Prompt, ContextMenu, type Ask } from "./ui";
-import {
-  Settings,
-  defaults,
-  palette,
-  commands,
-  eventBinding,
-  bindingEqual,
-  validateBindings,
-} from "./settings";
+import { Settings, defaults, palette } from "./settings";
+import { commandForEvent, validateBindings } from "./shortcuts";
 import type {
   Project,
   Card,
@@ -94,6 +88,7 @@ export default function App() {
   const [showProjectSettings, setShowProjectSettings] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [windowZoom, setWindowZoom] = useState(1);
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState("all");
   const [filter, setFilter] = useState("all");
@@ -153,6 +148,9 @@ export default function App() {
   function report(e: unknown) {
     if (String(e) !== "Cancelled") setError(String(e));
   }
+  useEffect(() => {
+    void getCurrentWebview().setZoom(windowZoom).catch(report);
+  }, [windowZoom]);
   useEffect(() => {
     void rpc<{
       projects: Project[];
@@ -696,6 +694,29 @@ export default function App() {
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
+      if (event.isComposing || target.closest(".key-recorder")) return;
+      const command = commandForEvent(event, keys);
+      if (
+        command &&
+        ["zoomWindowIn", "zoomWindowOut", "resetWindowZoom"].includes(command)
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        setWindowZoom((zoom) =>
+          command === "resetWindowZoom"
+            ? 1
+            : Math.max(
+                0.5,
+                Math.min(
+                  2,
+                  Math.round(
+                    (zoom + (command === "zoomWindowIn" ? 0.1 : -0.1)) * 10,
+                  ) / 10,
+                ),
+              ),
+        );
+        return;
+      }
       const inModal = !!target.closest('[role="dialog"]');
       if (inModal) return;
       const typing = !!target.closest(
@@ -731,10 +752,6 @@ export default function App() {
         setShowSettings(true);
         return;
       }
-      const binding = eventBinding(event);
-      const command = commands.find((c) =>
-        bindingEqual(keys.bindings[c.id] || c.binding, binding),
-      );
       if (!command) return;
       if (
         typing &&
@@ -745,12 +762,12 @@ export default function App() {
           "newEquation",
           "newFigure",
           "saveEquation",
-        ].includes(command.id)
+        ].includes(command)
       )
         return;
       event.preventDefault();
       event.stopPropagation();
-      void execute(command.id);
+      void execute(command);
     };
     window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);

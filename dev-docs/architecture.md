@@ -14,6 +14,7 @@
 | Source buffers, file tree, tabs and split panes | `src/SourceWorkspace.tsx`, `src/panes.ts` |
 | PDF viewer, source ranges and hit matching | `src/PdfPane.tsx`, `src/navigation.ts` |
 | Settings and project templates | `src/settings.tsx`, `src/templates.ts`, `src/NewProjectDialog.tsx` |
+| Shortcut matching and defaults | `src/shortcuts.ts`; matching Rust validation in `src-tauri/src/settings.rs` |
 | IPC and request ownership | `src-tauri/src/lib.rs` |
 | LaTeX/Typst extraction, includes and outline | `src-tauri/src/scan.rs` |
 | Compiler snapshots, cancellation and SyncTeX | `src-tauri/src/compiler.rs` |

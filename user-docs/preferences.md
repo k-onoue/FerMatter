@@ -6,6 +6,15 @@
 - **Editor → Save files**: choose After changes or Manually (`⌘S`).
 - **New Project → Edit Template**: customize the setup for [new projects](new-project.md).
 
+## Window zoom
+
+- `⌘+` or `⌘=` enlarges the interface; `⌘−` reduces it; `⌘0` restores 100%.
+- Zoom works in Projects, Library, Source and dialogs, including while editing. The range is 50–200%, in 10% steps; restarting the app restores 100%.
+- **Shortcuts → Zoom In / Zoom Out / Actual Size** customizes these keys.
+- PDF-only controls use `⌃⌘+`, `⌃⌘−` and `⌃⌘0` (Fit PDF); the PDF toolbar also remains available.
+- Saved custom shortcuts take precedence over new zoom defaults. A conflicting default appears unassigned until the custom assignment is changed or reset.
+- Window zoom changes the interface, not exported image dimensions or output font sizes.
+
 ## Color themes
 
 - Open **Settings → Appearance → Color Theme**; choose Default or one of fifteen bundled pairs.

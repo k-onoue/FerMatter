@@ -69,10 +69,16 @@ Version 1 command IDs are stable:
 | Editing | `find`, `edit`, `duplicate`, `saveEquation`, `copySVG`, `exportSVG`, `rescan` |
 | PDF | `togglePDF`, `rebuildPDF`, `previousPage`, `nextPage`, `zoomIn`, `zoomOut`, `fitPDF` |
 | Window | `inspector`, `pin`, `fullScreen`, `projectSource` |
+| Window zoom | `zoomWindowIn`, `zoomWindowOut`, `resetWindowZoom` |
 | Source panes | `nextSourceTab`, `previousSourceTab`, `splitSource`, `splitSourceDown` |
 
 The existing `copySVG` and `exportSVG` IDs retain their names for compatibility;
 they operate on the currently selected export format.
+
+- Window zoom defaults: `⌘=`, `⌘−`, `⌘0`; `⌘+` also enlarges.
+- PDF zoom IDs keep their PDF behavior; defaults now add Control (`⌃⌘=`, `⌃⌘−`, `⌃⌘0`).
+- Saved overrides take precedence over these six zoom defaults without rewriting their JSON. An implicit zoom default that conflicts with an override is shown as unassigned; explicit duplicate assignments are still rejected.
+- Window zoom is per launch (50–200%); it uses the [Tauri webview zoom API](https://v2.tauri.app/reference/javascript/api/namespacewebview/#setzoom) and leaves export scale unchanged.
 
 ## Themes, version 1
 
