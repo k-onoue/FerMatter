@@ -21,15 +21,15 @@
 
 ## Build and preview
 
-- Python 3.11+ for guide generation; app runtime requirements are separate.
+- Node.js 22+ for repository tools; no Python environment. App runtime requirements are separate.
 
 ```sh
-python3 -m venv .venv-docs
-.venv-docs/bin/python -m pip install -r scripts/requirements-docs.txt
-.venv-docs/bin/python scripts/build-guides.py
-.venv-docs/bin/python scripts/build-guides.py --check
-python3 -B scripts/check-publication.py
-python3 -m http.server 4174 --bind 127.0.0.1 --directory docs
+npm --prefix scripts ci
+npm --prefix scripts test
+node scripts/build-guides.mjs
+node scripts/build-guides.mjs --check
+node scripts/check-publication.mjs
+node scripts/preview-site.mjs
 ```
 
 - Open [localhost:4174](http://localhost:4174); serve `docs/` only.
@@ -41,7 +41,7 @@ python3 -m http.server 4174 --bind 127.0.0.1 --directory docs
 - Remove obsolete generated pages explicitly when removing a manifest entry.
 - GitHub Pages remains `main:/docs`; no deployment-mode change or runtime framework required.
 - CI checks generated freshness and local links; site preview itself needs no installed dependencies.
-- Reference: [Python-Markdown](https://python-markdown.github.io/), [Pages publishing sources](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
+- Reference: [markdown-it](https://github.com/markdown-it/markdown-it), [Pages publishing sources](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
 
 ## Product tone
 
@@ -68,6 +68,6 @@ python3 -m http.server 4174 --bind 127.0.0.1 --directory docs
 ## Samples
 
 - Edit only synthetic files in `examples/`.
-- Run `python3 -B scripts/prepare-demo.py`; review the four ZIPs and page copy.
+- Run `node scripts/prepare-demo.mjs`; review the four ZIPs and page copy.
 - Each ZIP has an explicit source allowlist; no private sources, generated compiler files, or symlinks.
 - Run publication checks and inspect the staged diff before pushing.

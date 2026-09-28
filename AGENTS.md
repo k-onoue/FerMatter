@@ -29,7 +29,7 @@
 ## Checks from the repository root
 
 - App changes: `./desktop-app/scripts/check.sh` and `./desktop-app/scripts/build.sh`.
-- Docs/site changes: `.venv-docs/bin/python scripts/build-guides.py --check` and `python3 -B scripts/check-publication.py`.
+- Docs/site changes: `node scripts/build-guides.mjs --check` and `node scripts/check-publication.mjs`.
 - Every change: `git diff --check`; inspect the staged diff before committing.
 - See [setup](dev-docs/documentation.md#build-and-preview) for the docs environment.
 - Report missing compiler tests or skipped UI checks; do not present them as passes.

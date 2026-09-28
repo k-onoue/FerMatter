@@ -40,10 +40,10 @@
 ## Preview the product page
 
 ```sh
-python3 -m http.server 4174 --bind 127.0.0.1 --directory docs
+node scripts/preview-site.mjs
 ```
 
-- Open [localhost:4174](http://localhost:4174); no install needed to preview checked-in pages.
+- Open [localhost:4174](http://localhost:4174); Node.js 22+; no npm install needed to preview checked-in pages.
 - After editing guide Markdown: [rebuild guides](dev-docs/documentation.md#build-and-preview).
 - Only `docs/` is served; keep private manuscripts and local builds outside it.
 

@@ -7,7 +7,7 @@
 | App, frontend, compiler backend | `./desktop-app/scripts/check.sh`; `./desktop-app/scripts/build.sh` |
 | User docs, site, site generator | Build guides; freshness check; publication check; browser preview |
 | Developer docs only | Publication/link check; review commands and referenced behavior |
-| Synthetic samples | `python3 -B scripts/prepare-demo.py`; compiler checks; publication check |
+| Synthetic samples | `node scripts/prepare-demo.mjs`; compiler checks; publication check |
 | Packaging | [Packaging verification](reference/packaging.md); distinguish inspection from installation |
 | Release | All affected checks; real compiler coverage; [release checklist](releasing.md) |
 
@@ -26,9 +26,11 @@
 ## Documentation/site checks
 
 ```sh
-.venv-docs/bin/python scripts/build-guides.py
-.venv-docs/bin/python scripts/build-guides.py --check
-python3 -B scripts/check-publication.py
+npm --prefix scripts ci
+npm --prefix scripts test
+node scripts/build-guides.mjs
+node scripts/build-guides.mjs --check
+node scripts/check-publication.mjs
 git diff --check
 ```
 
