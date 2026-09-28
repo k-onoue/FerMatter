@@ -3,16 +3,17 @@ use crate::{compiler, files::*, scan};
 use serde_json::{json, Value};
 use std::{fs, path::Path};
 pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
-    let output = output.canonicalize().map_err(err)?;
+    let report_folder = output.canonicalize().map_err(err)?;
+    // A retained run directory gives inspection artifacts without ever reusing an
+    // older fixture or render cache. Failures retain their workspace as evidence.
+    let output = fresh_workspace(&report_folder)?;
     let expected: Value =
         serde_json::from_str(include_str!("../../tests/fixtures/extraction.json")).map_err(err)?;
     let mut results = vec![];
     for name in ["demo-paper", "demo-typst", "demo-tikz", "demo-cetz"] {
         let source = repository.join("examples").join(name);
         let target = output.join("ProjectsSource").join(name);
-        if !target.exists() {
-            snapshot(&source, &target, &Value::Null)?
-        }
+        snapshot(&source, &target, &Value::Null)?;
         let root = target.canonicalize().map_err(err)?;
         let main = if name == "demo-typst" || name == "demo-cetz" {
             "main.typ"
@@ -192,7 +193,18 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
     verify_project_instant(&output)?;
     let report = json!(results);
     json_write(&output.join("verification.json"), &report)?;
+    json_write(
+        &report_folder.join("verification.json"),
+        &json!({"workspace": output, "results": report}),
+    )?;
     Ok(report)
+}
+fn fresh_workspace(output: &Path) -> Result<std::path::PathBuf> {
+    Ok(tempfile::Builder::new()
+        .prefix("verify-")
+        .tempdir_in(output)
+        .map_err(err)?
+        .keep())
 }
 fn verify_project_instant(output: &Path) -> Result<()> {
     use crate::{instant, storage::Storage};
@@ -367,6 +379,17 @@ fn normalize(scan: &Value) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn each_verification_has_fresh_sources_and_cache() {
+        let parent = tempfile::tempdir().unwrap();
+        let first = fresh_workspace(parent.path()).unwrap();
+        fs::create_dir_all(first.join("ProjectsSource")).unwrap();
+        fs::write(first.join("ProjectsSource/stale.typ"), "old source").unwrap();
+        let second = fresh_workspace(parent.path()).unwrap();
+        assert_ne!(first, second);
+        assert!(second.read_dir().unwrap().next().is_none());
+        assert!(first.join("ProjectsSource/stale.typ").exists());
+    }
     #[test]
     fn scanner_matches_existing_worker() {
         let repository = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
