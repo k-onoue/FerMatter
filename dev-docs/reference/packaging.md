@@ -14,6 +14,7 @@
 - Default output: ignored `desktop-app/build/distribution/`.
 - DMG/PKG/SHA-256 names include version, build, architecture and `prototype-unnotarized`.
 - Input: ad hoc signed arm64 app with identity `local.slidemath.prototype`, LICENSE and NOTICE; production signatures are rejected.
+- If [local certificate signing](signing.md) is configured, use `APPLE_SIGNING_IDENTITY=- ./desktop-app/scripts/package.sh` to build an ad hoc prototype. Switching the installed build's signing identity may request folder access again.
 - Version/build/minimum macOS come from the bundle; packaging does not edit the signed input.
 - Existing outputs are preserved unless `--overwrite` is supplied.
 - DMG: app, Applications shortcut, README, LICENSE, NOTICE.

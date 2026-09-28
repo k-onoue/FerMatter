@@ -158,6 +158,11 @@ mod mac {
     mod tests {
         use super::*;
         use serde_json::json;
+        unsafe fn test_board() -> *mut Object {
+            // Keep parallel AppKit tests on explicitly different pasteboards.
+            let name = format!("Mathlidelux-drop-test-{}", uuid::Uuid::new_v4());
+            msg_send![class!(NSPasteboard), pasteboardWithName:ns(&name)]
+        }
         #[test]
         fn hooks_versioned_wry_class_without_changing_its_identity_and_forwards_html_drop() {
             use objc::{
@@ -190,8 +195,7 @@ mod mac {
                 );
                 let info_class = declaration.register();
                 let info: *mut Object = msg_send![info_class, new];
-                let pasteboard: *mut Object =
-                    msg_send![class!(NSPasteboard), pasteboardWithUniqueName];
+                let pasteboard = test_board();
                 let url: *mut Object =
                     msg_send![class!(NSURL), fileURLWithPath:ns("/tmp/Test folder")];
                 let urls: *mut Object = msg_send![class!(NSArray), arrayWithObject:url];
@@ -244,7 +248,7 @@ mod mac {
         fn reads_file_urls_from_the_events_pasteboard() {
             unsafe {
                 let pool: *mut Object = msg_send![class!(NSAutoreleasePool), new];
-                let board: *mut Object = msg_send![class!(NSPasteboard), pasteboardWithUniqueName];
+                let board = test_board();
                 let urls: *mut Object = msg_send![class!(NSMutableArray), array];
                 for path in ["/tmp/数式.zip", "/tmp/Diagram folder"] {
                     let url: *mut Object = msg_send![class!(NSURL), fileURLWithPath:ns(path)];
