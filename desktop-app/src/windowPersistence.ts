@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { rpc } from "./api";
-import { flushWindow } from "./persistence";
+import { flushWindow, lockWindowInteraction } from "./persistence";
 
 export async function installWindowPersistence(
   report: (error: unknown) => void,
@@ -12,7 +12,7 @@ export async function installWindowPersistence(
     "flush-window",
     async ({ payload }) => {
       let error = "";
-      document.documentElement.inert = true;
+      const release = lockWindowInteraction();
       try {
         await flushWindow();
       } catch (failure) {
@@ -22,7 +22,7 @@ export async function installWindowPersistence(
       await rpc("window_flush_complete", { token: payload.token, error }).catch(
         report,
       );
-      document.documentElement.inert = false;
+      release();
     },
   );
   return () => {

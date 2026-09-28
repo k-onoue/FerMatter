@@ -27,6 +27,20 @@ export class SnapshotWriter<T> {
   }
 }
 
+let interactionLocks = 0;
+export function lockWindowInteraction() {
+  if (typeof document === "undefined") return () => {};
+  interactionLocks++;
+  document.documentElement.inert = true;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    interactionLocks--;
+    document.documentElement.inert = interactionLocks > 0;
+  };
+}
+
 const handlers = new Map<string, () => Promise<void>>();
 export function registerWindowFlush(key: string, flush: () => Promise<void>) {
   handlers.set(key, flush);
@@ -35,12 +49,17 @@ export function registerWindowFlush(key: string, flush: () => Promise<void>) {
   };
 }
 export async function flushWindow() {
-  // A source failure must not prevent another editor from preserving its draft.
-  const results = await Promise.allSettled(
-    [...handlers.values()].map((flush) => flush()),
-  );
-  const errors = results.flatMap((result) =>
-    result.status === "rejected" ? [String(result.reason)] : [],
-  );
-  if (errors.length) throw new Error(errors.join("\n"));
+  const release = lockWindowInteraction();
+  try {
+    // A source failure must not prevent another editor from preserving its draft.
+    const results = await Promise.allSettled(
+      [...handlers.values()].map((flush) => flush()),
+    );
+    const errors = results.flatMap((result) =>
+      result.status === "rejected" ? [String(result.reason)] : [],
+    );
+    if (errors.length) throw new Error(errors.join("\n"));
+  } finally {
+    release();
+  }
 }

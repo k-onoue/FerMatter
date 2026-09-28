@@ -17,7 +17,11 @@ import {
 } from "lucide-react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { CodeEditor, setProjectCompletions } from "./editor";
-import { SnapshotWriter, registerWindowFlush } from "./persistence";
+import {
+  SnapshotWriter,
+  registerWindowFlush,
+  lockWindowInteraction,
+} from "./persistence";
 import { flushSourceBuffers, dirtySourceBuffers } from "./sourcePersistence";
 import { rpc, uid } from "./api";
 import { ImagePreview, ContextMenu, type Ask } from "./ui";
@@ -515,7 +519,7 @@ export function SourceWorkspace({
     mutationDone.current = new Promise<void>((resolve) => {
       release = resolve;
     });
-    document.documentElement.inert = true;
+    const releaseInteraction = lockWindowInteraction();
     setMutationBusy(true);
     try {
       await flushRef.current();
@@ -558,7 +562,7 @@ export function SourceWorkspace({
       await saveDrafts();
     } finally {
       mutating.current = false;
-      document.documentElement.inert = false;
+      releaseInteraction();
       mutationDone.current = null;
       release();
       setMutationBusy(false);

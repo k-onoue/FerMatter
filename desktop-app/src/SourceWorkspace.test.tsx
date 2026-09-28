@@ -10,7 +10,7 @@ import {
 } from "@testing-library/react";
 import type { EditorProps } from "./editor";
 import type { Buffer, Project } from "./types";
-import { flushWindow } from "./persistence";
+import { flushWindow, lockWindowInteraction } from "./persistence";
 import { SourceWorkspace } from "./SourceWorkspace";
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("./api", () => ({ rpc, uid: () => crypto.randomUUID() }));
@@ -199,4 +199,15 @@ it("failed draft RPC rejects window close while the mounted editor keeps its tex
     await flushWindow();
   });
   expect(draftWrites.at(-1)?.["main.typ"].text).toBe("$ retained $");
+});
+
+it("nested mutation/close locks cannot re-enable editing before the final save completes", () => {
+  const mutation = lockWindowInteraction();
+  const close = lockWindowInteraction();
+  mutation();
+  expect(document.documentElement.inert).toBe(true);
+  mutation();
+  expect(document.documentElement.inert).toBe(true);
+  close();
+  expect(document.documentElement.inert).toBe(false);
 });
