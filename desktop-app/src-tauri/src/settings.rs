@@ -121,7 +121,9 @@ fn default_document(name: &str) -> Value {
         "keybindings.json" => {
             json!({"schemaVersion":1,"kind":"mathlidelux.keybindings","bindings":{}})
         }
-        _ => json!({"appearance":"dark","autoSave":true,"opacity":0.88,"pdfWidth":420,"projectView":"grid"}),
+        _ => {
+            json!({"appearance":"dark","autoSave":true,"opacity":0.88,"pdfWidth":420,"projectView":"grid"})
+        }
     }
 }
 pub fn validate(name: &str, v: &Value) -> Result<()> {
@@ -210,9 +212,12 @@ fn default_bindings() -> HashMap<&'static str, Value> {
         ("rebuildPDF", "r", true, false, false, true),
         ("previousPage", "[", false, false, false, true),
         ("nextPage", "]", false, false, false, true),
-        ("zoomIn", "=", true, false, false, true),
-        ("zoomOut", "-", false, false, false, true),
-        ("fitPDF", "0", false, false, false, true),
+        ("zoomIn", "=", false, false, true, true),
+        ("zoomOut", "-", false, false, true, true),
+        ("fitPDF", "0", false, false, true, true),
+        ("zoomWindowIn", "=", false, false, false, true),
+        ("zoomWindowOut", "-", false, false, false, true),
+        ("resetWindowZoom", "0", false, false, false, true),
         ("inspector", "i", false, true, false, true),
         ("pin", "p", true, false, false, true),
         ("fullScreen", "f", false, false, true, true),
@@ -240,6 +245,26 @@ fn keybindings(v: &Value) -> Result<()> {
             return Err(format!("Unknown command: {id}"));
         }
         *all.get_mut(id.as_str()).unwrap() = binding.clone()
+    }
+    // Keep stored overrides usable when new zoom defaults share their keys.
+    // Only implicit defaults yield; explicit duplicates are still rejected.
+    for id in [
+        "zoomIn",
+        "zoomOut",
+        "fitPDF",
+        "zoomWindowIn",
+        "zoomWindowOut",
+        "resetWindowZoom",
+    ] {
+        if !bindings.contains_key(id)
+            && bindings.values().any(|saved| {
+                ["key", "command", "control", "shift", "option"]
+                    .iter()
+                    .all(|field| saved[field] == all[id][field])
+            })
+        {
+            all.get_mut(id).unwrap()["key"] = json!("");
+        }
     }
     let mut seen = vec![];
     for (id, b) in all {
@@ -373,5 +398,27 @@ mod tests {
         v["bindings"]["rescan"] =
             json!({"key":"o","command":true,"control":false,"option":false,"shift":false});
         assert!(keybindings(&v).is_ok());
+    }
+    #[test]
+    fn preserves_legacy_zoom_overrides_and_rejects_explicit_duplicates() {
+        let d = tempfile::tempdir().unwrap();
+        let settings = SettingsFiles::new(d.path());
+        let mut v = settings.load("keybindings.json").unwrap();
+        v["bindings"]["zoomOut"] =
+            json!({"key":"-","command":true,"control":false,"option":false,"shift":false});
+        v["bindings"]["fitPDF"] =
+            json!({"key":"0","command":true,"control":false,"option":false,"shift":false});
+        v["bindings"]["open"] =
+            json!({"key":"=","command":true,"control":true,"option":false,"shift":false});
+        v["extensions"] = json!({"community.example":{"note":"keep me"}});
+        settings.save("keybindings.json", &v).unwrap();
+        assert_eq!(
+            SettingsFiles::new(d.path())
+                .load("keybindings.json")
+                .unwrap(),
+            v
+        );
+        v["bindings"]["zoomWindowOut"] = v["bindings"]["zoomOut"].clone();
+        assert!(keybindings(&v).is_err());
     }
 }
