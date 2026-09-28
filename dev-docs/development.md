@@ -12,7 +12,7 @@
 open desktop-app/src-tauri/target/release/bundle/macos/Mathlidelux.app
 ```
 
-- Output: an ad hoc signed local app; no Developer ID signing or notarization.
+- Output defaults to an ad hoc signed local app; no notarization. For remembered folder consent across rebuilds, configure [local signing](reference/signing.md).
 - Scripts install locked npm dependencies when missing; an optional project-local Rust toolchain is supported. See [desktop setup](../desktop-app/README.md#build-and-run).
 - App icon provenance: [AppIcon.md](../desktop-app/resources/AppIcon.md).
 

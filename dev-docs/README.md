@@ -20,6 +20,7 @@
 - [Settings-file schemas](reference/settings-files.md).
 - [Update contract](reference/updates.md).
 - [Prototype packaging](reference/packaging.md).
+- [Local signing and macOS folder access](reference/signing.md).
 - [Documentation structure decision](decisions/0001-documentation.md).
 - [Open PR snapshot, 2026-09-28](history/pr-snapshot-2026-09-28.md): scope, overlap, and integration follow-up.
 - [Earlier validation](history/validation-2026-09.md): historical evidence, not a current release pass.

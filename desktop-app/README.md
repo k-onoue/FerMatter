@@ -21,7 +21,7 @@ open 'src-tauri/target/release/bundle/macos/Mathlidelux.app'
 ```
 
 - `./scripts/build.sh --debug`: faster local bundle under `target/debug/bundle/macos/`.
-- Local bundles use ad hoc signing. No public release, Developer ID signing, or notarization is implied.
+- Local bundles default to ad hoc signing. To retain macOS folder consent across rebuilds, configure a stable local certificate using the [signing guide](../dev-docs/reference/signing.md). No public release or notarization is implied.
 - `./scripts/package.sh`: verified local DMG and PKG; artifacts remain unnotarized prototypes.
 - Dependency notices are generated into `public/vendor/` and included in the bundle. Theme source notices remain with the bundled theme files.
 
