@@ -77,17 +77,19 @@ pub fn import_svg(app: &tauri::AppHandle, sources: &[String]) -> Result<()> {
         queued.push((project, label, token));
     }
     drop(pending);
+    let mut failure = None;
     for (project, label, token) in queued {
         if let Err(error) = instant::open(app, project.as_ref()) {
             let mut pending = state.pending.lock().unwrap();
             if let Some(queue) = pending.get_mut(&label) {
                 queue.retain(|v| v["token"] != token);
             }
-            return Err(err(error));
+            failure = Some(err(error));
+            continue;
         }
         let _ = app.emit_to(&label, "instant-import-pending", ());
     }
-    Ok(())
+    failure.map_or(Ok(()), Err)
 }
 pub fn incoming(app: &tauri::AppHandle, label: &str, token: &str) -> Result<Value> {
     if !label.starts_with("instant") {

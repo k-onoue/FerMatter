@@ -1,7 +1,11 @@
 //! Portable SVG recipes. Never execute imported code or follow embedded paths.
 use crate::{files::*, instant, storage::Storage};
 use serde_json::{json, Value};
-use std::{fs, io::Read, path::Path};
+use std::{
+    fs,
+    io::{Read, Write},
+    path::Path,
+};
 
 pub const SVG_LIMIT: u64 = 16 * 1024 * 1024;
 const RECIPE_LIMIT: usize = 2 * 1024 * 1024;
@@ -50,11 +54,21 @@ pub fn project_uuid(root: &Path, create: bool) -> Result<Option<String>> {
         return Ok(None);
     }
     let uuid = uuid::Uuid::new_v4().to_string();
-    json_write(
-        &path,
+    let mut pending = tempfile::NamedTempFile::new_in(root).map_err(err)?;
+    let bytes = serde_json::to_vec_pretty(
         &json!({"schemaVersion":1,"kind":"mathlidelux.project","uuid":uuid}),
-    )?;
-    Ok(Some(uuid))
+    )
+    .map_err(err)?;
+    pending.write_all(&bytes).map_err(err)?;
+    pending.as_file().sync_all().map_err(err)?;
+    match pending.persist_noclobber(&path) {
+        Ok(_) => Ok(Some(uuid)),
+        Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
+            // Concurrent first open/export adopts the winner's identity.
+            project_uuid(root, false)
+        }
+        Err(error) => Err(err(error)),
+    }
 }
 
 pub fn inherit_identity(source: &Path, target: &Path) -> Result<()> {
@@ -299,6 +313,27 @@ mod tests {
         assert_eq!(project_uuid(&moved, false).unwrap(), uuid);
         reset_identity(&moved).unwrap();
         assert_ne!(project_uuid(&moved, false).unwrap(), uuid);
+    }
+    #[test]
+    fn concurrent_first_use_creates_one_stable_identity() {
+        let dir = tempfile::tempdir().unwrap();
+        let start = std::sync::Arc::new(std::sync::Barrier::new(8));
+        let workers: Vec<_> = (0..8)
+            .map(|_| {
+                let root = dir.path().to_path_buf();
+                let start = start.clone();
+                std::thread::spawn(move || {
+                    start.wait();
+                    project_uuid(&root, true).unwrap().unwrap()
+                })
+            })
+            .collect();
+        let ids: Vec<_> = workers
+            .into_iter()
+            .map(|worker| worker.join().unwrap())
+            .collect();
+        assert!(ids.iter().all(|id| id == &ids[0]));
+        assert_eq!(project_uuid(dir.path(), false).unwrap().unwrap(), ids[0]);
     }
     #[test]
     fn fallback_never_runs_imported_source() {

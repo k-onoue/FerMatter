@@ -22,6 +22,8 @@ export function dropSVG(event: DragEvent, report: (error: unknown) => void) {
   void (async () => {
     if (files.length > 16 || files.some((file) => file.size > 16 * 1024 * 1024))
       throw new Error("Drop up to 16 SVG files, each smaller than 16 MB.");
+    if (files.reduce((bytes, file) => bytes + file.size, 0) > 64 * 1024 * 1024)
+      throw new Error("SVG selection exceeds 64 MB.");
     for (const file of files)
       await rpc("import_svg", { svg: await file.text() });
   })().catch(report);

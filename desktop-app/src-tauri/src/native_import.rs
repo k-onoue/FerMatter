@@ -41,6 +41,7 @@ pub fn clipboard() -> Result<Vec<String>> {
             return Err("Open up to 16 SVG files at once.".into());
         }
         let mut result = vec![];
+        let mut total = 0;
         for index in 0..count {
             let url: *mut Object = msg_send![urls, objectAtIndex:index];
             let file: bool = msg_send![url, isFileURL];
@@ -50,9 +51,14 @@ pub fn clipboard() -> Result<Vec<String>> {
             let path: *mut Object = msg_send![url, path];
             let bytes: *const std::ffi::c_char = msg_send![path, UTF8String];
             if !bytes.is_null() {
-                result.push(crate::roundtrip::read_svg(Path::new(
+                let source = crate::roundtrip::read_svg(Path::new(
                     &*CStr::from_ptr(bytes).to_string_lossy(),
-                ))?);
+                ))?;
+                total += source.len();
+                if total > 64 * 1024 * 1024 {
+                    return Err("SVG selection exceeds 64 MB.".into());
+                }
+                result.push(source);
             }
         }
         if !result.is_empty() {
