@@ -76,12 +76,16 @@ async fn request(
         payload["key"] = json!(format!("{}::{}", window.label(), string(&payload, "key")));
     }
     if operation == "instant_open" {
+        if lifecycle::quitting(&app) {
+            return Err("Finish saving before opening another editor.".into());
+        }
         if project_setup::required(&runtime.store)? {
             return Err("Choose a project folder in the main window first.".into());
         }
         let project = if string(&payload, "project").is_empty() {
             None
         } else {
+            source_commands::recover_pending(&runtime.store, string(&payload, "project"))?;
             Some(runtime.store.load(string(&payload, "project"))?)
         };
         instant::open(&app, project.as_ref()).map_err(err)?;
@@ -676,6 +680,14 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("Unable to start Mathlidelux")
         .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            if matches!(event, tauri::RunEvent::Reopen { .. }) {
+                lifecycle::cancel_close(app, "main");
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
             if let tauri::RunEvent::ExitRequested { api, .. } = event {
                 if !lifecycle::exiting(app) {
                     api.prevent_exit();

@@ -293,7 +293,12 @@ export default function App() {
           await persist({ ...projectRef.current!, libraryDraft: draft });
       } while (draft !== editingRef.current);
     }
-    await Promise.all([writer.current.flush(), preferencesDocument.flush(), themeDocument.flush(), keysDocument.flush()]);
+    await Promise.all([
+      writer.current.flush(),
+      preferencesDocument.flush(),
+      themeDocument.flush(),
+      keysDocument.flush(),
+    ]);
   };
   useEffect(() => {
     const unregister = registerWindowFlush("library", () =>
@@ -390,6 +395,7 @@ export default function App() {
     setKind("all");
     setDrafts({});
     setEditing((p.libraryDraft as Card | undefined) || null);
+    setEditPreview(null);
     setError("");
     if (!p.cards?.length) void rescan(p);
   }
@@ -603,6 +609,7 @@ export default function App() {
   }
   async function saveVariant() {
     if (!project || !editing) return;
+    const draft = editing;
     const card = savedVariant(editing, editPreview);
     const exists = project.cards.some((c) => c.id === card.id);
     const next = {
@@ -613,6 +620,8 @@ export default function App() {
         : [...project.cards, card],
     };
     await persist(next);
+    if (projectRef.current?.id !== next.id || editingRef.current !== draft)
+      return;
     setSelected(new Set([card.id]));
     closeEditor();
     if (card.status !== "ready") void renderCards(next, [card]);

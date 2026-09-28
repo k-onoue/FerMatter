@@ -203,7 +203,13 @@ mod tests {
             .join("SourceMutation.json");
         json_write(&journal, &json!({"from":"main.typ","to":"moved.typ","project":next,"drafts":{"moved.typ":draft},"originalProject":project,"originalDrafts":{}})).unwrap();
         fs::rename(root.join("main.typ"), root.join("moved.typ")).unwrap();
-        recover_pending(&store, ident).unwrap();
+        let reopened = crate::project_commands::open(
+            &store,
+            &crate::settings::SettingsFiles::new(&store.home),
+            &json!({"path":root,"main":"main.typ"}),
+        )
+        .unwrap();
+        assert_eq!(reopened["main"], "moved.typ");
         assert_eq!(store.load(ident).unwrap()["main"], "moved.typ");
         assert_eq!(
             store.read_drafts(ident).unwrap()["buffers"]["moved.typ"]["text"],

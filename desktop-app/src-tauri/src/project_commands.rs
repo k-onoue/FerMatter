@@ -34,7 +34,14 @@ pub fn open(store: &Storage, settings: &SettingsFiles, v: &Value) -> Result<Valu
         (path, None)
     };
     let main = v["main"].as_str().map(str::to_owned).or(main);
-    store.open(&root, main.as_deref())
+    let ident = store.register(&root)?;
+    let recovering = store
+        .project_dir(&ident)?
+        .join("SourceMutation.json")
+        .exists();
+    crate::source_commands::recover_pending(store, &ident)?;
+    // Recent-project entries may still contain the pre-crash main path.
+    store.open(&root, if recovering { None } else { main.as_deref() })
 }
 
 pub fn create(store: &Storage, settings: &SettingsFiles, v: &Value) -> Result<Value> {

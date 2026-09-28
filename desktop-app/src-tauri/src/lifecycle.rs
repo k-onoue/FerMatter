@@ -46,6 +46,16 @@ impl Lifecycle {
         FlushOutcome::Complete(quit)
     }
 }
+pub fn quitting(app: &tauri::AppHandle) -> bool {
+    let state = app.state::<Lifecycle>();
+    state.exiting.load(Ordering::SeqCst)
+        || state
+            .pending
+            .lock()
+            .unwrap()
+            .as_ref()
+            .is_some_and(|request| request.quit)
+}
 pub fn exiting(app: &tauri::AppHandle) -> bool {
     app.state::<Lifecycle>().exiting.load(Ordering::SeqCst)
 }
@@ -69,7 +79,11 @@ pub fn request_close(app: &tauri::AppHandle, label: &str) {
 fn begin(app: &tauri::AppHandle, label: Option<&str>) {
     let state = app.state::<Lifecycle>();
     let mut pending = state.pending.lock().unwrap();
-    if pending.is_some() {
+    // Explicit Quit supersedes an unfinished single-window hide/close.
+    if pending
+        .as_ref()
+        .is_some_and(|request| request.quit || label.is_some())
+    {
         return;
     }
     let windows: Vec<_> = app
