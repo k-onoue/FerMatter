@@ -50,6 +50,8 @@ fn state_paths(store: &Storage, root: &Path) -> Result<Vec<PathBuf>> {
             .join("SourceDrafts")
             .join(format!("{}.json", hash(key.as_bytes()))),
         metadata.join("Instant/session.json"),
+        // Append to keep the original three history slots compatible.
+        metadata.join(".last-valid-project.json"),
     ])
 }
 fn backup_state(store: &Storage, root: &Path) -> Result<String> {

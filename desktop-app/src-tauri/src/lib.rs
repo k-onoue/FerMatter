@@ -7,6 +7,7 @@ mod instant_settings;
 mod lifecycle;
 mod native;
 mod project_commands;
+mod project_data;
 mod project_drop;
 mod project_history;
 mod project_location;
@@ -222,8 +223,14 @@ fn dispatch(
                 store.recent()?
             };
             Ok(
-                json!({"setupRequired":setup_required,"projects":projects,"settings":runtime.settings.snapshot("preferences.json", false)?,"defaultProjectDirectory":project_location::default_directory()?,"theme":runtime.settings.snapshot("theme.json", false)?,"keybindings":runtime.settings.snapshot("keybindings.json", false)?,"themes":themes,"templates":json_read(&store.home.join("templates.json")).unwrap_or(json!({})),"storage":store.home}),
+                json!({"setupRequired":setup_required,"projects":projects,"projectProblems":store.project_problems()?,"settings":runtime.settings.snapshot("preferences.json", false)?,"defaultProjectDirectory":project_location::default_directory()?,"theme":runtime.settings.snapshot("theme.json", false)?,"keybindings":runtime.settings.snapshot("keybindings.json", false)?,"themes":themes,"templates":json_read(&store.home.join("templates.json")).unwrap_or(json!({})),"storage":store.home}),
             )
+        }
+        "project_problems" => Ok(json!(store.project_problems()?)),
+        "recover_project" => {
+            let _guard = store.writes.lock().unwrap();
+            store.recover_project(ident, string(&v, "revision"))?;
+            Ok(json!({"projects":store.recent()?,"problems":store.project_problems()?}))
         }
         "complete_project_setup" => {
             let _guard = store.writes.lock().unwrap();
@@ -324,7 +331,9 @@ fn dispatch(
             for id in ids {
                 let card = p["cards"]
                     .as_array()
-                    .unwrap()
+                    .ok_or(
+                        "Invalid project cards. Reopen the project or restore its metadata backup.",
+                    )?
                     .iter()
                     .find(|c| c["id"] == *id)
                     .ok_or("Equation not found")?;

@@ -14,6 +14,7 @@
 | --- | --- |
 | `Projects/<project-id>/project.json` | Cards, labels, outline, export settings and compatible unknown fields |
 | `Projects/<project-id>/SourceMutation.json` | Temporary recovery journal for interrupted Source rename/move |
+| `Projects/<project-id>/.last-valid-project.json` | Last valid metadata; explicit recovery preserves rejected originals as `.rejected-project-<hash>.json` |
 | `Projects/<project-id>/Cache/` | Rendered images, previews and logs |
 | `Projects/<project-id>/Exports/` | Images at selected export sizes |
 | `Projects/<project-id>/Documents/` | Compiled PDFs and navigation snapshots |
@@ -86,3 +87,12 @@
 - Main-window close hides the app after saving; Quit waits for all open editor windows. Save failures or a missing flush response cancel closing.
 - Rename/move waits for active saves, journals old/new metadata and recovery paths, then updates the file, drafts and main-file selection. The next project request completes or rolls back interrupted work.
 - Source Trash refuses files/folders containing unsaved drafts; save or explicitly reload those files first.
+
+## Project metadata validation and recovery
+
+- `project.json` uses `schemaVersion: 1`; unversioned Swift/preview files migrate on load without dropping unknown fields, cards, labels, or variants. Missing legacy collection fields receive empty defaults; missing card IDs receive deterministic IDs.
+- Validate root/card/outline/label types before commands or UI consume them; reject unsupported versions. Metadata reads/writes are limited to 16 MB and reads reject links/special files.
+- Successful saves retain a last-valid copy. Invalid or missing active metadata blocks ordinary saves; never silently start an empty replacement over a backup or invalid legacy project.
+- Projects shows **Review recovery** while healthy projects remain usable. **Restore last valid backup** checks the original revision, keeps rejected bytes separately, and restores metadata only; source files and Source/Instant drafts remain untouched.
+- Without a valid backup, retain the file for manual recovery. Legacy originals are never rewritten by recovery.
+- Parsing errors identify the metadata file and structural field, not its source contents. A root render boundary offers **Reload view** for unexpected display failures.
