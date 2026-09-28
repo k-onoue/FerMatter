@@ -543,6 +543,7 @@ export default function App() {
   }
   async function exported(ids = [...selected]) {
     if (!project) throw new Error("Open a project.");
+    if (!ids.length) throw new Error("Select an equation or figure.");
     await writeQueue.current;
     return rpc<string[]>("export", {
       project: project.id,
@@ -561,8 +562,9 @@ export default function App() {
   }
   async function copyImages() {
     try {
-      await rpc("copy_images", { paths: await exported() });
-      setNotice("Copied");
+      const paths = await exported();
+      await rpc("copy_images", { paths });
+      setNotice(paths.length > 1 ? `Copied ${paths.length} images` : "Copied");
     } catch (e) {
       report(e);
     }
@@ -706,6 +708,20 @@ export default function App() {
       ) {
         event.preventDefault();
         setSelected(new Set(visible.map((c) => c.id)));
+        return;
+      }
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        !event.shiftKey &&
+        !event.altKey &&
+        event.key.toLowerCase() === "c" &&
+        !typing &&
+        mode === "library" &&
+        selected.size > 0
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        void copyImages();
         return;
       }
       if (event.metaKey && event.key === ",") {
@@ -1136,7 +1152,9 @@ export default function App() {
                   <div
                     className="cards-grid"
                     ref={grid}
+                    tabIndex={-1}
                     onPointerDown={(e) => {
+                      e.currentTarget.focus({ preventScroll: true });
                       if ((e.target as HTMLElement).closest(".equation-card"))
                         return;
                       const origin = { x: e.clientX, y: e.clientY },
@@ -1270,7 +1288,11 @@ export default function App() {
                       ))}
                     </select>
                     <button
-                      title="Copy image"
+                      title={
+                        selected.size > 1
+                          ? `Copy ${selected.size} images (⌘C)`
+                          : "Copy image (⌘C)"
+                      }
                       disabled={!selectedCard}
                       onClick={() => void copyImages()}
                     >
