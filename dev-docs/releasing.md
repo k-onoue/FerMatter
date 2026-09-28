@@ -4,7 +4,7 @@
 
 - Development prototype: Apple Silicon; macOS 14+ deployment target, verified on macOS 26. Only compiler tools remain external; no Python runtime.
 - No signed/notarized public download at this documentation baseline.
-- [Prototype packaging](reference/packaging.md) builds DMG/PKG. In-app update transport is not yet implemented in the current app.
+- [Packaging](reference/packaging.md) keeps ad hoc prototypes separate from an explicit Developer ID/notarization path. Production credentials and clean-Mac final-artifact validation are still required; no public release is implied. In-app update transport is not yet implemented.
 - Repository is private as of 2026-09-28; Pages is public. Test release access without authentication before advertising downloads.
 - Keep `docs/site-config.js` → `releaseAvailable: false` until all public-release checks pass.
 
@@ -37,7 +37,7 @@
 1. Choose version/scope; use a task branch, optionally `release/vX.Y.Z`.
 2. Finish [issue #7](https://github.com/k-onoue/mathlidelux/issues/7)'s verified release-blocking findings; document deferrals.
 3. Update versions, changelog, requirements, compatibility notes, and affected guides.
-4. Run [validation](testing.md); verify real compilers and synthetic workflows.
+4. Run the [automated release gate and final artifact checklist](reference/release-validation.md); verify real compilers and synthetic workflows.
 5. Review/merge the preparation PR; retest the exact resulting commit before tagging.
 
 ## Public distribution checklist

@@ -18,7 +18,7 @@
 - Real compiler checks run by default; `MATHLIDELUX_COMPILER_TESTS=0` explicitly skips them.
 - Missing compilers fail the default run. A skipped run is not a release pass.
 - Run `cargo clippy --manifest-path desktop-app/src-tauri/Cargo.toml --lib -- -D warnings` with the same Rust environment.
-- CI runs frontend/Rust checks on macOS with compiler checks explicitly skipped; local release checks must cover real compilers.
+- PR CI runs frontend/Rust checks on macOS with compiler checks explicitly skipped. The separate [release gate](reference/release-validation.md) requires all four real compiler paths, an app build and dependency audits; it records skips/failures distinctly.
 - Build verifies the local ad hoc signature; it does not verify notarization.
 - Test storage/source changes with disposable copies and external-edit conflicts.
 - Test worker changes with cancellation and late results after switching projects.

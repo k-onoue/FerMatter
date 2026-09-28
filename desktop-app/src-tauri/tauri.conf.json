@@ -43,12 +43,15 @@
     "macOS": {
       "minimumSystemVersion": "14.0",
       "signingIdentity": "-",
-      "bundleVersion": "11"
+      "bundleVersion": "11",
+      "hardenedRuntime": true
     },
     "resources": {
       "../../LICENSE": "LICENSE",
       "../../NOTICE": "NOTICE",
-      "../resources/themes/": "themes/"
+      "../resources/themes/": "themes/",
+      "../public/vendor/JAVASCRIPT-LICENSES.txt": "licenses/JAVASCRIPT-LICENSES.txt",
+      "../public/vendor/RUST-LICENSES.txt": "licenses/RUST-LICENSES.txt"
     }
   },
   "mainBinaryName": "Mathlidelux"

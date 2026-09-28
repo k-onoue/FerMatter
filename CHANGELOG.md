@@ -10,6 +10,8 @@
 
 ### Added
 
+- Fresh-input release verification, recorded dependency audits and an explicit signed/notarized packaging path with validation manifests.
+
 - Editable compiler and conversion-tool paths in Settings and first-launch setup, with automatic detection, executable checks, and recoverable file-managed configuration.
 
 - Required first-launch project-folder selection, with four bundled editable demos and preservation of existing sample variants, drafts, and Instant history.
