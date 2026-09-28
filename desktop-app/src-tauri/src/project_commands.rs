@@ -160,7 +160,16 @@ mod tests {
         let chosen = temp.path().join("Chosen");
         let mut preferences = settings.load("preferences.json").unwrap();
         preferences["projectDirectory"] = json!(chosen);
-        settings.save("preferences.json", &preferences).unwrap();
+        settings
+            .save(
+                "preferences.json",
+                &preferences,
+                string(
+                    &settings.snapshot("preferences.json", false).unwrap(),
+                    "revision",
+                ),
+            )
+            .unwrap();
         let input = json!({"name":"Example", "format":"latex", "text":"\\documentclass{article}\n\\begin{document}$x$\\end{document}", "engine":"xelatex"});
         let project = create(&store, &settings, &input).unwrap();
         let root = chosen.join("Example").canonicalize().unwrap();

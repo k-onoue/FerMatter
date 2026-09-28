@@ -23,6 +23,7 @@ export function Settings({
   onTheme,
   onKeys,
   onClose,
+  onReload,
   onError,
   defaultProjectDirectory,
 }: {
@@ -30,10 +31,11 @@ export function Settings({
   themes: Theme[];
   theme: Theme;
   keys: Keybindings;
-  onSettings: (s: Preferences) => void;
+  onSettings: (s: Partial<Preferences>) => void;
   onTheme: (t: Theme) => void;
   onKeys: (k: Keybindings) => void;
   onClose: () => void;
+  onReload: (file: string) => Promise<void>;
   onError: (e: string) => void;
   defaultProjectDirectory: string;
 }) {
@@ -42,8 +44,7 @@ export function Settings({
   const [json, setJson] = useState<{ file: string; text: string } | null>(null);
   const [search, setSearch] = useState("");
   const bindings = effectiveBindings(keys);
-  const update = (patch: Partial<Preferences>) =>
-    onSettings({ ...settings, ...patch });
+  const update = (patch: Partial<Preferences>) => onSettings(patch);
   async function importFile(file: string) {
     try {
       const path = await open({
@@ -64,12 +65,7 @@ export function Settings({
   }
   async function reload(file: string) {
     try {
-      const value = await rpc<Theme | Keybindings>("reload_settings", { file });
-      if (file === "theme.json") onTheme(value as Theme);
-      else {
-        validateBindings(value as Keybindings);
-        onKeys(value as Keybindings);
-      }
+      await onReload(file);
     } catch (error) {
       onError(String(error));
     }
@@ -140,6 +136,12 @@ export function Settings({
         )}
         {tab === "Appearance" && (
           <>
+            <div className="setting-row">
+              <span>Preferences</span>
+              <button onClick={() => void reload("preferences.json")}>
+                Reload
+              </button>
+            </div>
             <label className="setting-row">
               <span>Appearance</span>
               <select

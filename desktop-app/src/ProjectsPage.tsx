@@ -48,7 +48,7 @@ export function ProjectsPage({
   projects: Project[];
   onProjects: (p: Project[]) => void;
   settings: Preferences;
-  onSettings: (p: Preferences) => void;
+  onSettings: (p: Partial<Preferences>) => void;
   onOpen: (p: Project) => void;
   onOpenDialog: (type?: string) => void;
   onNew: () => void;
@@ -299,7 +299,6 @@ export function ProjectsPage({
           title="Appearance"
           onClick={() =>
             onSettings({
-              ...settings,
               appearance:
                 document.documentElement.dataset.appearance === "dark"
                   ? "light"
@@ -339,7 +338,7 @@ export function ProjectsPage({
               aria-label={`${view === "grid" ? "Grid" : "List"} view`}
               aria-pressed={settings.projectView === view}
               className={settings.projectView === view ? "active" : ""}
-              onClick={() => onSettings({ ...settings, projectView: view })}
+              onClick={() => onSettings({ projectView: view })}
             >
               {view === "grid" ? <Grid2X2 size={17} /> : <List size={17} />}
             </button>

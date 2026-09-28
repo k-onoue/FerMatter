@@ -35,6 +35,8 @@ import { OutputSizeOptions } from "./OutputSizeOptions";
 import { ImagePreview, Modal, Prompt, ContextMenu, type Ask } from "./ui";
 import { Settings } from "./settings";
 import { defaults } from "./appearance";
+import { useSettingsDocument } from "./useSettingsDocument";
+import type { SettingsSnapshot } from "./settingsPersistence";
 import { useAppearance } from "./useAppearance";
 import { commandForEvent, validateBindings } from "./shortcuts";
 import { stepZoom } from "./scrollZoom";
@@ -85,6 +87,22 @@ export default function App() {
     [themes, setThemes] = useState<Theme[]>([]),
     [theme, setTheme] = useState<Theme>(defaults),
     [keys, setKeys] = useState<Keybindings>(initialKeys);
+  const preferencesDocument = useSettingsDocument(
+    "preferences.json",
+    initialPreferences,
+    setSettings,
+  );
+  const themeDocument = useSettingsDocument(
+    "theme.json",
+    defaults,
+    setTheme,
+    false,
+  );
+  const keysDocument = useSettingsDocument(
+    "keybindings.json",
+    initialKeys,
+    setKeys,
+  );
   const [systemDark, setSystemDark] = useState(
     matchMedia("(prefers-color-scheme: dark)").matches,
   );
@@ -164,28 +182,31 @@ export default function App() {
       projects: Project[];
       setupRequired: boolean;
       defaultProjectDirectory: string;
-      settings: Preferences;
+      settings: SettingsSnapshot<Preferences>;
       themes: Theme[];
-      theme: Theme | null;
-      keybindings: Keybindings;
+      theme: SettingsSnapshot<Theme>;
+      keybindings: SettingsSnapshot<Keybindings>;
       templates: TemplateConfiguration;
     }>("startup")
       .then((data) => {
         setProjects(data.projects);
         setSetupRequired(data.setupRequired);
         setDefaultProjectDirectory(data.defaultProjectDirectory);
-        setSettings({ ...initialPreferences, ...data.settings });
-        if (data.settings.pinned === true) {
+        preferencesDocument.accept({
+          ...data.settings,
+          value: { ...initialPreferences, ...data.settings.value },
+        });
+        if (data.settings.value.pinned === true) {
           void getCurrentWindow()
             .setAlwaysOnTop(true)
             .then(() => setPin(true))
             .catch(report);
         }
         setThemes(data.themes);
-        if (data.theme) setTheme(data.theme);
+        themeDocument.accept(data.theme);
         try {
-          validateBindings(data.keybindings);
-          setKeys(data.keybindings);
+          validateBindings(data.keybindings.value);
+          keysDocument.accept(data.keybindings);
         } catch (e) {
           report(e);
         }
@@ -250,10 +271,9 @@ export default function App() {
       .catch(report);
     return writeQueue.current;
   }
-  async function updateSettings(next: Preferences) {
+  async function updateSettings(next: Partial<Preferences>) {
     try {
-      await rpc("settings", { file: "preferences.json", value: next });
-      setSettings(next);
+      await preferencesDocument.patch(next);
     } catch (e) {
       report(e);
     }
@@ -287,8 +307,7 @@ export default function App() {
   }, [project?.id]);
   async function updateTheme(next: Theme) {
     try {
-      await rpc("settings", { file: "theme.json", value: next });
-      setTheme(next);
+      await themeDocument.replace(next);
     } catch (e) {
       report(e);
     }
@@ -296,8 +315,7 @@ export default function App() {
   async function updateKeys(next: Keybindings) {
     try {
       validateBindings(next);
-      await rpc("settings", { file: "keybindings.json", value: next });
-      setKeys(next);
+      await keysDocument.replace(next);
     } catch (e) {
       report(e);
     }
@@ -809,7 +827,7 @@ export default function App() {
     if (id === "pin") {
       await getCurrentWindow().setAlwaysOnTop(!pin);
       setPin(!pin);
-      await updateSettings({ ...settings, pinned: !pin });
+      await updateSettings({ pinned: !pin });
       return;
     }
     if (id === "fullScreen") {
@@ -893,7 +911,10 @@ export default function App() {
             settings.projectDirectory || defaultProjectDirectory
           }
           onComplete={(data) => {
-            setSettings({ ...initialPreferences, ...data.settings });
+            preferencesDocument.accept({
+              ...data.settings,
+              value: { ...initialPreferences, ...data.settings.value },
+            });
             setProjects(data.projects);
             setSetupRequired(false);
           }}
@@ -986,7 +1007,6 @@ export default function App() {
                   title="Appearance"
                   onClick={() =>
                     void updateSettings({
-                      ...settings,
                       appearance: dark ? "light" : "dark",
                     })
                   }
@@ -1345,7 +1365,7 @@ export default function App() {
                     "pointerup",
                     () => {
                       el.removeEventListener("pointermove", move);
-                      void updateSettings({ ...settings, pdfWidth: last });
+                      void updateSettings({ pdfWidth: last });
                     },
                     { once: true },
                   );
@@ -1453,6 +1473,24 @@ export default function App() {
           onSettings={(s) => void updateSettings(s)}
           onTheme={(t) => void updateTheme(t)}
           onKeys={(k) => void updateKeys(k)}
+          onReload={(file) => {
+            if (file === "preferences.json")
+              return preferencesDocument.reload(async () => {
+                const snapshot = await rpc<SettingsSnapshot<Preferences>>(
+                  "reload_settings",
+                  { file },
+                );
+                return {
+                  ...snapshot,
+                  value: { ...initialPreferences, ...snapshot.value },
+                };
+              });
+            if (file === "theme.json")
+              return themeDocument.reload(() =>
+                rpc("reload_settings", { file }),
+              );
+            return keysDocument.reload(() => rpc("reload_settings", { file }));
+          }}
           onClose={() => setShowSettings(false)}
           onError={setError}
         />

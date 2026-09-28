@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FolderOpen, RotateCcw } from "lucide-react";
 import { rpc } from "./api";
 
@@ -8,7 +8,11 @@ type Configuration = {
   paths: Record<string, string>;
 };
 type Tool = { name: string; group: string; path?: string; error?: string };
-type ToolStatus = { configuration: Configuration; tools: Tool[] };
+type ToolStatus = {
+  revision?: string;
+  configuration: Configuration;
+  tools: Tool[];
+};
 
 function sameConfiguration(a: Configuration | null, b: Configuration | null) {
   if (!a || !b) return a === b;
@@ -18,6 +22,8 @@ function sameConfiguration(a: Configuration | null, b: Configuration | null) {
 }
 
 export function useCompilerTools() {
+  const revision = useRef("");
+  const inFlight = useRef(false);
   const [saved, setSaved] = useState<Configuration | null>(null);
   const [draft, setDraft] = useState<Configuration | null>(null);
   const [checked, setChecked] = useState<Configuration | null>(null);
@@ -25,6 +31,7 @@ export function useCompilerTools() {
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
   function accept(result: ToolStatus) {
+    revision.current = result.revision || "";
     setSaved(result.configuration);
     setDraft(result.configuration);
     setChecked(result.configuration);
@@ -58,10 +65,15 @@ export function useCompilerTools() {
   async function request(
     operation: "save_tools" | "reload_tools" | "check_tools",
   ) {
+    if (inFlight.current) return false;
+    inFlight.current = true;
     setBusy(true);
     setError("");
     try {
-      const result = await rpc<ToolStatus>(operation, { value: draft });
+      const result = await rpc<ToolStatus>(operation, {
+        value: draft,
+        revision: revision.current,
+      });
       if (operation === "check_tools") {
         setTools(result.tools);
         setChecked(result.configuration);
@@ -71,6 +83,7 @@ export function useCompilerTools() {
       setError(String(e));
       return false;
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }

@@ -19,6 +19,8 @@ import {
 import { asset, rpc, projectName } from "./api";
 import { CodeEditor, setProjectCompletions } from "./editor";
 import { defaults } from "./appearance";
+import type { SettingsSnapshot } from "./settingsPersistence";
+import { useSettingsDocument } from "./useSettingsDocument";
 import { useAppearance } from "./useAppearance";
 import { builtinTemplates, type ProjectTemplate } from "./templates";
 import { commandForEvent } from "./shortcuts";
@@ -49,6 +51,11 @@ export default function InstantWindow() {
   const [history, setHistory] = useState<InstantHistory[]>([]);
   const [configuration, setConfiguration] =
     useState<InstantConfiguration | null>(null);
+  const configurationDocument = useSettingsDocument<InstantConfiguration>(
+    "instant.json",
+    {} as InstantConfiguration,
+    setConfiguration,
+  );
   const [projectContext, setProjectContext] =
     useState<InstantProjectContext | null>(null);
   const [contextBusy, setContextBusy] = useState(false);
@@ -134,14 +141,20 @@ export default function InstantWindow() {
       exportFormat: draft.exportFormat,
       color: draft.color,
     };
-    await rpc("settings", { file: "instant.json", value: next });
-    setConfiguration(next);
+    await configurationDocument.replace(next);
     setNotice("Defaults saved");
   }
   async function reloadDefaults() {
-    const next = await rpc<InstantConfiguration>("reload_settings", {
-      file: "instant.json",
+    let next: InstantConfiguration | undefined;
+    await configurationDocument.reload(async () => {
+      const snapshot = await rpc<SettingsSnapshot<InstantConfiguration>>(
+        "reload_settings",
+        { file: "instant.json" },
+      );
+      next = snapshot.value;
+      return snapshot;
     });
+    if (!next) return;
     const nextDraft = configuredInstant(next);
     if (nextDraft.template.format === draftRef.current?.template.format)
       nextDraft.source = draftRef.current.source;
@@ -196,9 +209,9 @@ export default function InstantWindow() {
     let gone = false;
     void Promise.all([
       rpc<{
-        settings: Preferences;
-        theme: Theme | null;
-        keybindings: Keybindings;
+        settings: SettingsSnapshot<Preferences>;
+        theme: SettingsSnapshot<Theme>;
+        keybindings: SettingsSnapshot<Keybindings>;
       }>("startup"),
       rpc<InstantSession>("instant_session", { action: "load" }),
       projectID
@@ -206,19 +219,19 @@ export default function InstantWindow() {
         : Promise.resolve(null),
       projectID
         ? Promise.resolve(null)
-        : rpc<InstantConfiguration>("instant_configuration"),
+        : rpc<SettingsSnapshot<InstantConfiguration>>("instant_configuration"),
     ])
       .then(async ([data, state, context, config]) => {
         if (gone) return;
-        setTheme(data.theme || defaults);
+        setTheme(data.theme.value || defaults);
         setDark(
-          data.settings.appearance === "system"
+          data.settings.value.appearance === "system"
             ? matchMedia("(prefers-color-scheme: dark)").matches
-            : data.settings.appearance !== "light",
+            : data.settings.value.appearance !== "light",
         );
-        setOpacity(data.settings.opacity ?? 0.88);
-        setKeys(data.keybindings);
-        setConfiguration(config);
+        setOpacity(data.settings.value.opacity ?? 0.88);
+        setKeys(data.keybindings.value);
+        if (config) configurationDocument.accept(config);
         setProjectContext(context);
         setHistory(state.history);
         let next =
@@ -226,7 +239,7 @@ export default function InstantWindow() {
           (context
             ? localInstant(context)
             : config
-              ? configuredInstant(config)
+              ? configuredInstant(config.value)
               : initialInstant());
         const pending = localStorage.getItem(pendingKey);
         if (pending) {

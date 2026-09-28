@@ -3,18 +3,19 @@ use serde_json::{json, Value};
 use std::{
     collections::HashMap,
     fs,
+    io::Read,
     path::{Path, PathBuf},
     sync::Mutex,
 };
 pub struct SettingsFiles {
     dir: PathBuf,
-    revisions: Mutex<HashMap<String, String>>,
+    writes: Mutex<()>,
 }
 impl SettingsFiles {
     pub fn new(home: &Path) -> Self {
         Self {
             dir: home.join("Settings"),
-            revisions: Mutex::new(HashMap::new()),
+            writes: Mutex::new(()),
         }
     }
     pub fn initialize(&self, name: &str, value: &Value) -> Result<()> {
@@ -55,65 +56,110 @@ impl SettingsFiles {
         json_write(&self.dir.join("preferences.json"), &prefs)
     }
     pub fn load(&self, name: &str) -> Result<Value> {
+        Ok(self.snapshot(name, false)?["value"].clone())
+    }
+    /// Return the revision of exactly the bytes read, never a shared caller revision.
+    pub fn snapshot(&self, name: &str, strict: bool) -> Result<Value> {
+        let _guard = self.writes.lock().unwrap();
         valid_name(name)?;
         let path = self.dir.join(name);
         let backup = self.dir.join(format!(".last-valid-{name}"));
-        let value = match json_read(&path).and_then(|v| {
-            validate(name, &v)?;
-            Ok(v)
-        }) {
-            Ok(v) => v,
-            Err(_) => match json_read(&backup).and_then(|v| {
-                validate(name, &v)?;
-                Ok(v)
-            }) {
-                Ok(v) => v,
-                Err(_) => default_document(name),
-            },
+        let bytes = match read_document(&path) {
+            Ok(bytes) => Some(bytes),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+            Err(_) => {
+                return Err(format!(
+                    "Cannot read settings file {}. It has been kept.",
+                    path.display()
+                ))
+            }
         };
-        if !path.exists() {
-            json_write(&path, &value)?
-        }
+        let parse = |bytes: &[u8]| -> Result<Value> {
+            if bytes.len() > 1_000_000 {
+                return Err("Settings exceed 1 MB.".into());
+            }
+            let value: Value =
+                serde_json::from_slice(bytes).map_err(|_| "Invalid settings JSON.".to_string())?;
+            validate(name, &value)?;
+            Ok(value)
+        };
+        let current = bytes
+            .as_deref()
+            .ok_or_else(|| "Settings file is missing.".to_string())
+            .and_then(parse);
+        let valid = current.is_ok();
+        let value = match current {
+            Ok(value) => value,
+            Err(error) if strict => return Err(error),
+            Err(_) => read_document(&backup)
+                .ok()
+                .and_then(|b| parse(&b).ok())
+                .unwrap_or_else(|| default_document(name)),
+        };
+        let revision = if let Some(bytes) = bytes {
+            // An invalid active document can supply fallback values, but never a
+            // writable revision. Reload must succeed before replacing the original.
+            if valid {
+                hash(bytes)
+            } else {
+                String::new()
+            }
+        } else {
+            let bytes = serde_json::to_vec_pretty(&value).map_err(err)?;
+            atomic(&path, &bytes)?;
+            hash(bytes)
+        };
         json_write(&backup, &value)?;
-        self.revisions
-            .lock()
-            .unwrap()
-            .insert(name.into(), hash(fs::read(&path).map_err(err)?));
-        Ok(value)
+        Ok(json!({"value":value,"revision":revision}))
     }
+    #[cfg(test)]
     pub fn reload(&self, name: &str) -> Result<Value> {
-        valid_name(name)?;
-        let path = self.dir.join(name);
-        let value = json_read(&path)?;
-        validate(name, &value)?;
-        json_write(&self.dir.join(format!(".last-valid-{name}")), &value)?;
-        self.revisions
-            .lock()
-            .unwrap()
-            .insert(name.into(), hash(fs::read(&path).map_err(err)?));
-        Ok(value)
+        Ok(self.snapshot(name, true)?["value"].clone())
     }
-    pub fn save(&self, name: &str, value: &Value) -> Result<()> {
+    pub fn save(&self, name: &str, value: &Value, expected: &str) -> Result<String> {
+        let _guard = self.writes.lock().unwrap();
         valid_name(name)?;
         validate(name, value)?;
         if serde_json::to_vec(value).map_err(err)?.len() > 1_000_000 {
             return Err("Settings exceed 1 MB.".into());
         }
         let path = self.dir.join(name);
-        let mut revisions = self.revisions.lock().unwrap();
-        let actual = fs::read(&path).map(hash).unwrap_or_default();
-        if revisions
-            .get(name)
-            .is_some_and(|revision| *revision != actual)
-        {
+        let actual = read_document(&path).map(hash).unwrap_or_default();
+        if expected.is_empty() || expected != actual {
             return Err("Settings changed on disk. Reload the file before saving.".into());
         }
-        json_write(&path, value)?;
-        json_write(&self.dir.join(format!(".last-valid-{name}")), value)?;
-        revisions.insert(name.into(), hash(fs::read(path).map_err(err)?));
-        Ok(())
+        let bytes = serde_json::to_vec_pretty(value).map_err(err)?;
+        atomic(&path, &bytes)?;
+        atomic(&self.dir.join(format!(".last-valid-{name}")), &bytes)?;
+        Ok(hash(bytes))
     }
 }
+fn read_document(path: &Path) -> std::io::Result<Vec<u8>> {
+    let mut options = fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+    }
+    let file = options.open(path)?;
+    if !file.metadata()?.is_file() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Settings must be a regular file.",
+        ));
+    }
+    let mut bytes = Vec::new();
+    file.take(1_000_001).read_to_end(&mut bytes)?;
+    if bytes.len() > 1_000_000 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Settings exceed 1 MB.",
+        ));
+    }
+    Ok(bytes)
+}
+
 fn valid_name(name: &str) -> Result<()> {
     if [
         "preferences.json",
@@ -373,6 +419,70 @@ pub fn validate_templates(value: &Value) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn oversized_settings_remain_untouched_and_cannot_be_saved_over() {
+        let dir = tempfile::tempdir().unwrap();
+        let settings = SettingsFiles::new(dir.path());
+        let first = settings.snapshot("preferences.json", false).unwrap();
+        let path = dir.path().join("Settings/preferences.json");
+        let file = fs::OpenOptions::new().write(true).open(&path).unwrap();
+        file.set_len(32 * 1024 * 1024).unwrap();
+        assert!(settings.snapshot("preferences.json", false).is_err());
+        assert!(settings
+            .save(
+                "preferences.json",
+                &first["value"],
+                string(&first, "revision")
+            )
+            .is_err());
+        assert_eq!(fs::metadata(path).unwrap().len(), 32 * 1024 * 1024);
+    }
+    #[test]
+    fn another_reader_cannot_authorize_a_stale_writer() {
+        let dir = tempfile::tempdir().unwrap();
+        let settings = SettingsFiles::new(dir.path());
+        for name in [
+            "preferences.json",
+            "theme.json",
+            "keybindings.json",
+            "instant.json",
+            "tools.json",
+        ] {
+            let first = settings.snapshot(name, false).unwrap();
+            let mut external = first["value"].clone();
+            external["extensions"] = json!({"community.example": "external change"});
+            json_write(&dir.path().join("Settings").join(name), &external).unwrap();
+            let second = settings.snapshot(name, false).unwrap();
+            assert_eq!(second["value"], external);
+            assert!(settings
+                .save(name, &first["value"], string(&first, "revision"))
+                .is_err());
+            let revision = settings
+                .save(name, &external, string(&second, "revision"))
+                .unwrap();
+            assert!(!revision.is_empty());
+            assert_eq!(settings.load(name).unwrap(), external);
+        }
+    }
+    #[test]
+    fn invalid_active_settings_cannot_be_overwritten_using_fallback_revision() {
+        let dir = tempfile::tempdir().unwrap();
+        let settings = SettingsFiles::new(dir.path());
+        let initial = settings.snapshot("preferences.json", false).unwrap();
+        let path = dir.path().join("Settings/preferences.json");
+        fs::write(&path, "{unfinished").unwrap();
+        let fallback = settings.snapshot("preferences.json", false).unwrap();
+        assert_eq!(fallback["value"], initial["value"]);
+        assert_eq!(fallback["revision"], "");
+        assert!(settings
+            .save(
+                "preferences.json",
+                &fallback["value"],
+                string(&fallback, "revision")
+            )
+            .is_err());
+        assert_eq!(fs::read_to_string(path).unwrap(), "{unfinished");
+    }
     #[cfg(target_os = "macos")]
     #[test]
     fn swift_preferences_import_preserves_preview_settings() {
@@ -395,7 +505,16 @@ mod tests {
         assert_eq!(prefs["autoSave"], false);
         assert_eq!(prefs["pinned"], true);
         let changed = json!({"appearance":"dark","opacity":0.9,"autoSave":true});
-        settings.save("preferences.json", &changed).unwrap();
+        settings
+            .save(
+                "preferences.json",
+                &changed,
+                string(
+                    &settings.snapshot("preferences.json", false).unwrap(),
+                    "revision",
+                ),
+            )
+            .unwrap();
         settings.import_swift_preferences(&legacy).unwrap();
         assert_eq!(settings.load("preferences.json").unwrap(), changed);
         assert!(legacy.exists());
@@ -406,9 +525,21 @@ mod tests {
         let settings = SettingsFiles::new(d.path());
         let mut theme = settings.load("theme.json").unwrap();
         theme["extensions"] = json!({"community.example":{"author":"Example"}});
-        settings.save("theme.json", &theme).unwrap();
+        settings
+            .save(
+                "theme.json",
+                &theme,
+                string(&settings.snapshot("theme.json", false).unwrap(), "revision"),
+            )
+            .unwrap();
         fs::write(d.path().join("Settings/theme.json"), "{").unwrap();
-        assert!(settings.save("theme.json", &theme).is_err());
+        assert!(settings
+            .save(
+                "theme.json",
+                &theme,
+                string(&settings.snapshot("theme.json", false).unwrap(), "revision")
+            )
+            .is_err());
         assert_eq!(
             SettingsFiles::new(d.path()).load("theme.json").unwrap(),
             theme
@@ -439,7 +570,16 @@ mod tests {
         v["bindings"]["open"] =
             json!({"key":"=","command":true,"control":true,"option":false,"shift":false});
         v["extensions"] = json!({"community.example":{"note":"keep me"}});
-        settings.save("keybindings.json", &v).unwrap();
+        settings
+            .save(
+                "keybindings.json",
+                &v,
+                string(
+                    &settings.snapshot("keybindings.json", false).unwrap(),
+                    "revision",
+                ),
+            )
+            .unwrap();
         assert_eq!(
             SettingsFiles::new(d.path())
                 .load("keybindings.json")
