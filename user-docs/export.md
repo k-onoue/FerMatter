@@ -3,7 +3,7 @@
 1. Select an equation or figure.
 2. Choose **SVG**, **PNG**, **JPEG**, or **PDF**.
 3. Set **Export Font Size** to Original or a size from 10–96 pt.
-4. Copy (`⇧⌘C`), export (`⇧⌘S`), or drag from the card/preview.
+4. Copy (`⌘C` with cards selected, or `⇧⌘C`), export (`⇧⌘S`), or drag from the card/preview.
 
 | Format | Use |
 | --- | --- |
@@ -23,8 +23,9 @@
 
 - Command-click individual cards; Shift-click a range; drag a selection rectangle from empty space.
 - `⌘A` selects the current filtered view; Escape clears selection.
-- Export writes one file per selected item; existing files get unique names.
-- Copying several items copies their file URLs.
+- Copy (`⌘C` or the copy button), then paste into PowerPoint (`⌘V`); each selected item becomes a separate image.
+- SVG remains vector artwork. Multiple-image drag support depends on the receiving app.
+- Export saves one selected image; use copy or drag for several items.
 - Use the context menu to assign a label to the selection.
 
 ## Troubleshooting
