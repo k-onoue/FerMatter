@@ -218,10 +218,22 @@ mod tests {
         let settings = SettingsFiles::new(base.path());
         assert_eq!(settings.load("tools.json").unwrap(), defaults());
         let value = config(json!({"typst":"/bin/sh"}));
-        settings.save("tools.json", &value).unwrap();
+        settings
+            .save(
+                "tools.json",
+                &value,
+                string(&settings.snapshot("tools.json", false).unwrap(), "revision"),
+            )
+            .unwrap();
         let file = base.path().join("Settings/tools.json");
         fs::write(&file, "invalid").unwrap();
-        assert!(settings.save("tools.json", &defaults()).is_err());
+        assert!(settings
+            .save(
+                "tools.json",
+                &defaults(),
+                string(&settings.snapshot("tools.json", false).unwrap(), "revision")
+            )
+            .is_err());
         assert!(settings.reload("tools.json").is_err());
         assert_eq!(
             SettingsFiles::new(base.path()).load("tools.json").unwrap(),

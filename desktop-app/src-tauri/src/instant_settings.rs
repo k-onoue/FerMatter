@@ -105,7 +105,16 @@ mod tests {
         settings.load("instant.json").unwrap();
         let file = temp.path().join("Settings/instant.json");
         std::fs::write(&file, "unfinished external edit").unwrap();
-        assert!(settings.save("instant.json", &value).is_err());
+        assert!(settings
+            .save(
+                "instant.json",
+                &value,
+                string(
+                    &settings.snapshot("instant.json", false).unwrap(),
+                    "revision"
+                )
+            )
+            .is_err());
         assert!(settings.reload("instant.json").is_err());
         assert_eq!(settings.load("instant.json").unwrap(), value);
         assert_eq!(
@@ -133,7 +142,16 @@ mod tests {
             before
         );
         config["fontSize"] = json!(48);
-        settings.save("instant.json", &config).unwrap();
+        settings
+            .save(
+                "instant.json",
+                &config,
+                string(
+                    &settings.snapshot("instant.json", false).unwrap(),
+                    "revision",
+                ),
+            )
+            .unwrap();
         assert_eq!(load(&store, &settings).unwrap()["fontSize"], 48);
         assert_eq!(
             std::fs::read(store.home.join("Instant/session.json")).unwrap(),

@@ -3,10 +3,14 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { FolderOpen, LoaderCircle } from "lucide-react";
 import { rpc } from "./api";
 import type { Preferences, Project } from "./types";
+import type { SettingsSnapshot } from "./settingsPersistence";
 import icon from "../src-tauri/icons/icon.png";
 import { CompilerToolFields, useCompilerTools } from "./CompilerTools";
 
-type SetupResult = { settings: Preferences; projects: Project[] };
+type SetupResult = {
+  settings: SettingsSnapshot<Preferences>;
+  projects: Project[];
+};
 
 export function ProjectSetup({
   initialDirectory,

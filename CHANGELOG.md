@@ -34,6 +34,8 @@
 
 ### Changed
 
+- Protect settings against stale-window overwrites and preserve rapid preference changes with ordered saves and explicit reload after conflicts.
+
 - Align slider thumbs with track endpoints at minimum and maximum values.
 
 - Display source font sizes in points instead of “Original” throughout the Library and Source previews.

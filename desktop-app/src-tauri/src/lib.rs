@@ -31,6 +31,7 @@ struct Runtime {
     settings: settings::SettingsFiles,
     jobs: Mutex<HashMap<String, compiler::Cancellation>>,
     tools: Mutex<Arc<toolchain::Toolchain>>,
+    tools_revision: Mutex<String>,
 }
 fn job(runtime: &Runtime, key: &str) -> compiler::Cancellation {
     let c = compiler::Cancellation::with_tools(runtime.tools.lock().unwrap().clone());
@@ -123,7 +124,10 @@ fn dispatch(
     match op {
         "instant_session" => instant::session(store, &v),
         "instant_context" => instant::context(store, ident),
-        "instant_configuration" => instant_settings::load(store, &runtime.settings),
+        "instant_configuration" => {
+            instant_settings::load(store, &runtime.settings)?;
+            runtime.settings.snapshot("instant.json", false)
+        }
         "reveal_instant_configuration" => {
             std::process::Command::new("/usr/bin/open")
                 .arg("-R")
@@ -200,7 +204,7 @@ fn dispatch(
                 store.recent()?
             };
             Ok(
-                json!({"setupRequired":setup_required,"projects":projects,"settings":runtime.settings.load("preferences.json")?,"defaultProjectDirectory":project_location::default_directory()?,"theme":runtime.settings.load("theme.json")?,"keybindings":runtime.settings.load("keybindings.json")?,"themes":themes,"templates":json_read(&store.home.join("templates.json")).unwrap_or(json!({})),"storage":store.home}),
+                json!({"setupRequired":setup_required,"projects":projects,"settings":runtime.settings.snapshot("preferences.json", false)?,"defaultProjectDirectory":project_location::default_directory()?,"theme":runtime.settings.snapshot("theme.json", false)?,"keybindings":runtime.settings.snapshot("keybindings.json", false)?,"themes":themes,"templates":json_read(&store.home.join("templates.json")).unwrap_or(json!({})),"storage":store.home}),
             )
         }
         "complete_project_setup" => {
@@ -256,10 +260,13 @@ fn dispatch(
         }
         "settings" => {
             let _guard = store.writes.lock().unwrap();
-            runtime.settings.save(string(&v, "file"), &v["value"])?;
-            Ok(Value::Null)
+            Ok(json!(runtime.settings.save(
+                string(&v, "file"),
+                &v["value"],
+                string(&v, "revision")
+            )?))
         }
-        "reload_settings" => runtime.settings.reload(string(&v, "file")),
+        "reload_settings" => runtime.settings.snapshot(string(&v, "file"), true),
         "export_settings" => {
             settings::validate(string(&v, "file"), &v["value"])?;
             json_write(Path::new(string(&v, "path")), &v["value"])?;
@@ -520,19 +527,33 @@ fn dispatch(
                 Ok(json!(path.map(|path| path.to_string())))
             }
         }
-        "tools" => Ok(runtime.tools.lock().unwrap().status()),
+        "tools" => {
+            let _guard = store.writes.lock().unwrap();
+            let mut status = runtime.tools.lock().unwrap().status();
+            status["revision"] = json!(*runtime.tools_revision.lock().unwrap());
+            Ok(status)
+        }
         "check_tools" => Ok(toolchain::Toolchain::from_value(&v["value"])?.status()),
         "save_tools" | "reload_tools" => {
             let _guard = store.writes.lock().unwrap();
-            let tools = if op == "save_tools" {
+            let (tools, revision) = if op == "save_tools" {
                 let tools = toolchain::Toolchain::from_value(&v["value"])?;
                 tools.check_overrides()?;
-                runtime.settings.save("tools.json", &v["value"])?;
-                tools
+                let revision =
+                    runtime
+                        .settings
+                        .save("tools.json", &v["value"], string(&v, "revision"))?;
+                (tools, revision)
             } else {
-                toolchain::Toolchain::from_value(&runtime.settings.reload("tools.json")?)?
+                let snapshot = runtime.settings.snapshot("tools.json", true)?;
+                (
+                    toolchain::Toolchain::from_value(&snapshot["value"])?,
+                    string(&snapshot, "revision").to_owned(),
+                )
             };
-            let result = tools.status();
+            let mut result = tools.status();
+            result["revision"] = json!(revision);
+            *runtime.tools_revision.lock().unwrap() = revision;
             *runtime.tools.lock().unwrap() = Arc::new(tools);
             Ok(result)
         }
@@ -566,12 +587,14 @@ pub fn run() {
                     )?;
                 }
             }
-            let tools = toolchain::Toolchain::from_value(&settings.load("tools.json")?)?;
+            let tools_snapshot = settings.snapshot("tools.json", false)?;
+            let tools = toolchain::Toolchain::from_value(&tools_snapshot["value"])?;
             app.manage(Arc::new(Runtime {
                 settings,
                 store,
                 jobs: Mutex::new(HashMap::new()),
                 tools: Mutex::new(Arc::new(tools)),
+                tools_revision: Mutex::new(string(&tools_snapshot, "revision").to_owned()),
             }));
             let menu = tauri::menu::Menu::default(app.handle())?;
             for item in menu.items()? {
@@ -642,6 +665,7 @@ mod request_tests {
             settings: settings::SettingsFiles::new(temp.path()),
             jobs: Mutex::new(HashMap::new()),
             tools: Mutex::new(Arc::default()),
+            tools_revision: Mutex::new(String::new()),
         };
         let main = job(&runtime, "main::render");
         let old = job(&runtime, "instant::render");

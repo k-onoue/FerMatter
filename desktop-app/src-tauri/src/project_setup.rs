@@ -225,9 +225,14 @@ pub fn finish(store: &Storage, settings: &SettingsFiles, chosen: &str) -> Result
             store.save(&ident, &project)?;
         }
     }
-    let mut preferences = settings.load("preferences.json")?;
+    let snapshot = settings.snapshot("preferences.json", false)?;
+    let mut preferences = snapshot["value"].clone();
     preferences["projectDirectory"] = json!(directory);
-    settings.save("preferences.json", &preferences)?;
+    let revision = settings.save(
+        "preferences.json",
+        &preferences,
+        string(&snapshot, "revision"),
+    )?;
     for demo in &setup.projects {
         let target = setup.demos.join(&demo.name);
         if let Some(source) = demo
@@ -243,7 +248,7 @@ pub fn finish(store: &Storage, settings: &SettingsFiles, chosen: &str) -> Result
     let projects = store.recent()?;
     setup.complete = true;
     save(store, &setup)?;
-    Ok(json!({"settings": preferences, "projects": projects}))
+    Ok(json!({"settings": {"value": preferences, "revision": revision}, "projects": projects}))
 }
 
 #[cfg(test)]
@@ -275,7 +280,7 @@ mod tests {
         let result = finish(&store, &settings, base.to_str().unwrap()).unwrap();
         assert!(!required(&store).unwrap());
         assert_eq!(
-            result["settings"]["projectDirectory"],
+            result["settings"]["value"]["projectDirectory"],
             json!(base.canonicalize().unwrap())
         );
         let projects = result["projects"].as_array().unwrap();

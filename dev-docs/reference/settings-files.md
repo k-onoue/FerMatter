@@ -31,6 +31,12 @@ the recovery copy. The shortcut recorder refuses to overwrite external edits unt
 Reload accepts them. A failed file write leaves the active settings unchanged.
 Files are limited to 1 MB and writes use atomic replacement.
 
+- Reads return the document and its byte revision together; saves must supply that revision.
+- Opening another window or reading compiler preferences cannot authorize an older view to overwrite external changes.
+- Preferences merge patches and save in order. Failed saves keep the pending view and block later writes until Reload succeeds; Appearance includes a preferences Reload button.
+- Invalid active JSON may supply last-valid fallback values but never a writable revision. Fix the external file and Reload before saving.
+- Theme/shortcut/Instant/tool settings use the same revision contract. Tool changes still require Apply.
+
 The desktop app copies missing Swift JSON settings and recovery files on first
 use. Current preview settings take precedence. Appearance, opacity, pinning and
 auto-save mode migrate from Swift preferences when current preferences are absent.
