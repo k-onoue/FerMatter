@@ -861,7 +861,11 @@ export default function App() {
   const title = mode === "source" ? "Source" : "Library";
   const desktopBackground = useDesktopBackground();
   return (
-    <div className="app">
+    <div
+      className="app"
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => event.preventDefault()}
+    >
       {desktopBackground && (
         <div
           className="desktop-wallpaper"
@@ -1520,6 +1524,7 @@ export default function App() {
               <div className="pdf-column" style={{ width: settings.pdfWidth }}>
                 <PdfPane
                   document={pdf}
+                  project={project}
                   building={pdfBusy}
                   onBuild={() => void buildPdf()}
                   onClose={() => setPdfOpen(false)}

@@ -47,7 +47,13 @@ async fn request(
     }
     let cancellation = if matches!(
         operation.as_str(),
-        "scan" | "render" | "source_preview" | "document" | "pdf_navigate"
+        "scan"
+            | "render"
+            | "source_preview"
+            | "document"
+            | "pdf_navigate"
+            | "pdf_drag_target"
+            | "pdf_prepare_drag"
     ) {
         Some(job(&runtime, string(&payload, "key")))
     } else {
@@ -438,11 +444,45 @@ fn dispatch(
             }
             result
         }
-        "pdf_navigate" => {
+        "pdf_navigate" | "pdf_drag_target" | "pdf_prepare_drag" => {
             let c = cancellation.unwrap_or_default();
             store.allowed_artifact(Path::new(string(&v["document"], "pdfPath")))?;
             store.allowed_artifact(Path::new(string(&v["document"], "sourceRoot")))?;
-            let result = compiler::navigate(&v["document"], &v, &c);
+            let result = (|| {
+                c.check()?;
+                if op == "pdf_navigate" {
+                    return compiler::navigate(&v["document"], &v, &c);
+                }
+                if op == "pdf_drag_target" {
+                    return compiler::drag_target(&v["document"], &v, &c);
+                }
+                store.allowed_artifact(Path::new(string(&v["document"], "renderRoot")))?;
+                let p = store.load(ident)?;
+                let card = compiler::document_artwork(
+                    &v["document"],
+                    string(&v, "targetID"),
+                    &store.project_dir(ident)?.join("Cache/PDFArtwork"),
+                    &c,
+                )?;
+                let size = v["fontSize"]
+                    .as_f64()
+                    .or_else(|| {
+                        p["cards"]
+                            .as_array()
+                            .and_then(|cards| cards.iter().find(|item| item["id"] == card["id"]))
+                            .and_then(|item| item["exportFontSize"].as_f64())
+                            .or(p["exportFontSize"].as_f64())
+                    })
+                    .unwrap_or(0.);
+                let path = export::image_file(
+                    &card,
+                    string(&v, "format"),
+                    size,
+                    &store.project_dir(ident)?.join("Exports"),
+                )?;
+                c.check()?;
+                Ok(json!({"card":card,"path":path}))
+            })();
             let mut jobs = runtime.jobs.lock().unwrap();
             let key = string(&v, "key");
             if jobs

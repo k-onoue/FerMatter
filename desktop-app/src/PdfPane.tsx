@@ -11,13 +11,15 @@ import {
   Maximize,
 } from "lucide-react";
 import { asset, rpc } from "./api";
-import type { DocumentPDF, Anchor } from "./types";
+import type { DocumentPDF, Anchor, Project } from "./types";
 import { anchorAtPoint } from "./navigation";
 import { stepZoom } from "./scrollZoom";
 import { useControlScroll } from "./useControlScroll";
+import { PdfArtworkDrag, usePdfArtworkHover } from "./PdfArtworkDrag";
 pdfjs.GlobalWorkerOptions.workerSrc = workerURL;
 export function PdfPane({
   document,
+  project,
   building,
   onBuild,
   onClose,
@@ -26,6 +28,7 @@ export function PdfPane({
   target,
 }: {
   document: DocumentPDF | null;
+  project: Project;
   building: boolean;
   onBuild: () => void;
   onClose: () => void;
@@ -39,6 +42,12 @@ export function PdfPane({
   const [width, setWidth] = useState(400);
   const [error, setError] = useState("");
   const [pageSize, setPageSize] = useState({ width: 1, height: 1, scale: 1 });
+  const artwork = usePdfArtworkHover(
+    document,
+    page,
+    pageSize.scale,
+    project.id,
+  );
   const canvas = useRef<HTMLCanvasElement>(null);
   const pageElement = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
@@ -244,6 +253,8 @@ export function PdfPane({
         <div
           className="pdf-page"
           ref={pageElement}
+          onPointerMove={artwork.move}
+          onPointerLeave={artwork.leave}
           style={{
             display: pdf ? "block" : "none",
             width: pageSize.width,
@@ -301,6 +312,16 @@ export function PdfPane({
                   ) * pageSize.scale,
                 height: ((selectedAnchor.height || 36) + 6) * pageSize.scale,
               }}
+            />
+          )}
+          {artwork.hover && document && (
+            <PdfArtworkDrag
+              key={`${document.pdfPath}:${artwork.hover.targetID}`}
+              anchor={artwork.hover}
+              document={document}
+              project={project}
+              scale={pageSize.scale}
+              onNavigate={onNavigate}
             />
           )}
         </div>

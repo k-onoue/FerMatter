@@ -746,6 +746,30 @@ small,
   border-radius: 4px;
   background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
+.pdf-artwork-drag {
+  position: absolute;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+  border: 1px dashed var(--accent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  cursor: progress;
+}
+.pdf-artwork-drag.ready {
+  cursor: grab;
+}
+.pdf-artwork-drag:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.pdf-artwork-drag > svg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  color: var(--accent);
+  background: var(--surfaceBackground);
+  border-radius: 2px;
+}
 .pdf-content canvas:not([width]) {
   display: none;
 }

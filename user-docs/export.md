@@ -3,7 +3,7 @@
 1. Select an equation or figure.
 2. Choose **SVG**, **PNG**, **JPEG**, or **PDF**.
 3. Set **Export Font Size** to Original or a size from 10–96 pt.
-4. Copy (`⌘C` with cards selected, or `⇧⌘C`), export (`⇧⌘S`), or drag from the card/preview.
+4. Copy (`⌘C` with cards selected, or `⇧⌘C`), export (`⇧⌘S`), or drag from the card, preview, or [mapped PDF artwork](navigate-paper.md).
 
 | Format | Use |
 | --- | --- |
@@ -18,6 +18,7 @@
 - Figures retain their original size unless given an item override; that override scales the whole drawing.
 - Vector artwork stays vector; embedded raster images remain raster.
 - Copy/paste into PowerPoint is demonstrated here; drag behavior depends on the receiving app.
+- Hover over a PDF equation or figure and wait for its grab handle to drag the compiled source artwork. PDF drags export one item, using the project format and its source card's output size override if set.
 
 ## Several equations
 

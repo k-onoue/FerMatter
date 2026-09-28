@@ -504,6 +504,15 @@ pub fn document(
     let result = (|| {
         snapshot(root, &stage, drafts)?;
         let targets = scan::extract(&stage, main, None)?["cards"].clone();
+        // Typst navigation inserts metadata into its build sources. Keep an
+        // untouched snapshot for exporting the artwork visible in this PDF.
+        let render_root = if main.ends_with(".typ") {
+            let original = dest.join("Original");
+            snapshot(&stage, &original, &Value::Null)?;
+            original
+        } else {
+            stage.clone()
+        };
         let (pdf, anchors) = if main.ends_with(".typ") {
             typst_document(&stage, main, &out, c)?
         } else {
@@ -520,13 +529,93 @@ pub fn document(
             (pdf, vec![])
         };
         Ok(
-            json!({"pdfPath":pdf,"sourceRoot":stage,"format":if main.ends_with(".typ"){"typst"}else{"latex"},"anchors":anchors,"targets":targets}),
+            json!({"pdfPath":pdf,"sourceRoot":stage,"renderRoot":render_root,"main":main,"engine":engine,"format":if main.ends_with(".typ"){"typst"}else{"latex"},"anchors":anchors,"targets":targets}),
         )
     })();
     if result.is_err() {
         let _ = fs::remove_dir_all(&dest);
     }
     result
+}
+pub fn document_artwork(
+    document: &Value,
+    target_id: &str,
+    cache: &Path,
+    c: &Cancellation,
+) -> Result<Value> {
+    c.check()?;
+    let mut card = document["targets"]
+        .as_array()
+        .and_then(|targets| targets.iter().find(|t| string(t, "id") == target_id))
+        .cloned()
+        .ok_or("No exportable equation at this PDF position.")?;
+    let root = Path::new(string(document, "renderRoot"));
+    let main = string(document, "main");
+    if main.is_empty() || !root.is_dir() {
+        return Err("Rebuild the PDF before dragging its artwork.".into());
+    }
+    render(
+        root,
+        main,
+        string(document, "engine"),
+        &[card.clone()],
+        cache,
+        c,
+        |event| {
+            for (key, value) in event.as_object().unwrap() {
+                card[key] = value.clone();
+            }
+        },
+    )?;
+    c.check()?;
+    if string(&card, "status") != "ready" {
+        return Err(string(&card, "error").to_owned());
+    }
+    Ok(card)
+}
+
+pub fn drag_target(document: &Value, request: &Value, c: &Cancellation) -> Result<Value> {
+    let location = navigate(document, request, c)?;
+    let line = location["line"].as_u64().unwrap_or(0);
+    let targets: Vec<_> = document["targets"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|target| {
+            target["file"] == location["file"]
+                && target["line"].as_u64().unwrap_or(u64::MAX) <= line
+                && target["endLine"].as_u64().unwrap_or(0) >= line
+        })
+        .collect();
+    // SyncTeX can report only a line. Never export an arbitrary item when
+    // several equations share it; ordinary click-to-source still works.
+    if targets.len() != 1 {
+        return Ok(Value::Null);
+    }
+    let target = targets[0];
+    let mut anchor = navigate(
+        document,
+        &json!({"file":target["file"],"line":target["line"]}),
+        c,
+    )?;
+    let x = request["x"].as_f64().unwrap_or(-1.);
+    let y = request["y"].as_f64().unwrap_or(-1.);
+    let left = anchor["x"].as_f64().unwrap_or(0.);
+    let top = anchor["y"].as_f64().unwrap_or(0.);
+    let width = anchor["width"].as_f64().unwrap_or(0.);
+    let height = anchor["height"].as_f64().unwrap_or(0.);
+    if anchor["page"] != request["page"]
+        || width <= 0.
+        || height <= 0.
+        || x < left - 3.
+        || x > left + width + 3.
+        || y < top - 3.
+        || y > top + height + 3.
+    {
+        return Ok(Value::Null);
+    }
+    anchor["targetID"] = target["id"].clone();
+    Ok(anchor)
 }
 fn typst_document(
     stage: &Path,
