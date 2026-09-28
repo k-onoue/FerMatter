@@ -24,6 +24,7 @@
     "pdfjs-dist": "^6.3.289",
     "prettier": "3.9.9",
     "react": "^19",
+    "react-colorful": "5.8.1",
     "react-dom": "^19"
   },
   "devDependencies": {

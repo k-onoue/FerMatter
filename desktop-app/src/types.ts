@@ -19,6 +19,8 @@ export interface Card {
   error?: string;
   sourceFontSize?: number;
   exportFontSize?: number;
+  /** Six-digit output HEX override; keep the legacy field name for saved cards. */
+  instantColor?: string | null;
   outlinePath?: string[];
   typstContext?: { file: string; offset: number }[];
   parentID?: string;

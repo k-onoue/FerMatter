@@ -966,6 +966,7 @@ export default function App() {
     editing?.tex,
     editing?.kind,
     editing?.id,
+    editing?.instantColor,
     editing?.requiresRender,
   ]);
   function closeEditor() {

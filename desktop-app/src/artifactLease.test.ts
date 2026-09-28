@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), drag: vi.fn() }));
 vi.mock("./api", () => ({ rpc: mocks.rpc, uid: () => "lease-id" }));
 vi.mock("@crabnebula/tauri-plugin-drag", () => ({ startDrag: mocks.drag }));
-import { retainArtifacts, startDrag } from "./artifactLease";
+import { prepareDrag, retainArtifacts, startDrag } from "./artifactLease";
 
 describe("artifact leases", () => {
   beforeEach(() => {
@@ -42,5 +42,71 @@ describe("artifact leases", () => {
       "drag failed",
     );
     await vi.waitFor(() => expect(mocks.rpc).toHaveBeenCalledTimes(2));
+  });
+  it("prepares the lease before the gesture and invokes native drag synchronously when ready", async () => {
+    let acquire!: () => void;
+    mocks.rpc.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          acquire = resolve;
+        }),
+    );
+    const finish = vi.fn();
+    const prepared = prepareDrag({ item: ["a.svg"], icon: "a.png" }, finish);
+    await expect(prepared.start()).rejects.toThrow("not ready");
+    expect(mocks.drag).not.toHaveBeenCalled();
+    acquire();
+    await prepared.acquired;
+    const started = prepared.start();
+    // No await or second IPC round trip is needed inside the pointer handler.
+    expect(mocks.drag).toHaveBeenCalledTimes(1);
+    expect(mocks.rpc).toHaveBeenCalledTimes(1);
+    await started;
+    expect(finish).not.toHaveBeenCalled();
+    mocks.drag.mock.calls[0][1]({ result: "Dropped" });
+    await vi.waitFor(() => expect(mocks.rpc).toHaveBeenCalledTimes(2));
+    expect(finish).toHaveBeenCalledTimes(1);
+    mocks.drag.mock.calls[0][1]({ result: "Cancelled" });
+    prepared.dispose();
+    expect(finish).toHaveBeenCalledTimes(1);
+    expect(mocks.rpc).toHaveBeenCalledTimes(2);
+  });
+  it("holds a prepared drag across unmount until native completion, and does not rearm a disposed viewer", async () => {
+    const finish = vi.fn();
+    const prepared = prepareDrag({ item: ["a.svg"], icon: "a.png" }, finish);
+    await prepared.acquired;
+    await prepared.start();
+    prepared.dispose();
+    expect(mocks.rpc).toHaveBeenCalledTimes(1);
+    mocks.drag.mock.calls[0][1]({ result: "Dropped" });
+    await vi.waitFor(() => expect(mocks.rpc).toHaveBeenCalledTimes(2));
+    expect(finish).not.toHaveBeenCalled();
+  });
+  it("releases an unused pending preparation after acquisition and cannot start it later", async () => {
+    let acquire!: () => void;
+    mocks.rpc.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          acquire = resolve;
+        }),
+    );
+    const prepared = prepareDrag({ item: ["a.svg"], icon: "a.png" }, vi.fn());
+    prepared.dispose();
+    prepared.dispose();
+    expect(mocks.rpc).toHaveBeenCalledTimes(1);
+    acquire();
+    await prepared.acquired;
+    await vi.waitFor(() => expect(mocks.rpc).toHaveBeenCalledTimes(2));
+    await expect(prepared.start()).rejects.toThrow("not ready");
+    expect(mocks.drag).not.toHaveBeenCalled();
+  });
+  it("releases a prepared drag that fails to start and notifies the viewer to rearm", async () => {
+    mocks.drag.mockRejectedValue(new Error("native error"));
+    const finish = vi.fn();
+    const prepared = prepareDrag({ item: ["a.svg"], icon: "a.png" }, finish);
+    await prepared.acquired;
+    await expect(prepared.start()).rejects.toThrow("native error");
+    await vi.waitFor(() => expect(mocks.rpc).toHaveBeenCalledTimes(2));
+    expect(finish).toHaveBeenCalledTimes(1);
   });
 });

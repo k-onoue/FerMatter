@@ -58,6 +58,7 @@
 - Manual Library order metadata is retained; the current UI displays source order.
 - Instant stores schema-versioned drafts/history atomically. Invalid saved state is preserved and blocks replacement; a pending webview-local draft covers an interrupted save.
 - Instant pending-recovery keys include the project ID; retain the original global key/path for compatibility. No source files move when opening either Instant mode.
+- Recent output colors use the WebView-local `mathlidelux.color-history.v1` key, shared across Instant and Library editors and capped at 16 opaque HEX values. This convenience history is independent of saved drafts and `Settings/instant.json`; invalid or unavailable history never blocks rendering.
 - The first global settings file is seeded from built-ins, existing shared templates, and a valid old Instant draft; keep the old session unchanged. Subsequent global defaults are independent of project templates.
 - Do not edit one project simultaneously in old and new apps; their Library metadata is not synchronized.
 

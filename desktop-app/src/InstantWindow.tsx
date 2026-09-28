@@ -6,7 +6,7 @@ import { dropSVG, openSVG } from "./svgImport";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { save } from "@tauri-apps/plugin-dialog";
-import { startDrag, useCardArtifacts } from "./artifactLease";
+import { prepareDrag, useCardArtifacts } from "./artifactLease";
 import {
   ClipboardCopy,
   ClipboardPaste,
@@ -109,6 +109,47 @@ export default function InstantWindow() {
     draft && !contextBusy && !contextError
       ? readyInstant(draft, rendered, projectContext?.revision)
       : null;
+  const [dragGeneration, setDragGeneration] = useState(0);
+  const [preparedDrag, setPreparedDrag] = useState<{
+    result: Rendered;
+    start: () => Promise<void>;
+  } | null>(null);
+  const dragPointer = useRef<{
+    id: number;
+    x: number;
+    y: number;
+    start: () => Promise<void>;
+  } | null>(null);
+  const beginDrag =
+    preparedDrag?.result === current ? preparedDrag?.start : null;
+  useEffect(() => {
+    setPreparedDrag(null);
+    if (!current?.card.pngPath) return;
+    let stopped = false;
+    const prepared = prepareDrag(
+      { item: [current.path], icon: current.card.pngPath, mode: "copy" },
+      () => {
+        if (!stopped) setDragGeneration((value) => value + 1);
+      },
+    );
+    void prepared.acquired
+      .then(() => {
+        if (!stopped)
+          setPreparedDrag({ result: current, start: prepared.start });
+      })
+      .catch(report);
+    return () => {
+      stopped = true;
+      prepared.dispose();
+    };
+  }, [current, dragGeneration]);
+
+  function releaseDragPointer(element: HTMLImageElement) {
+    const pointer = dragPointer.current;
+    dragPointer.current = null;
+    if (pointer && element.hasPointerCapture?.(pointer.id))
+      element.releasePointerCapture(pointer.id);
+  }
 
   async function refreshContext() {
     if (!projectID) return;
@@ -456,12 +497,10 @@ export default function InstantWindow() {
     }
   }
   function drag() {
-    if (!current || !draft) return;
-    void startDrag({
-      item: [current.path],
-      icon: current.card.pngPath!,
-      mode: "copy",
-    }).catch(report);
+    if (!beginDrag || !draft) return;
+    const started = beginDrag();
+    setPreparedDrag(null);
+    void started.catch(report);
     void remember(draft).catch(report);
   }
   function togglePin() {
@@ -843,10 +882,48 @@ export default function InstantWindow() {
                     <img
                       src={rendered.image}
                       alt="Rendered equation"
-                      draggable={!!current}
-                      onDragStart={(event) => {
+                      draggable={false}
+                      style={{ cursor: beginDrag ? "grab" : undefined }}
+                      onDragStart={(event) => event.preventDefault()}
+                      onPointerDown={(event) => {
+                        if (event.button !== 0 || !beginDrag) return;
                         event.preventDefault();
+                        dragPointer.current = {
+                          id: event.pointerId,
+                          x: event.clientX,
+                          y: event.clientY,
+                          start: beginDrag,
+                        };
+                        event.currentTarget.setPointerCapture(event.pointerId);
+                      }}
+                      onPointerMove={(event) => {
+                        const pointer = dragPointer.current;
+                        if (!pointer || pointer.id !== event.pointerId) return;
+                        if (
+                          !(event.buttons & 1) ||
+                          pointer.start !== beginDrag
+                        ) {
+                          releaseDragPointer(event.currentTarget);
+                          return;
+                        }
+                        if (
+                          Math.hypot(
+                            event.clientX - pointer.x,
+                            event.clientY - pointer.y,
+                          ) < 5
+                        )
+                          return;
+                        releaseDragPointer(event.currentTarget);
                         drag();
+                      }}
+                      onPointerUp={(event) =>
+                        releaseDragPointer(event.currentTarget)
+                      }
+                      onPointerCancel={(event) =>
+                        releaseDragPointer(event.currentTarget)
+                      }
+                      onLostPointerCapture={() => {
+                        dragPointer.current = null;
                       }}
                     />
                   ) : (

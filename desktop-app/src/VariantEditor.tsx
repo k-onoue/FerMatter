@@ -1,7 +1,9 @@
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, RotateCcw } from "lucide-react";
 import { Modal, ImagePreview } from "./ui";
 import { CodeEditor } from "./editor";
 import { OutputSizeOptions } from "./OutputSizeOptions";
+import { ColorPicker } from "./ColorPicker";
+import { savedVariant } from "./variants";
 import type { Card, Project } from "./types";
 export function VariantEditor({
   project,
@@ -24,6 +26,12 @@ export function VariantEditor({
   onDrag: (card: Card) => void;
   onRender: () => void;
 }) {
+  const preview = savedVariant(editing, editPreview);
+  const color =
+    typeof editing.instantColor === "string" &&
+    /^[0-9a-f]{6}$/i.test(editing.instantColor)
+      ? "#" + editing.instantColor
+      : "#000000";
   return (
     <Modal title="Edit Variant" onClose={onClose} wide>
       <div className="variant-title">
@@ -52,11 +60,9 @@ export function VariantEditor({
         )}
         {editBusy && <LoaderCircle size={15} className="spin" />}
         {editing.requiresRender !== true && (
-          <ImagePreview card={editPreview || editing} onDrag={onDrag} />
+          <ImagePreview card={preview} onDrag={onDrag} />
         )}
-        {editPreview?.error && (
-          <pre className="error-box">{editPreview.error}</pre>
-        )}
+        {preview.error && <pre className="error-box">{preview.error}</pre>}
       </div>
       <div className="variant-editor">
         <CodeEditor
@@ -94,6 +100,20 @@ export function VariantEditor({
             />
           </select>
         </label>
+        <ColorPicker
+          value={color}
+          onChange={(color) =>
+            setEditing({ ...editing, instantColor: color.slice(1) })
+          }
+        />
+        <button
+          aria-label="Reset color"
+          title="Use source color"
+          disabled={!editing.instantColor}
+          onClick={() => setEditing({ ...editing, instantColor: undefined })}
+        >
+          <RotateCcw size={16} />
+        </button>
         <span className="spacer" />
         <button onClick={onClose}>Cancel</button>
         <button className="primary" onClick={onSave}>
