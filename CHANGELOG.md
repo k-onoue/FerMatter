@@ -10,7 +10,7 @@
 
 ### Added
 
-- Project-free Instant window with LaTeX/Typst templates, live previews, syntax completion, numeric output sizes, color, drag/copy/export, recoverable drafts, and searchable history.
+- Global Instant and per-project Instant windows with live previews, completion, size/color controls, drag/copy/export, separate recoverable drafts/history, and file-managed global defaults. Project Instant reuses saved LaTeX packages/commands and Typst definitions/imports.
 - Drag equations and figures directly from mapped PDF locations, using the compiled snapshot and current export settings.
 - Independent Control-scroll zoom for Projects, the Library canvas and the PDF pane, with percentage/reset controls for Projects and Library.
 - Window-wide zoom with Command +/− and Command 0, customizable shortcuts, and separate Control-Command PDF zoom controls.

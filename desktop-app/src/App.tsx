@@ -785,7 +785,8 @@ export default function App() {
     return () => window.removeEventListener("keydown", handler, true);
   }, [keys, mode, project, selected, visible, drafts, pdfOpen, inspector, pin]);
   async function execute(id: string) {
-    if (id === "instant") return rpc("instant_open").catch(report);
+    if (id === "instant")
+      return rpc("instant_open", { project: project?.id }).catch(report);
     if (id === "open") return openProject();
     if (id === "newProject") {
       setNewProject(true);

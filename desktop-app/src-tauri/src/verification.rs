@@ -189,9 +189,83 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
         results.push(json!({"project":name,"cards":cards.len(),"headings":scanned["outline"].as_array().unwrap().len(),"anchors":document["anchors"].as_array().unwrap().len(),"pdf":document["pdfPath"]}));
     }
     verify_instant(&output)?;
+    verify_project_instant(&output)?;
     let report = json!(results);
     json_write(&output.join("verification.json"), &report)?;
     Ok(report)
+}
+fn verify_project_instant(output: &Path) -> Result<()> {
+    use crate::{instant, storage::Storage};
+    let temp = tempfile::tempdir().map_err(err)?;
+    let store = Storage::new(temp.path().join("data"), temp.path().join("legacy"))?;
+    let mut reports = vec![];
+    for format in ["latex", "typst"] {
+        let root = temp.path().join(format);
+        fs::create_dir_all(root.join("sections")).map_err(err)?;
+        let (main, source) = if format == "latex" {
+            fs::write(root.join("main.tex"), "\\documentclass[12pt]{article}\n\\input{definitions}\n\\begin{document}Project body\\end{document}").map_err(err)?;
+            fs::write(
+                root.join("definitions.tex"),
+                "\\usepackage{mathtools,bm}\n\\newcommand{\\projectvec}[1]{\\bm{#1}}\n",
+            )
+            .map_err(err)?;
+            fs::write(root.join("latexmkrc"), "$pdf_mode = 1;\n").map_err(err)?;
+            ("main.tex", r"\projectvec{x}+\mathclap{1}")
+        } else {
+            fs::write(root.join("main.typ"), "#set text(size: 13pt)\n#import \"symbols.typ\": projectSum\n= Project\n#include \"sections/model.typ\"\n").map_err(err)?;
+            fs::write(root.join("symbols.typ"), "#let projectSum(x) = $x + 7$\n").map_err(err)?;
+            fs::write(root.join("sections/model.typ"), "#import \"../symbols.typ\": projectSum\n$ x $\n#let lastDef(x) = $projectSum(x) + 3$\n").map_err(err)?;
+            ("main.typ", "projectSum(x)")
+        };
+        let p = store.open(&root, Some(main))?;
+        let id = string(&p, "id");
+        let before = fingerprint(&root)?;
+        let context = instant::context(&store, id)?;
+        let mut draft = json!({"source":source,"kind":"block","fontSize":24,"color":"#2356ab","exportFormat":"svg","template":{"id":"project","name":"Project","format":format,"source":"","compiler":"pdflatex"}});
+        let cancel = compiler::Cancellation::default();
+        let result = instant::render_project(&store, id, &draft, &cancel)?;
+        let mut nested = Value::Null;
+        if format == "typst" {
+            draft["contextFile"] = json!("sections/model.typ");
+            draft["source"] = json!("lastDef(x)");
+            nested = instant::render_project(&store, id, &draft, &cancel)?;
+        }
+        if fingerprint(&root)? != before {
+            return Err("Project Instant changed source files.".into());
+        }
+        draft["color"] = json!("#aa2244");
+        let colored = instant::render_project(&store, id, &draft, &cancel)?;
+        let previous = if nested.is_null() { &result } else { &nested };
+        if colored["card"]["svgPath"] == previous["card"]["svgPath"] {
+            return Err("Project Instant reused stale colors.".into());
+        }
+        let definitions = root.join(if format == "latex" {
+            "definitions.tex"
+        } else {
+            "symbols.typ"
+        });
+        let old = read(&definitions)?;
+        fs::write(
+            &definitions,
+            format!(
+                "{old}\n{} changed\n",
+                if format == "latex" { "%" } else { "//" }
+            ),
+        )
+        .map_err(err)?;
+        if instant::context(&store, id)?["revision"] == context["revision"] {
+            return Err("Project Instant missed source changes.".into());
+        }
+        cancel.cancel();
+        if instant::render_project(&store, id, &draft, &cancel).is_ok() {
+            return Err("Cancelled Project Instant returned artwork.".into());
+        }
+        reports.push(json!({"format":format,"status":"ready","nestedTypstContext":!nested.is_null(),"sourceUnchanged":true,"externalChangesDetected":true}));
+    }
+    json_write(
+        &output.join("instant-project-verification.json"),
+        &json!(reports),
+    )
 }
 fn verify_instant(output: &Path) -> Result<()> {
     use crate::{export, instant};

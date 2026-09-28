@@ -1,7 +1,7 @@
 {
   "identifier": "main",
   "description": "Local Mathlidelux window",
-  "windows": ["main", "instant"],
+  "windows": ["main", "instant", "instant-*"],
   "permissions": [
     "core:default",
     "core:webview:allow-set-webview-zoom",

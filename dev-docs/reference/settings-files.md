@@ -9,6 +9,7 @@ Import and Export. Shortcuts can be reset; choose Default to reset the theme.
   saves the file immediately.
 - `theme.json` contains the active theme, including both light and dark palettes.
 - `preferences.json` stores appearance, auto-save and window preferences. `projectView` is `grid` (default) or `list`; older files without it keep the grid view.
+- `instant.json` stores reusable global Instant defaults; edit through the settings of Instant opened from Projects, or the revealed JSON file. Drafts/history are separate.
 
 Edit JSON opens the built-in editor. For external edits, save the file and choose
 Reload. Import validates a local JSON file and copies it into the settings folder;
@@ -65,7 +66,7 @@ Version 1 command IDs are stable:
 
 | Group | IDs |
 | --- | --- |
-| Projects | `open`, `projects`, `newProject`, `newEquation`, `newFigure` |
+| Projects | `open`, `projects`, `newProject`, `instant`, `newEquation`, `newFigure` |
 | Editing | `find`, `edit`, `duplicate`, `saveEquation`, `copySVG`, `exportSVG`, `rescan` |
 | PDF | `togglePDF`, `rebuildPDF`, `previousPage`, `nextPage`, `zoomIn`, `zoomOut`, `fitPDF` |
 | Window | `inspector`, `pin`, `fullScreen`, `projectSource` |
@@ -79,6 +80,25 @@ they operate on the currently selected export format.
 - PDF zoom IDs keep their PDF behavior; defaults now add Control (`⌃⌘=`, `⌃⌘−`, `⌃⌘0`).
 - Saved overrides take precedence over these six zoom defaults without rewriting their JSON. An implicit zoom default that conflicts with an override is shown as unassigned; explicit duplicate assignments are still rejected.
 - Window zoom is per launch (50–200%); it uses the [Tauri webview zoom API](https://v2.tauri.app/reference/javascript/api/namespacewebview/#setzoom) and leaves export scale unchanged.
+- `instant` defaults to `⇧⌘K`: global from Projects, local from a project. Its implicit default also yields to saved overrides.
+
+## Global Instant, version 1
+
+| Field | Value |
+| --- | --- |
+| `schemaVersion`, `kind` | `1`, `mathlidelux.instant` |
+| `templates` | 1–100 named templates with unique `id`, `name`, `format`, `compiler`, and `source` containing one `{{content}}` |
+| `defaultTemplateID` | An ID from `templates` |
+| `inputMode` | `block`, `inline`, or `figure` |
+| `fontSize` | 1–200 pt |
+| `color` | Opaque `#RRGGBB` |
+| `exportFormat` | `svg`, `pdf`, `png`, or `jpeg` |
+
+- **Save defaults** writes the current global template and output defaults; unfinished template edits stay recoverable in the draft but cannot become defaults until valid.
+- **Reload defaults** validates and applies the external file. Invalid input preserves the existing settings and file; writes detect changes since load/reload.
+- `.last-valid-instant.json` supports recovery; the active file is not replaced just because parsing failed.
+- Built-in source templates are shared with project creation: [template-defaults.json](../../desktop-app/src/template-defaults.json).
+- Shared project-template edits and Project Instant do not update global defaults. See [Instant guide](../../user-docs/instant.md).
 
 ## Themes, version 1
 

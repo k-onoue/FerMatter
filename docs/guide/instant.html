@@ -23,8 +23,8 @@
     <h1>Make an equation instantly</h1>
 
     <article class="guide-content" aria-label="Guide instructions"><ol>
-<li>Choose <strong>Instant</strong> on the Projects page, the lightning button in a project, or <strong>File → New Instant</strong> (<code>⇧⌘K</code>).</li>
-<li>Choose a template and type an equation. The preview updates automatically.</li>
+<li>Choose <strong>Instant</strong> beside Projects for standalone work, or the lightning button inside a project to use that project's definitions. <code>⇧⌘K</code> follows the current workspace.</li>
+<li>Type an equation. The preview updates automatically.</li>
 <li>Choose the output size in <strong>pt</strong>, a color, and <strong>SVG</strong>, <strong>PDF</strong>, <strong>PNG</strong>, or <strong>JPEG</strong>.</li>
 <li>Drag the preview into your slide, choose <strong>Copy</strong> (<code>⇧⌘C</code>), or export (<code>⇧⌘S</code>).</li>
 </ol>
@@ -39,12 +39,31 @@
 <h2 id="editing-and-templates">Editing and templates</h2>
 <ul>
 <li>The editor includes syntax completion, undo/redo, line numbers, and the usual editing shortcuts.</li>
-<li>Choose <strong>Instant settings</strong> to edit the template and LaTeX compiler; keep one <code>{{content}}</code> placeholder.</li>
-<li>Template edits are saved with the Instant draft and each history entry. Shared project templates are unchanged.</li>
-<li>Definitions in the template are available to completion and compilation.</li>
-<li>Templates requiring companion files should be used in a regular project.</li>
 <li><code>⌘Enter</code> or the refresh button renders again.</li>
 <li>Copy and drag become available when the preview matches the current input and settings. Errors retain the last preview for reference, but prevent exporting it as the new result.</li>
+</ul>
+<h2 id="from-projects">From Projects</h2>
+<ul>
+<li>Use for independent equations with reusable templates. <strong>File → New Instant</strong> also opens this window from anywhere.</li>
+<li>Choose a LaTeX, Typst, TikZ, or CeTZ template. <strong>Instant settings</strong> edits the template and compiler; keep one <code>{{content}}</code> placeholder.</li>
+<li>Template definitions are available to syntax completion and compilation.</li>
+<li><strong>Save defaults</strong> writes the current template, input mode, size, color, and output format to <code>Settings/instant.json</code>.</li>
+<li><strong>New equation</strong> starts from these saved defaults; the current draft is kept in history.</li>
+<li>The folder button reveals <code>instant.json</code> in Finder. Edit it with a text editor and choose <strong>Reload defaults</strong> to validate and apply it. JSON stores template source as a string; the in-app template editor avoids manual escaping.</li>
+<li>Reload keeps the current equation when the language matches. A language change preserves the old draft in history before starting empty.</li>
+<li>Invalid settings leave the current defaults active. Valid backups and external-edit conflict checks use the same mechanism as other <a href="preferences.html">settings files</a>.</li>
+<li>Initial defaults copy existing custom project templates and a valid earlier Instant draft once. Later edits are independent of shared project templates.</li>
+<li>For templates requiring companion files, open Instant from within the project.</li>
+</ul>
+<h2 id="within-a-project">Within a project</h2>
+<ul>
+<li>One separate window, draft, and history per project. Standalone and project windows can coexist; the title identifies the project.</li>
+<li>LaTeX uses the project's main preamble, included definition/package files, compiler, and <code>latexmkrc</code>.</li>
+<li>Typst uses the selected context file's top-level definitions/imports, including definitions after its last equation. Choose another <code>.typ</code> file for definitions in that module; imported modules keep their normal scope.</li>
+<li>Syntax completion reads the project's <code>.tex</code>, <code>.sty</code>, <code>.cls</code>, and <code>.typ</code> files.</li>
+<li>Source files remain unchanged. Instant reads saved project files; save Source edits first when using manual save.</li>
+<li>Returning to the window or choosing refresh reloads the project context. If the project entry file's language changed, choose <strong>New equation</strong> for a fresh compatible draft; the previous draft stays in history.</li>
+<li>Add packages or shared definitions in the project's Source editor. The local settings panel shows the entry file/compiler and reveals the project folder.</li>
 </ul>
 <h2 id="come-back-later">Come back later</h2>
 <ul>
@@ -56,9 +75,35 @@
 <li>Ordinary <code>⌘C</code> copies selected editor text; <code>⇧⌘C</code> copies the rendered image.</li>
 <li>The New Instant, copy, export, new equation, and pin shortcuts follow <a href="preferences.html">custom keybindings</a>.</li>
 </ul>
+<table>
+<thead>
+<tr>
+<th>Under <code>~/Library/Application Support/Slide Math/Rust Preview/</code></th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Settings/instant.json</code></td>
+<td>Reusable global defaults; copy this file to back them up</td>
+</tr>
+<tr>
+<td><code>Instant/session.json</code></td>
+<td>Global working draft and history</td>
+</tr>
+<tr>
+<td><code>Projects/&lt;id&gt;/Instant/session.json</code></td>
+<td>That project's working draft and history</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Session files are app-managed. Keep them for backup/recovery; use the UI to edit drafts and history.</li>
+<li>Each scope has its own <code>Instant/Cache/</code> and <code>Instant/Exports/</code>; these contain generated artwork.</li>
+</ul>
 <h2 id="current-scope">Current scope</h2>
 <ul>
-<li>One Instant window, separate from the project workspace.</li>
+<li>One global window and one local window per project, separate from the project workspace.</li>
 <li>Source and history are local to Mathlidelux; exported images do not yet include editable source metadata.</li>
 <li>LaTeXiT library import, LinkBack, global shortcuts, and macOS Services are not included.</li>
 </ul></article>

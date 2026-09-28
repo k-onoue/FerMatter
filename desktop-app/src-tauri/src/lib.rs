@@ -2,6 +2,7 @@ mod compiler;
 mod export;
 mod files;
 mod instant;
+mod instant_settings;
 mod native;
 mod scan;
 mod settings;
@@ -55,8 +56,20 @@ async fn request(
         payload["key"] = json!(format!("{}::{}", window.label(), string(&payload, "key")));
     }
     if operation == "instant_open" {
-        instant::open(&app).map_err(err)?;
+        let project = if string(&payload, "project").is_empty() {
+            None
+        } else {
+            Some(runtime.store.load(string(&payload, "project"))?)
+        };
+        instant::open(&app, project.as_ref()).map_err(err)?;
         return Ok(Value::Null);
+    }
+    if matches!(
+        operation.as_str(),
+        "instant_session" | "instant_context" | "instant_render" | "instant_export"
+    ) {
+        // A local window owns exactly one project's scratch data, independent of navigation in main.
+        payload["project"] = json!(window.label().strip_prefix("instant-").unwrap_or(""));
     }
     // Reserve ownership before queuing blocking work. A delayed old request must
     // never replace a newer compiler session after its cancellation was received.
@@ -98,9 +111,19 @@ fn dispatch(
     let ident = string(&v, "project");
     match op {
         "instant_session" => instant::session(store, &v),
+        "instant_context" => instant::context(store, ident),
+        "instant_configuration" => instant_settings::load(store, &runtime.settings),
+        "reveal_instant_configuration" => {
+            std::process::Command::new("/usr/bin/open")
+                .arg("-R")
+                .arg(store.home.join("Settings/instant.json"))
+                .spawn()
+                .map_err(err)?;
+            Ok(Value::Null)
+        }
         "instant_export" => {
             let path = store.allowed_artifact(Path::new(string(&v, "path")))?;
-            if !path.starts_with(store.home.join("Instant/Exports")) {
+            if !path.starts_with(instant::home(store, ident)?.join("Instant/Exports")) {
                 return Err("Not an Instant image.".into());
             }
             fs::copy(path, string(&v, "destination")).map_err(err)?;
@@ -108,7 +131,11 @@ fn dispatch(
         }
         "instant_render" => {
             let c = cancellation.ok_or("Missing request ownership")?;
-            let result = instant::render(&store.home, &v["draft"], &c);
+            let result = if ident.is_empty() {
+                instant::render(&store.home, &v["draft"], &c)
+            } else {
+                instant::render_project(store, ident, &v["draft"], &c)
+            };
             let mut jobs = runtime.jobs.lock().unwrap();
             let key = string(&v, "key");
             if jobs
@@ -634,7 +661,7 @@ pub fn run() {
         })
         .on_menu_event(|app, event| {
             if event.id().as_ref() == "instant" {
-                if let Err(error) = instant::open(app) {
+                if let Err(error) = instant::open(app, None) {
                     eprintln!("Could not open Instant: {error}");
                 }
             }

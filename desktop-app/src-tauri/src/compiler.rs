@@ -269,10 +269,14 @@ pub fn render(
     let mut pending = vec![];
     for card in cards {
         c.check()?;
-        let key = id(&format!(
+        let mut cache_key = format!(
             "rust-1|{stamp}|{main}|{engine}|{version}|{}|{}|{}",
             card["kind"], card["tex"], card["typstContext"]
-        ));
+        );
+        if let Some(color) = card["instantColor"].as_str() {
+            cache_key.push_str(&format!("|instant-color:{color}"));
+        }
+        let key = id(&cache_key);
         let base = cache.join(key);
         if let Some(e) = cache_hit(card, &base) {
             emit(e)
@@ -352,7 +356,12 @@ fn render_typst(
                     json!(format!("/{}", child.strip_prefix(stage).unwrap().display()))
                 )
             } else {
-                format!("#set page(width: auto, height: auto, margin: 2pt, fill: none, header: none, footer: none, background: none, foreground: none, numbering: none)\n#set math.equation(numbering: none)\n#context [#metadata(text.size.pt()) <slide-math-font>]\n{}\n",typst_body(card)?)
+                let color = card["instantColor"]
+                    .as_str()
+                    .filter(|s| s.len() == 6 && s.bytes().all(|b| b.is_ascii_hexdigit()))
+                    .map(|s| format!("#set text(fill: rgb(\"{s}\"))\n"))
+                    .unwrap_or_default();
+                format!("#set page(width: auto, height: auto, margin: 2pt, fill: none, header: none, footer: none, background: none, foreground: none, numbering: none)\n#set math.equation(numbering: none)\n{color}#context [#metadata(text.size.pt()) <slide-math-font>]\n{}\n",typst_body(card)?)
             };
             fs::write(&target, format!("{prelude}\n{content}")).map_err(err)?;
             generated.push(target.clone());

@@ -12,38 +12,49 @@ import {
   Plus,
   RefreshCw,
   Settings2,
+  FolderOpen,
   SunMoon,
   X,
 } from "lucide-react";
-import { asset, rpc } from "./api";
+import { asset, rpc, projectName } from "./api";
 import { CodeEditor, configureTheme, setProjectCompletions } from "./editor";
 import { defaults, palette } from "./settings";
-import {
-  builtinTemplates,
-  initialTemplates,
-  type TemplateConfiguration,
-} from "./templates";
+import { builtinTemplates, type ProjectTemplate } from "./templates";
 import { commandForEvent } from "./shortcuts";
 import {
   initialInstant,
+  configuredInstant,
+  localInstant,
+  instantPendingKey,
   instantError,
   instantRevision,
   readyInstant,
   type InstantDraft,
   type InstantHistory,
   type InstantSession,
+  type InstantConfiguration,
+  type InstantProjectContext,
 } from "./instant";
 import type { Card, Keybindings, Preferences, Theme } from "./types";
 import { useDesktopBackground } from "./useDesktopBackground";
 import "./instant.css";
 
-const pendingKey = "mathlidelux.instant.pending.v1";
+const projectID =
+  new URLSearchParams(location.hash.split("?")[1]).get("project") || "";
+const pendingKey = instantPendingKey(projectID);
 type Rendered = { card: Card; path: string; revision: string; image: string };
 export default function InstantWindow() {
   const [draft, setDraft] = useState<InstantDraft | null>(null);
   const [history, setHistory] = useState<InstantHistory[]>([]);
-  const [templates, setTemplates] =
-    useState<TemplateConfiguration>(initialTemplates);
+  const [configuration, setConfiguration] =
+    useState<InstantConfiguration | null>(null);
+  const [projectContext, setProjectContext] =
+    useState<InstantProjectContext | null>(null);
+  const [contextBusy, setContextBusy] = useState(false);
+  const [contextError, setContextError] = useState(false);
+  const contextSequence = useRef(0);
+  const templateChoices: ProjectTemplate[] =
+    configuration?.templates || builtinTemplates;
   const [rendered, setRendered] = useState<Rendered | null>(null);
   const [busy, setBusy] = useState(false),
     [outputBusy, setOutputBusy] = useState(false);
@@ -74,7 +85,68 @@ export default function InstantWindow() {
     if (String(e) !== "Cancelled") setError(String(e));
   };
   const wallpaper = useDesktopBackground();
-  const current = draft ? readyInstant(draft, rendered) : null;
+  const current =
+    draft && !contextBusy && !contextError
+      ? readyInstant(draft, rendered, projectContext?.revision)
+      : null;
+
+  async function refreshContext() {
+    if (!projectID) return;
+    const ticket = ++contextSequence.current;
+    setContextBusy(true);
+    try {
+      const value = await rpc<InstantProjectContext>("instant_context");
+      if (ticket !== contextSequence.current) return;
+      setProjectContext(value);
+      setContextError(false);
+    } catch (e) {
+      if (ticket === contextSequence.current) {
+        setContextError(true);
+        report(e);
+      }
+    } finally {
+      if (ticket === contextSequence.current) setContextBusy(false);
+    }
+  }
+  const refresh = () => {
+    void refreshContext().then(() => setRetry((value) => value + 1));
+  };
+  const newEquation = () => {
+    const next = projectContext
+      ? localInstant(projectContext)
+      : configuration
+        ? configuredInstant(configuration)
+        : initialInstant();
+    void replace(next).catch(report);
+  };
+  async function saveDefaults() {
+    if (!draft || !configuration) return;
+    const next: InstantConfiguration = {
+      ...configuration,
+      templates: [
+        ...configuration.templates.filter((t) => t.id !== draft.template.id),
+        draft.template,
+      ],
+      defaultTemplateID: draft.template.id,
+      inputMode: draft.kind,
+      fontSize: draft.fontSize,
+      exportFormat: draft.exportFormat,
+      color: draft.color,
+    };
+    await rpc("settings", { file: "instant.json", value: next });
+    setConfiguration(next);
+    setNotice("Defaults saved");
+  }
+  async function reloadDefaults() {
+    const next = await rpc<InstantConfiguration>("reload_settings", {
+      file: "instant.json",
+    });
+    const nextDraft = configuredInstant(next);
+    if (nextDraft.template.format === draftRef.current?.template.format)
+      nextDraft.source = draftRef.current.source;
+    setConfiguration(next);
+    await replace(nextDraft);
+  }
 
   function persist(value: InstantDraft) {
     const text = instantRevision(value);
@@ -126,11 +198,16 @@ export default function InstantWindow() {
         settings: Preferences;
         theme: Theme | null;
         keybindings: Keybindings;
-        templates: TemplateConfiguration;
       }>("startup"),
       rpc<InstantSession>("instant_session", { action: "load" }),
+      projectID
+        ? rpc<InstantProjectContext>("instant_context")
+        : Promise.resolve(null),
+      projectID
+        ? Promise.resolve(null)
+        : rpc<InstantConfiguration>("instant_configuration"),
     ])
-      .then(async ([data, state]) => {
+      .then(async ([data, state, context, config]) => {
         if (gone) return;
         setTheme(data.theme || defaults);
         setDark(
@@ -140,18 +217,16 @@ export default function InstantWindow() {
         );
         setOpacity(data.settings.opacity ?? 0.88);
         setKeys(data.keybindings);
-        const configuration = Array.isArray(data.templates?.custom)
-          ? data.templates
-          : initialTemplates;
-        setTemplates(configuration);
+        setConfiguration(config);
+        setProjectContext(context);
         setHistory(state.history);
         let next =
           state.draft ||
-          initialInstant(
-            [...builtinTemplates, ...configuration.custom].find(
-              (t) => t.id === configuration.defaultID,
-            ),
-          );
+          (context
+            ? localInstant(context)
+            : config
+              ? configuredInstant(config)
+              : initialInstant());
         const pending = localStorage.getItem(pendingKey);
         if (pending) {
           next = JSON.parse(pending);
@@ -167,6 +242,19 @@ export default function InstantWindow() {
       .catch(report);
     return () => {
       gone = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!projectID) return;
+    let stopped = false;
+    const subscription = getCurrentWindow().onFocusChanged(({ payload }) => {
+      if (payload && draftRef.current && !stopped) void refreshContext();
+    });
+    return () => {
+      stopped = true;
+      contextSequence.current++;
+      void subscription.then((stop) => stop());
     };
   }, []);
 
@@ -211,8 +299,12 @@ export default function InstantWindow() {
   }, [notice]);
   useEffect(() => {
     if (draft)
-      setProjectCompletions("instant", [draft.template.source, draft.source]);
-  }, [draft]);
+      setProjectCompletions("instant", [
+        ...(projectContext?.sources.map((file) => file.text) || []),
+        draft.template.source,
+        draft.source,
+      ]);
+  }, [draft, projectContext]);
 
   useEffect(() => {
     const ticket = ++sequence.current;
@@ -222,7 +314,11 @@ export default function InstantWindow() {
       setBusy(false);
       return;
     }
-    const revision = instantRevision(draft);
+    if (contextBusy || contextError || (projectID && !projectContext)) {
+      setBusy(false);
+      return;
+    }
+    const revision = instantRevision(draft, projectContext?.revision);
     setBusy(true);
     const timer = setTimeout(() => {
       void rpc<{ card: Card; path: string }>("instant_render", {
@@ -247,7 +343,7 @@ export default function InstantWindow() {
       clearTimeout(timer);
       void rpc("cancel", { key: "render" }).catch(report);
     };
-  }, [draft, retry]);
+  }, [draft, retry, projectContext?.revision, contextBusy, contextError]);
 
   async function copy() {
     if (!current || !draft) return;
@@ -306,17 +402,14 @@ export default function InstantWindow() {
       let action: (() => void) | undefined;
       if (command === "copySVG") action = () => void copy();
       if (command === "exportSVG") action = () => void exportImage();
-      if (command === "newEquation")
-        action = () => {
-          if (draft) void replace({ ...draft, source: "" }).catch(report);
-        };
+      if (command === "newEquation") action = newEquation;
       if (command === "pin") action = togglePin;
       if (
         command === "instant" ||
         command === "rescan" ||
         (event.metaKey && event.key === "Enter")
       )
-        action = () => setRetry((value) => value + 1);
+        action = refresh;
       if (command === "saveEquation")
         action = () => {
           if (draft) {
@@ -350,7 +443,7 @@ export default function InstantWindow() {
     };
     window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);
-  }, [draft, current, keys, pin]);
+  }, [draft, current, keys, pin, configuration, projectContext]);
 
   return (
     <div
@@ -365,16 +458,20 @@ export default function InstantWindow() {
         />
       )}
       <div className="titlebar" data-tauri-drag-region>
-        <span data-tauri-drag-region>Mathlidelux · Instant</span>
+        <span data-tauri-drag-region>
+          {projectContext
+            ? projectName(projectContext.root) + " · Instant"
+            : projectID
+              ? "Instant"
+              : "Mathlidelux · Instant"}
+        </span>
       </div>
       <header className="instant-toolbar">
         <button
           aria-label="New equation"
           title="New equation (⌘N)"
           disabled={!draft}
-          onClick={() =>
-            draft && void replace({ ...draft, source: "" }).catch(report)
-          }
+          onClick={newEquation}
         >
           <Plus size={18} />
         </button>
@@ -422,37 +519,60 @@ export default function InstantWindow() {
       ) : (
         <>
           <div className="instant-options">
-            <select
-              aria-label="Template"
-              value={draft.template.id}
-              onChange={(event) => {
-                const template = [
-                  ...builtinTemplates,
-                  ...templates.custom,
-                ].find((t) => t.id === event.target.value);
-                if (template)
-                  void replace({
-                    ...draft,
-                    template,
-                    kind: /tikz|cetz/.test(template.id) ? "figure" : "block",
-                    source:
-                      template.format === draft.template.format
-                        ? draft.source
-                        : "",
-                  }).catch(report);
-              }}
-            >
-              {[...builtinTemplates, ...templates.custom].map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-              {![...builtinTemplates, ...templates.custom].some(
-                (t) => t.id === draft.template.id,
-              ) && (
-                <option value={draft.template.id}>{draft.template.name}</option>
-              )}
-            </select>
+            {!projectID ? (
+              <select
+                aria-label="Template"
+                value={draft.template.id}
+                onChange={(event) => {
+                  const template = templateChoices.find(
+                    (t) => t.id === event.target.value,
+                  );
+                  if (template)
+                    void replace({
+                      ...draft,
+                      template,
+                      kind: /tikz|cetz/.test(template.id) ? "figure" : "block",
+                      source:
+                        template.format === draft.template.format
+                          ? draft.source
+                          : "",
+                    }).catch(report);
+                }}
+              >
+                {templateChoices.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+                {!templateChoices.some((t) => t.id === draft.template.id) && (
+                  <option value={draft.template.id}>
+                    {draft.template.name}
+                  </option>
+                )}
+              </select>
+            ) : projectContext?.format === "typst" ? (
+              <select
+                aria-label="Context file"
+                value={draft.contextFile || projectContext.main}
+                onChange={(event) => patch({ contextFile: event.target.value })}
+              >
+                {[
+                  ...new Set([
+                    projectContext.main,
+                    ...(draft.contextFile ? [draft.contextFile] : []),
+                    ...projectContext.sources
+                      .filter((s) => s.path.endsWith(".typ"))
+                      .map((s) => s.path),
+                  ]),
+                ].map((file) => (
+                  <option key={file}>{file}</option>
+                ))}
+              </select>
+            ) : (
+              <span className="instant-context" title={projectContext?.root}>
+                {projectContext?.main}
+              </span>
+            )}
             <select
               aria-label="Input mode"
               value={draft.kind}
@@ -465,11 +585,7 @@ export default function InstantWindow() {
               <option value="figure">Code</option>
             </select>
             <span className="spacer" />
-            <button
-              aria-label="Render"
-              title="Render (⌘↵)"
-              onClick={() => setRetry((value) => value + 1)}
-            >
+            <button aria-label="Render" title="Render (⌘↵)" onClick={refresh}>
               <RefreshCw size={16} className={busy ? "spin" : ""} />
             </button>
           </div>
@@ -510,9 +626,9 @@ export default function InstantWindow() {
               {details && (
                 <section className="instant-settings">
                   <div className="instant-options">
-                    <strong>Template</strong>
+                    <strong>{projectID ? "Context" : "Template"}</strong>
                     <span className="spacer" />
-                    {draft.template.format === "latex" && (
+                    {!projectID && draft.template.format === "latex" && (
                       <select
                         aria-label="Compiler"
                         value={draft.template.compiler}
@@ -543,17 +659,71 @@ export default function InstantWindow() {
                       />
                     </label>
                   </div>
-                  <div className="instant-template-editor">
-                    <CodeEditor
-                      project="instant"
-                      path={"template-" + draft.template.id}
-                      format={draft.template.format}
-                      value={draft.template.source}
-                      onChange={(source) =>
-                        patch({ template: { ...draft.template, source } })
-                      }
-                    />
-                  </div>
+                  {projectID ? (
+                    <div className="instant-options">
+                      <span
+                        className="instant-context"
+                        title={projectContext?.root}
+                      >
+                        {projectContext?.main} ·{" "}
+                        {projectContext?.format === "typst"
+                          ? "Typst"
+                          : projectContext?.engine}
+                      </span>
+                      <span className="spacer" />
+                      <button
+                        title="Show project folder"
+                        aria-label="Show project folder"
+                        onClick={() =>
+                          void rpc("reveal", { project: projectID }).catch(
+                            report,
+                          )
+                        }
+                      >
+                        <FolderOpen size={17} />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="instant-template-editor">
+                        <CodeEditor
+                          project="instant"
+                          path={"template-" + draft.template.id}
+                          format={draft.template.format}
+                          value={draft.template.source}
+                          onChange={(source) =>
+                            patch({ template: { ...draft.template, source } })
+                          }
+                        />
+                      </div>
+                      <div className="instant-options">
+                        <button
+                          className="soft"
+                          onClick={() => void saveDefaults().catch(report)}
+                        >
+                          Save defaults
+                        </button>
+                        <button
+                          title="Reload instant.json and apply defaults"
+                          onClick={() => void reloadDefaults().catch(report)}
+                        >
+                          Reload defaults
+                        </button>
+                        <span className="spacer" />
+                        <button
+                          title="Show instant.json in Finder"
+                          aria-label="Show settings file"
+                          onClick={() =>
+                            void rpc("reveal_instant_configuration").catch(
+                              report,
+                            )
+                          }
+                        >
+                          <FolderOpen size={17} />
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </section>
               )}
               <div className="instant-split">

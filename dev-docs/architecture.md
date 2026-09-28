@@ -32,6 +32,8 @@
 - Replacing/cancelling a request terminates its process group; ignore late callbacks using request/project identity.
 - Keep separate render, caret-preview, document and forward/reverse-navigation jobs.
 - Namespace request ownership by the calling window; closing Instant must not cancel the project window's jobs.
+- `instant` is global; `instant-<project-id>` owns local scratch state. Resolve its scope from the native window label, not the request's project field.
+- Project Instant compiles saved project snapshots with existing preamble/import context; it does not alter manuscripts or consume unsaved Source buffers.
 - Compile snapshots; do not write manuscripts to render a card or PDF.
 - PDF navigation targets refer to the compiled snapshot; rebuild after source changes.
 

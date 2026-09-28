@@ -4,5 +4,5 @@ import App from "./App";
 import InstantWindow from "./InstantWindow";
 import "./style.css";
 createRoot(document.getElementById("root")!).render(
-  location.hash === "#instant" ? <InstantWindow /> : <App />,
+  location.hash.startsWith("#instant") ? <InstantWindow /> : <App />,
 );
