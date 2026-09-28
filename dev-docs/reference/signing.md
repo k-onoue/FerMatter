@@ -7,7 +7,7 @@
 
 ## Configure this Mac once
 
-1. In **Xcode → Settings → Accounts**, select your Apple Account/team.
+1. In **Xcode → Settings → Apple Accounts**, select your Apple Account/team.
 2. Open **Manage Certificates… → + → Apple Development**. Complete sign-in or Keychain prompts yourself.
 3. List installed signing identities:
 
@@ -25,6 +25,7 @@
 
 - `build/signing-identity.txt` is ignored by Git; it contains only a certificate reference. Private keys stay in Keychain.
 - `APPLE_SIGNING_IDENTITY` overrides the file for one build. An unavailable configured identity stops the build before compilation; there is no silent ad hoc fallback.
+- If Xcode created a certificate but `security find-identity -v -p codesigning` reports no valid identities, check the certificate chain in Keychain Access. Install a missing WWDR intermediate only from [Apple PKI](https://www.apple.com/certificateauthority/), matching the certificate's issuer; retain the system's default trust settings.
 - With neither setting, the existing ad hoc build remains available. Explicit `APPLE_SIGNING_IDENTITY=-` selects ad hoc signing for prototype packaging; switching signatures can trigger consent again.
 - Restart the new bundle and approve the initial Documents request if needed. Check two rebuilt versions with the same certificate before claiming that upgrade consent was verified.
 
