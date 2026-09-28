@@ -11,7 +11,8 @@
 - Existing [compiler requirements](requirements.md) still apply.
 - Images have a transparent background; JPEG uses white. The checkerboard is only the preview background.
 - Output color is independent of the app theme. The opacity slider changes the window background, not text or exported artwork.
-- Click the color swatch for presets or a HEX value. Color changes update the preview and exported artwork.
+- Click the color swatch for **Default** colors, a draggable **Color Picker**, **History**, and **HEX** input. Arrow keys also work in the picker. Changes update the preview and exported artwork.
+- **History** keeps the last 16 chosen colors across Instant and Library editors and app restarts. Dragging adds the final color, not every intermediate shade.
 
 ## Editing and templates
 

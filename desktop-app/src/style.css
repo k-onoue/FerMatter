@@ -10,10 +10,12 @@ body,
   overflow: hidden;
   background: transparent;
 }
-[data-appearance="dark"] select {
+[data-appearance="dark"] select,
+[data-appearance="dark"] input[type="number"] {
   color-scheme: dark;
 }
-[data-appearance="light"] select {
+[data-appearance="light"] select,
+[data-appearance="light"] input[type="number"] {
   color-scheme: light;
 }
 body {
@@ -780,13 +782,17 @@ button.danger {
 .equation-image[draggable="true"] {
   cursor: grab;
 }
-[data-appearance="dark"] .equation-image.math img {
+[data-appearance="dark"] .equation-image.math:not(.colored) img {
   filter: invert(1) brightness(0.9);
 }
-.equation-image.figure img {
+.equation-image.figure img,
+.equation-image.colored img {
   background: white;
   border-radius: 5px;
   padding: 4px;
+}
+.equation-image.colored.bright-ink img {
+  background: #343840;
 }
 .placeholder-equation {
   font:

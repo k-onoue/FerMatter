@@ -18,13 +18,15 @@ import {
 } from "./instant";
 import type { Card } from "./types";
 
-const { rpc, events, save } = vi.hoisted(() => ({
+const { rpc, events, save, drag } = vi.hoisted(() => ({
   rpc: vi.fn(),
   events: new Map<string, Set<() => void>>(),
   save: vi.fn(),
+  drag: vi.fn(),
 }));
 vi.mock("./api", () => ({
   rpc,
+  uid: () => crypto.randomUUID(),
   projectName: () => "Synthetic",
   asset: async (path: string) => "data:image/svg+xml," + path,
 }));
@@ -53,10 +55,11 @@ vi.mock("./useDesktopBackground", () => ({ useDesktopBackground: () => null }));
 vi.mock("./windowPersistence", () => ({
   installWindowPersistence: async () => () => {},
 }));
-vi.mock("./artifactLease", () => ({
-  startDrag: vi.fn(),
+vi.mock("./artifactLease", async (original) => ({
+  ...(await original<typeof import("./artifactLease")>()),
   useCardArtifacts: () => {},
 }));
+vi.mock("@crabnebula/tauri-plugin-drag", () => ({ startDrag: drag }));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: async (name: string, callback: () => void) => {
     if (!events.has(name)) events.set(name, new Set());
@@ -97,6 +100,16 @@ function result(draft: InstantDraft): Result {
   };
 }
 beforeEach(() => {
+  vi.stubGlobal(
+    "PointerEvent",
+    class extends MouseEvent {
+      readonly pointerId: number;
+      constructor(type: string, init: PointerEventInit = {}) {
+        super(type, init);
+        this.pointerId = init.pointerId ?? 1;
+      }
+    },
+  );
   session = {
     schemaVersion: 1,
     draft: { ...initialInstant(), source: "x" },
@@ -111,6 +124,7 @@ beforeEach(() => {
   localStorage.clear();
   events.clear();
   save.mockReset().mockResolvedValue("/synthetic/export.svg");
+  drag.mockReset().mockResolvedValue(undefined);
   rpc.mockReset().mockImplementation(async (operation, payload) => {
     if (operation === "startup")
       return {
@@ -325,4 +339,70 @@ it("keeps newly typed text and leaves the import queued when history saving over
   ).toBe("still typing");
   expect(pending).toHaveLength(1);
   expect(saved.some((draft) => draft.source === "incoming")).toBe(false);
+});
+
+function pointerImage() {
+  const image = screen.getByRole("img", { name: "Rendered equation" });
+  image.setPointerCapture = vi.fn();
+  image.hasPointerCapture = () => true;
+  image.releasePointerCapture = vi.fn();
+  return image;
+}
+
+it("starts a native file drag after pointer movement without an HTML image drag, and rearms after completion", async () => {
+  await openInstant();
+  const image = pointerImage();
+  await waitFor(() => expect(image.style.cursor).toBe("grab"));
+  const point = {
+    pointerId: 1,
+    button: 0,
+    buttons: 1,
+    clientX: 10,
+    clientY: 20,
+  };
+  fireEvent.pointerDown(image, point);
+  fireEvent.pointerMove(image, { ...point, clientX: 12 });
+  expect(drag).not.toHaveBeenCalled();
+  fireEvent.pointerMove(image, { ...point, clientX: 18 });
+  expect(drag).toHaveBeenCalledTimes(1);
+  expect(drag.mock.calls[0][0]).toEqual({
+    item: [result(session.draft!).path],
+    icon: result(session.draft!).path,
+    mode: "copy",
+  });
+  expect(image.releasePointerCapture).toHaveBeenCalledWith(1);
+  expect(image.draggable).toBe(false);
+  fireEvent.pointerMove(image, { ...point, clientX: 30 });
+  expect(drag).toHaveBeenCalledTimes(1);
+  await act(async () => drag.mock.calls[0][1]({ result: "Dropped" }));
+  await waitFor(() => expect(image.style.cursor).toBe("grab"));
+  fireEvent.pointerDown(image, point);
+  fireEvent.pointerMove(image, { ...point, clientX: 18 });
+  expect(drag).toHaveBeenCalledTimes(2);
+});
+
+it("does not drag for a click, a released pointer, or a preview made obsolete by editing", async () => {
+  await openInstant();
+  const image = pointerImage();
+  await waitFor(() => expect(image.style.cursor).toBe("grab"));
+  const point = {
+    pointerId: 1,
+    button: 0,
+    buttons: 1,
+    clientX: 10,
+    clientY: 20,
+  };
+  fireEvent.pointerDown(image, point);
+  fireEvent.pointerUp(image, { ...point, buttons: 0 });
+  fireEvent.pointerMove(image, { ...point, clientX: 30 });
+  expect(drag).not.toHaveBeenCalled();
+  fireEvent.pointerDown(image, point);
+  fireEvent.pointerMove(image, { ...point, buttons: 0, clientX: 30 });
+  expect(drag).not.toHaveBeenCalled();
+  fireEvent.pointerDown(image, point);
+  fireEvent.change(screen.getByRole("textbox", { name: "Equation source" }), {
+    target: { value: "new source" },
+  });
+  fireEvent.pointerMove(image, { ...point, clientX: 30 });
+  expect(drag).not.toHaveBeenCalled();
 });

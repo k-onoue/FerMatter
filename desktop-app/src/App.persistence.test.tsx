@@ -87,6 +87,16 @@ vi.mock("./VariantEditor", () => ({
         onChange={(e) => setEditing({ ...editing, tex: e.target.value })}
       />
       <button onClick={onSave}>Save test variant</button>
+      <button
+        onClick={() => setEditing({ ...editing, instantColor: "2563eb" })}
+      >
+        Set test color
+      </button>
+      <button
+        onClick={() => setEditing({ ...editing, instantColor: undefined })}
+      >
+        Reset test color
+      </button>
       {editing.requiresRender === true && (
         <button onClick={onRender}>Render imported source</button>
       )}
@@ -429,6 +439,37 @@ function edit(text: string) {
     target: { value: text },
   });
 }
+it("renders color-only changes and resets while preserving the source card", async () => {
+  const original = structuredClone(project.cards);
+  await openProject();
+  edit("x");
+  const editRenders = () =>
+    rpc.mock.calls.filter(
+      ([op, payload]) => op === "render" && payload.key === "p:edit",
+    );
+  await waitFor(() => expect(editRenders()).toHaveLength(1));
+  fireEvent.click(screen.getByRole("button", { name: "Set test color" }));
+  await waitFor(() => expect(editRenders()).toHaveLength(2));
+  expect(editRenders()[1][1].cards[0].instantColor).toBe("2563eb");
+  fireEvent.click(screen.getByRole("button", { name: "Reset test color" }));
+  await waitFor(() => expect(editRenders()).toHaveLength(3));
+  expect(editRenders()[2][1].cards[0].instantColor).toBeUndefined();
+  fireEvent.click(screen.getByRole("button", { name: "Set test color" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save test variant" }));
+  await waitFor(() =>
+    expect(
+      saved.some((p) =>
+        p.cards.some(
+          (card) => card.origin === "custom" && card.instantColor === "2563eb",
+        ),
+      ),
+    ).toBe(true),
+  );
+  expect(saved.at(-1)?.cards.find((card) => card.id === "source")).toEqual(
+    original[0],
+  );
+  expect(rpc.mock.calls.some(([op]) => op === "save_file")).toBe(false);
+});
 it("failed Library saving keeps the editor and blocks project switching until recovery succeeds", async () => {
   await openProject();
   edit("latest variant");

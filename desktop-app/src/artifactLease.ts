@@ -39,6 +39,51 @@ export async function startDrag(options: Options) {
   }
 }
 
+/** Prepare outside the pointer gesture so starting does not await filesystem IPC. */
+export function prepareDrag(options: Options, onFinish: () => void) {
+  const lease = retainArtifacts([
+    ...(Array.isArray(options.item) ? options.item : []),
+    options.icon,
+  ]);
+  let state: "pending" | "ready" | "dragging" | "finished" = "pending";
+  let disposed = false;
+  const release = () => void lease.release().catch(console.error);
+  const finish = () => {
+    if (state === "finished") return;
+    state = "finished";
+    release();
+    if (!disposed) onFinish();
+  };
+  return {
+    acquired: lease.acquired.then(() => {
+      if (state === "pending") state = "ready";
+    }),
+    start() {
+      if (state !== "ready" || disposed)
+        return Promise.reject(new Error("The image is not ready to drag."));
+      state = "dragging";
+      // Invoke immediately while the mouse is held. Native completion (not the
+      // invoke promise) owns the lease after this point, including on unmount.
+      try {
+        return nativeDrag(options, finish).catch((error) => {
+          finish();
+          throw error;
+        });
+      } catch (error) {
+        finish();
+        return Promise.reject(error);
+      }
+    },
+    dispose() {
+      disposed = true;
+      if (state !== "dragging") {
+        state = "finished";
+        release();
+      }
+    },
+  };
+}
+
 export function useCardArtifacts(
   card: Card | null | undefined,
   extra?: string,
