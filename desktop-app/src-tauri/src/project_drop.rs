@@ -9,7 +9,7 @@ mod mac {
     use super::*;
     use objc::{
         class, msg_send,
-        runtime::{method_setImplementation, Class, Imp, Method, Object, Sel, BOOL, NO},
+        runtime::{method_setImplementation, Imp, Method, Object, Sel, BOOL, NO},
         sel, sel_impl,
     };
     use std::{
@@ -83,23 +83,37 @@ mod mac {
     pub fn install(window: &tauri::WebviewWindow) -> tauri::Result<()> {
         window.with_webview(|webview| unsafe {
             let view = webview.inner().cast::<Object>();
-            // Only hook the app-owned Wry class, never WKWebView or NSView.
-            let Some(method) = Class::get("WryWebView")
-                .and_then(|class| class.instance_method(sel!(performDragOperation:)))
-            else {
-                eprintln!("Finder import hook unavailable");
-                return;
-            };
-            ORIGINAL.get_or_init(|| {
-                method_setImplementation(
-                    method as *const Method as *mut Method,
-                    std::mem::transmute::<extern "C" fn(&Object, Sel, *mut Object) -> BOOL, Imp>(
-                        perform,
-                    ),
-                )
-            });
-            MAIN_VIEW.store(view as usize, Ordering::Relaxed);
+            install_view(view);
         })
+    }
+    unsafe fn install_view(view: *mut Object) {
+        // Only hook the app-owned Wry class, never WKWebView or NSView.
+        let mut class = Some((*view).class());
+        let mut wry = None;
+        while let Some(candidate) = class {
+            if candidate.name().starts_with("wry::") && candidate.name().contains("::WryWebView") {
+                wry = Some(candidate);
+                break;
+            }
+            class = candidate.superclass();
+        }
+        let Some(method) = wry.and_then(|class| class.instance_method(sel!(performDragOperation:)))
+        else {
+            eprintln!(
+                "Finder import hook unavailable for {}",
+                (*view).class().name()
+            );
+            return;
+        };
+        ORIGINAL.get_or_init(|| {
+            method_setImplementation(
+                method as *const Method as *mut Method,
+                std::mem::transmute::<extern "C" fn(&Object, Sel, *mut Object) -> BOOL, Imp>(
+                    perform,
+                ),
+            )
+        });
+        MAIN_VIEW.store(view as usize, Ordering::Relaxed);
     }
     pub fn clear() {
         MAIN_VIEW.store(0, Ordering::Relaxed);
@@ -108,9 +122,9 @@ mod mac {
         }
     }
     fn consume(captured: &mut Option<Drop>, names: &Value) -> Result<Value> {
-        let dropped = captured
-            .take()
-            .ok_or("Could not read the dropped files. Please drag them from Finder again.")?;
+        let dropped = captured.take().ok_or(
+            "No native file drop was received. Please drag the folder or ZIP from Finder again.",
+        )?;
         let mut expected: Vec<&str> = names
             .as_array()
             .ok_or("Missing dropped files")?
@@ -129,7 +143,7 @@ mod mac {
             || dropped.time.elapsed() > Duration::from_secs(10)
         {
             return Err(
-                "Could not read the dropped files. Please drag them from Finder again.".into(),
+                format!("Could not match the dropped files (Finder: {}, browser: {}). Please drag them from Finder again.", actual.len(), expected.len()),
             );
         }
         Ok(serde_json::json!(dropped.paths))
@@ -144,6 +158,64 @@ mod mac {
     mod tests {
         use super::*;
         use serde_json::json;
+        #[test]
+        fn hooks_versioned_wry_class_without_changing_its_identity_and_forwards_html_drop() {
+            use objc::{
+                declare::ClassDecl,
+                runtime::{Class, YES},
+            };
+            extern "C" fn original(_: &Object, _: Sel, _: *mut Object) -> BOOL {
+                YES
+            }
+            extern "C" fn board(this: &Object, _: Sel) -> *mut Object {
+                unsafe { *this.get_ivar::<*mut Object>("board") }
+            }
+            unsafe {
+                let pool: *mut Object = msg_send![class!(NSAutoreleasePool), new];
+                let mut declaration =
+                    ClassDecl::new("wry::test::WryWebView0.57.0", class!(NSObject)).unwrap();
+                declaration.add_method(
+                    sel!(performDragOperation:),
+                    original as extern "C" fn(&Object, Sel, *mut Object) -> BOOL,
+                );
+                let class: &Class = declaration.register();
+                let view: *mut Object = msg_send![class, new];
+                let other: *mut Object = msg_send![class, new];
+                let mut declaration =
+                    ClassDecl::new("MathlideluxTestDragInfo", class!(NSObject)).unwrap();
+                declaration.add_ivar::<*mut Object>("board");
+                declaration.add_method(
+                    sel!(draggingPasteboard),
+                    board as extern "C" fn(&Object, Sel) -> *mut Object,
+                );
+                let info_class = declaration.register();
+                let info: *mut Object = msg_send![info_class, new];
+                let pasteboard: *mut Object =
+                    msg_send![class!(NSPasteboard), pasteboardWithUniqueName];
+                let url: *mut Object =
+                    msg_send![class!(NSURL), fileURLWithPath:ns("/tmp/Test folder")];
+                let urls: *mut Object = msg_send![class!(NSArray), arrayWithObject:url];
+                let _: BOOL = msg_send![pasteboard, writeObjects:urls];
+                (*info).set_ivar("board", pasteboard);
+                install_view(view);
+                assert_eq!((*view).class(), class);
+                let forwarded: BOOL = msg_send![view, performDragOperation:info];
+                assert_eq!(forwarded, YES);
+                assert_eq!(
+                    paths(&json!(["Test folder"])).unwrap(),
+                    json!(["/tmp/Test folder"])
+                );
+                let forwarded: BOOL = msg_send![other, performDragOperation:info];
+                assert_eq!(forwarded, YES);
+                assert!(paths(&json!(["Test folder"])).is_err());
+                clear();
+                let _: () = msg_send![info, release];
+                let _: () = msg_send![view, release];
+                let _: () = msg_send![other, release];
+                let _: () = msg_send![pasteboard, releaseGlobally];
+                let _: () = msg_send![pool, drain];
+            }
+        }
         #[test]
         fn paths_are_scoped_to_one_recent_matching_drop() {
             let paths = vec![
