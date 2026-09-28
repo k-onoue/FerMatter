@@ -15,6 +15,7 @@ import {
   FileText,
   FolderOpen,
   Grid2X2,
+  List,
   LoaderCircle,
   PanelLeftClose,
   Pin,
@@ -60,6 +61,7 @@ const initialPreferences: Preferences = {
   opacity: 0.88,
   theme: defaults.id,
   pdfWidth: 420,
+  projectView: "grid",
 };
 const initialKeys: Keybindings = {
   schemaVersion: 1,
@@ -871,6 +873,34 @@ export default function App() {
           <header className="projects-heading">
             <h1>Projects</h1>
             <span className="spacer" />
+            <div
+              className="segmented project-view-switch"
+              role="group"
+              aria-label="Project view"
+            >
+              <button
+                title="Grid view"
+                aria-label="Grid view"
+                aria-pressed={settings.projectView === "grid"}
+                className={settings.projectView === "grid" ? "active" : ""}
+                onClick={() =>
+                  void updateSettings({ ...settings, projectView: "grid" })
+                }
+              >
+                <Grid2X2 size={17} />
+              </button>
+              <button
+                title="List view"
+                aria-label="List view"
+                aria-pressed={settings.projectView === "list"}
+                className={settings.projectView === "list" ? "active" : ""}
+                onClick={() =>
+                  void updateSettings({ ...settings, projectView: "list" })
+                }
+              >
+                <List size={17} />
+              </button>
+            </div>
             <div className="search">
               <Search size={16} />
               <input
@@ -897,7 +927,9 @@ export default function App() {
               New Project
             </button>
           </header>
-          <div className="project-grid">
+          <div
+            className={`project-grid ${settings.projectView === "list" ? "project-list" : ""}`}
+          >
             {projects
               .filter((p) =>
                 projectName(p.root)
@@ -908,6 +940,7 @@ export default function App() {
                 <button
                   className="project-card"
                   key={p.id}
+                  aria-label={`Open ${projectName(p.root)}`}
                   onClick={() => void openRecent(p)}
                   onContextMenu={(e) => {
                     e.preventDefault();
@@ -917,13 +950,21 @@ export default function App() {
                   <ImagePreview
                     card={p.cards?.find((c) => c.status === "ready")}
                   />
-                  <div>
+                  <div className="project-name">
                     <h2>{projectName(p.root)}</h2>
                     <ArrowUpRight size={18} />
                   </div>
-                  <p>
-                    {p.format === "typst" ? "Typst" : "LaTeX"} ·{" "}
-                    {p.cards?.length || 0} items
+                  <p className="project-location" title={p.root}>
+                    {p.root}
+                  </p>
+                  <p className="project-details">
+                    <span className="project-format">
+                      {p.format === "typst" ? "Typst" : "LaTeX"}
+                    </span>
+                    <span className="project-detail-separator"> · </span>
+                    <span className="project-count">
+                      {p.cards?.length || 0} items
+                    </span>
                   </p>
                 </button>
               ))}

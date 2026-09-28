@@ -87,6 +87,7 @@ export interface Preferences {
   opacity: number;
   theme: string;
   pdfWidth: number;
+  projectView: "grid" | "list";
   [key: string]: unknown;
 }
 export interface Binding {

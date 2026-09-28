@@ -10,6 +10,7 @@
 
 ### Added
 
+- Grid/list switching on Projects, with the selected view remembered and folder paths shown beneath project names.
 - Desktop implementation in Rust and TypeScript, with a Python-free backend, shared Monaco editors, equation/figure exports and PDF navigation.
 
 - Task-based user guides, maintained in Markdown and available on the product site.
