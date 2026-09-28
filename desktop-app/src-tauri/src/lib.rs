@@ -4,12 +4,14 @@ mod files;
 mod instant;
 mod instant_settings;
 mod native;
+mod project_commands;
 mod project_drop;
 mod project_history;
 mod project_location;
 mod project_setup;
 mod scan;
 mod settings;
+mod source_commands;
 mod storage;
 pub mod verification;
 #[cfg(target_os = "macos")]
@@ -203,142 +205,12 @@ fn dispatch(
             let _guard = store.writes.lock().unwrap();
             project_setup::finish(store, &runtime.settings, string(&v, "directory"))
         }
-        "open_project" => {
-            let path = PathBuf::from(string(&v, "path"));
-            if path.is_file()
-                && path
-                    .extension()
-                    .is_some_and(|e| e.eq_ignore_ascii_case("zip"))
-            {
-                let _guard = store.writes.lock().unwrap();
-                let mut history = project_history::History::load(store)?;
-                let imported = storage::import_zip(
-                    &path,
-                    &project_location::directory(&runtime.settings.load("preferences.json")?, "")?,
-                )?;
-                let project = project_history::open_created(store, &imported, None)?;
-                history.record_created(store, vec![imported], "Import Projects")?;
-                return Ok(project);
-            }
-            let (root, main) = if path.is_file() {
-                (
-                    path.parent().unwrap().to_owned(),
-                    Some(path.file_name().unwrap().to_string_lossy().into_owned()),
-                )
-            } else {
-                (path, None)
-            };
-            let main = v["main"].as_str().map(str::to_owned).or(main);
-            store.open(&root, main.as_deref())
-        }
-        "new_project" => {
-            let _guard = store.writes.lock().unwrap();
-            let mut history = project_history::History::load(store)?;
-            let target = project_location::create(&runtime.settings.load("preferences.json")?, &v)?;
-            let typst = string(&v, "format") == "typst";
-            let main = if typst { "main.typ" } else { "main.tex" };
-            let mut project = project_history::open_created(store, &target, Some(main))?;
-            if !typst {
-                let engine = string(&v, "engine");
-                if ["pdflatex", "xelatex", "lualatex"].contains(&engine) {
-                    project["engine"] = json!(engine);
-                }
-                store.save(string(&project, "id"), &project)?;
-            }
-            history.record_created(store, vec![target], "New Project")?;
-            Ok(project)
-        }
+        "open_project" => project_commands::open(store, &runtime.settings, &v),
+        "new_project" => project_commands::create(store, &runtime.settings, &v),
+        "project_action" => project_commands::action(app, store, &runtime.settings, &v),
+        "file_operation" => source_commands::operate(store, ident, &v),
         "dropped_project_paths" => project_drop::paths(&v["names"]),
         "project_history" => Ok(project_history::History::load(store)?.status()),
-        "project_action" => {
-            let _guard = store.writes.lock().unwrap();
-            let mut history = project_history::History::load(store)?;
-            let action = string(&v, "action");
-            let mut errors = Vec::new();
-            let mut created = Vec::new();
-            let parent =
-                project_location::directory(&runtime.settings.load("preferences.json")?, "")?;
-            let ensure_closed = |roots: &[PathBuf]| -> Result<()> {
-                for root in roots {
-                    if store.home.starts_with(root) || store.legacy.starts_with(root) {
-                        return Err("This folder contains application data and cannot be deleted as a project.".into());
-                    }
-                    if app
-                        .webview_windows()
-                        .keys()
-                        .filter_map(|label| label.strip_prefix("instant-"))
-                        .any(|ident| {
-                            store
-                                .root(ident)
-                                .is_ok_and(|source| source.starts_with(root))
-                        })
-                    {
-                        return Err(
-                            "Close the project's Instant window before deleting or restoring it."
-                                .into(),
-                        );
-                    }
-                }
-                Ok(())
-            };
-            match action {
-                "import" => {
-                    let paths = v["paths"]
-                        .as_array()
-                        .ok_or("Drop project folders or ZIPs.")?;
-                    if paths.len() > 1000 {
-                        return Err("Import up to 1,000 projects at a time.".into());
-                    }
-                    for path in paths {
-                        let path = Path::new(path.as_str().ok_or("Invalid path")?);
-                        match project_location::import(path, &parent).and_then(|root| {
-                            if path.canonicalize().ok().as_ref() == Some(&root) {
-                                store.open(&root, None)?;
-                            } else {
-                                project_history::open_created(store, &root, None)?;
-                            }
-                            Ok(root)
-                        }) {
-                            Ok(root) => {
-                                if path.canonicalize().ok().as_ref() != Some(&root) {
-                                    created.push(root);
-                                }
-                            }
-                            Err(error) => errors.push(format!("{}: {error}", path.display())),
-                        }
-                    }
-                    history.record_created(store, created.clone(), "Import Projects")?;
-                }
-                "duplicate" => {
-                    for root in project_history::roots(store, &v["ids"])? {
-                        match project_history::duplicate(store, &root, &parent) {
-                            Ok(copy) => created.push(copy),
-                            Err(error) => errors.push(format!("{}: {error}", root.display())),
-                        }
-                    }
-                    history.record_created(store, created.clone(), "Duplicate Projects")?;
-                }
-                "delete" => {
-                    let roots = project_history::roots(store, &v["ids"])?;
-                    ensure_closed(&roots)?;
-                    if let Err(error) = history.delete(store, roots, native::trash_project) {
-                        errors.push(error);
-                    }
-                }
-                "undo" | "redo" => {
-                    ensure_closed(&history.affected(action == "redo"))?;
-                    if let Err(error) =
-                        history.travel(store, action == "redo", native::trash_project)
-                    {
-                        errors.push(error);
-                    }
-                }
-                _ => return Err("Unknown project action.".into()),
-            }
-            Ok(
-                json!({"projects":store.recent()?,"history":history.status(),"created":created,"errors":errors}),
-            )
-        }
         "save_project" => {
             let _guard = store.writes.lock().unwrap();
             store.save(ident, &v["value"])?;
@@ -360,69 +232,6 @@ fn dispatch(
         "save_drafts" => {
             let _guard = store.writes.lock().unwrap();
             json_write(&store.draft_path(ident)?, &v["value"])?;
-            Ok(Value::Null)
-        }
-        "file_operation" => {
-            let _guard = store.writes.lock().unwrap();
-            let root = store.root(ident)?;
-            let action = string(&v, "action");
-            let name = string(&v, "path");
-            match action {
-                "create_file" => {
-                    let dest = destination(&root, name)?;
-                    use std::io::Write;
-                    fs::OpenOptions::new()
-                        .create_new(true)
-                        .write(true)
-                        .open(dest)
-                        .map_err(err)?
-                        .write_all(string(&v, "text").as_bytes())
-                        .map_err(err)?;
-                }
-                "create_folder" => {
-                    let dest = destination(&root, name)?;
-                    fs::create_dir(dest).map_err(err)?
-                }
-                "rename" | "move" => {
-                    let source = safe(&root, name)?;
-                    let dest = destination(&root, string(&v, "destination"))?;
-                    if dest.starts_with(&source) {
-                        return Err("A folder cannot be moved inside itself.".into());
-                    }
-                    rename_no_replace(&source, &dest)?;
-                    let mut p = store.load(ident)?;
-                    let main = string(&p, "main").to_owned();
-                    if main == name || main.starts_with(&format!("{name}/")) {
-                        p["main"] = json!(format!(
-                            "{}{}",
-                            string(&v, "destination"),
-                            &main[name.len()..]
-                        ));
-                        store.save(ident, &p)?;
-                    }
-                }
-                "copy" => {
-                    let source = safe(&root, name)?;
-                    let dest = destination(&root, string(&v, "destination"))?;
-                    let staging = tempfile::tempdir_in(dest.parent().ok_or("Missing parent")?)
-                        .map_err(err)?;
-                    let copy = staging.path().join("copy");
-                    if source.is_dir() {
-                        if dest.starts_with(&source) {
-                            return Err("A folder cannot be copied inside itself.".into());
-                        }
-                        snapshot(&source, &copy, &Value::Null)?;
-                    } else {
-                        fs::copy(source, &copy).map_err(err)?;
-                    }
-                    rename_no_replace(&copy, &dest)?;
-                }
-                "trash" => {
-                    let source = safe(&root, name)?;
-                    trash::delete(source).map_err(err)?
-                }
-                _ => return Err("Unknown file operation".into()),
-            };
             Ok(Value::Null)
         }
         "reveal" => {

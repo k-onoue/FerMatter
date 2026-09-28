@@ -2,10 +2,10 @@ name: Desktop
 
 on:
   pull_request:
-    paths: ['desktop-app/**', '.github/workflows/desktop.yml', 'LICENSE', 'NOTICE']
+    paths: ['desktop-app/**', 'docs/downloads/**', '.github/workflows/desktop.yml', 'LICENSE', 'NOTICE']
   push:
     branches: [main]
-    paths: ['desktop-app/**', '.github/workflows/desktop.yml', 'LICENSE', 'NOTICE']
+    paths: ['desktop-app/**', 'docs/downloads/**', '.github/workflows/desktop.yml', 'LICENSE', 'NOTICE']
 
 permissions:
   contents: read

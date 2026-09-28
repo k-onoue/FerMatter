@@ -17,8 +17,9 @@ import {
   X,
 } from "lucide-react";
 import { asset, rpc, projectName } from "./api";
-import { CodeEditor, configureTheme, setProjectCompletions } from "./editor";
-import { defaults, palette } from "./settings";
+import { CodeEditor, setProjectCompletions } from "./editor";
+import { defaults } from "./appearance";
+import { useAppearance } from "./useAppearance";
 import { builtinTemplates, type ProjectTemplate } from "./templates";
 import { commandForEvent } from "./shortcuts";
 import {
@@ -281,14 +282,7 @@ export default function InstantWindow() {
     };
   }, []);
 
-  useEffect(() => {
-    const colors = palette(theme, dark);
-    configureTheme(colors, dark);
-    document.documentElement.dataset.appearance = dark ? "dark" : "light";
-    for (const [key, value] of Object.entries(colors))
-      document.documentElement.style.setProperty("--" + key, value);
-    document.documentElement.style.setProperty("--opacity", String(opacity));
-  }, [theme, dark, opacity]);
+  useAppearance(theme, dark, opacity);
   useEffect(() => {
     void getCurrentWebview().setZoom(zoom).catch(report);
   }, [zoom]);

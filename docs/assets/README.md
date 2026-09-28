@@ -1,7 +1,6 @@
 # Public assets
 
-- `app-light.jpg` / `app-dark.jpg`: earlier Swift app, synthetic `examples/demo-paper/`, opaque background.
-- `trajectory.svg`: demo equation rendered by the TeX worker; glyphs are paths.
+- `app-light.jpg`: earlier Swift app, synthetic `examples/demo-paper/`, opaque background; used by the repository README.
 - `icon.png`: unchanged approved artwork from `desktop-app/resources/AppIcon.icon/Assets/AppIcon.png`; same source as PR #6.
 - Never capture private manuscripts, project-history lists, accounts, or desktop notifications.
 
