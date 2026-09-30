@@ -1,3 +1,4 @@
+mod automation;
 mod cache;
 mod compiler;
 mod export;
@@ -323,6 +324,11 @@ fn dispatch(
                 json!({"setupRequired":setup_required,"projects":projects,"projectProblems":store.project_problems()?,"settings":runtime.settings.snapshot("preferences.json", false)?,"defaultProjectDirectory":project_location::default_directory()?,"theme":runtime.settings.snapshot("theme.json", false)?,"keybindings":runtime.settings.snapshot("keybindings.json", false)?,"themes":themes,"templates":json_read(&store.home.join("templates.json")).unwrap_or(json!({})),"storage":store.home}),
             )
         }
+        "automation_projects" => Ok(json!(store
+            .recent()?
+            .into_iter()
+            .filter(|p| p["automationGeneration"].as_u64().unwrap_or(0) > 0)
+            .collect::<Vec<_>>())),
         "project_problems" => Ok(json!(store.project_problems()?)),
         "recover_project" => {
             let _guard = store.writes.lock().unwrap();
@@ -341,7 +347,11 @@ fn dispatch(
         "project_history" => Ok(project_history::History::load(store)?.status()),
         "save_project" => {
             let _guard = store.writes.lock().unwrap();
-            store.save(ident, &v["value"])?;
+            let current = store.load(ident)?;
+            store.save(
+                ident,
+                &automation::merge_unseen_variants(&v["value"], &current),
+            )?;
             Ok(Value::Null)
         }
         "tree" => Ok(json!(entries(&store.root(ident)?)?
@@ -721,10 +731,15 @@ fn dispatch(
     }
 }
 pub fn run() {
-    if formatting::worker_requested() {
+    if automation::entry() || formatting::worker_requested() {
         return;
     }
-    let context = tauri::generate_context!();
+    let mut context = tauri::generate_context!();
+    if std::env::args().any(|a| a == "--automation-background") {
+        for window in &mut context.config_mut().app.windows {
+            window.visible = false;
+        }
+    }
     #[cfg(unix)]
     let guard = match single_instance::claim(&context.config().identifier) {
         Ok(single_instance::Claim::Primary(guard)) => guard,
@@ -801,7 +816,10 @@ pub fn run() {
             }));
             app.manage(lifecycle::Lifecycle::default());
             #[cfg(unix)]
-            app.state::<single_instance::Guard>().listen(app.handle())?;
+            {
+                app.state::<single_instance::Guard>().listen(app.handle())?;
+                app.manage(automation::transport::start(app.handle())?);
+            }
             let menu = tauri::menu::Menu::default(app.handle())?;
             for item in menu.items()? {
                 if let Some(submenu) = item.as_submenu() {
