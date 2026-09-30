@@ -1,13 +1,14 @@
 import { LoaderCircle, RotateCcw } from "lucide-react";
 import { Modal, ImagePreview } from "./ui";
 import { CodeEditor } from "./editor";
-import { OutputSizeOptions } from "./OutputSizeOptions";
+import { OutputSizeControl } from "./OutputSizeControl";
 import { ColorPicker } from "./ColorPicker";
 import { savedVariant } from "./variants";
 import { cardOutputColor } from "./outputColor";
 import type { Card, Project } from "./types";
 export function VariantEditor({
   project,
+  defaultFontSize = 30,
   editing,
   setEditing,
   editPreview,
@@ -18,6 +19,7 @@ export function VariantEditor({
   onRender,
 }: {
   project: Project;
+  defaultFontSize?: number;
   editing: Card;
   setEditing: (card: Card) => void;
   editPreview: Card | null;
@@ -78,25 +80,17 @@ export function VariantEditor({
         />
       </div>
       <footer>
-        <label>
-          Output size{" "}
-          <select
-            value={editing.exportFontSize ?? -1}
-            onChange={(e) =>
-              setEditing({
-                ...editing,
-                exportFontSize:
-                  +e.target.value < 0 ? undefined : +e.target.value,
-              })
-            }
-          >
-            <OutputSizeOptions
-              value={editing.exportFontSize ?? -1}
-              sourceSizes={[editing.sourceFontSize]}
-              projectSize={project.exportFontSize || 0}
-            />
-          </select>
-        </label>
+        <OutputSizeControl
+          value={editing.exportFontSize}
+          defaultSize={project.exportFontSize ?? defaultFontSize}
+          sourceSizes={[editing.sourceFontSize]}
+          onChange={(exportFontSize) =>
+            setEditing({
+              ...editing,
+              exportFontSize,
+            })
+          }
+        />
         <ColorPicker
           value={color}
           onChange={(color) =>

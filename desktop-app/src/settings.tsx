@@ -5,6 +5,7 @@ import { FolderOpen, RotateCcw } from "lucide-react";
 import { rpc } from "./api";
 import { Modal } from "./ui";
 import { CodeEditor } from "./editor";
+import { OutputSizeControl } from "./OutputSizeControl";
 import { CompilerTools } from "./CompilerTools";
 import type { Keybindings, Preferences, Theme } from "./types";
 import {
@@ -132,20 +133,15 @@ export function Settings({
             <p className="folder-path">
               {settings.projectDirectory || defaultProjectDirectory}
             </p>
-            <label className="setting-row">
+            <div className="setting-row">
               <span>Default output font size</span>
-              <input
-                type="number"
-                min="0"
-                max="200"
-                step="1"
+              <OutputSizeControl
+                label="Default output font size"
+                allowDefault={false}
                 value={settings.exportFontSize ?? 30}
-                onChange={(e) => update({ exportFontSize: Math.max(0, +e.target.value) })}
+                onChange={(exportFontSize) => update({ exportFontSize })}
               />
-            </label>
-            <p className="muted">
-              0 pt uses the original paper's font size.
-            </p>
+            </div>
           </>
         )}
         {tab === "Appearance" && (

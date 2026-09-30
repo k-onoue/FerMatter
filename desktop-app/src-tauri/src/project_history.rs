@@ -98,7 +98,7 @@ pub fn open_created(store: &Storage, root: &Path, main: Option<&str>) -> Result<
     }
     // Seed a clean document so legacy lookup cannot resurrect an old project.
     let ident = store.register(&root)?;
-    store.save(&ident,&json!({"root":root,"cards":[],"customOrder":[],"sections":[],"sectionAssignments":{},"exportFormat":"svg","exportFontSize":0}))?;
+    store.save(&ident,&json!({"root":root,"cards":[],"customOrder":[],"sections":[],"sectionAssignments":{},"exportFormat":"svg"}))?;
     store.open(&root, main)
 }
 fn identity(path: &Path) -> Result<String> {
