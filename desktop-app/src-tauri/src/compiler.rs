@@ -175,6 +175,11 @@ fn tex_args(stage: &Path, engine: &str, out: &Path, main: &str, pdf: bool) -> Re
         .find(|s| stage.join(s).is_file());
     let mut a = args(&["-norc"]);
     if let Some(rc) = rc {
+        if engine == "project" {
+            // A project rc may only set search paths. Default to direct PDF
+            // output before loading it so explicit project modes still win.
+            a.extend(args(&["-e", "$pdf_mode = 1;"]));
+        }
         a.extend(args(&["-r", rc]))
     }
     match engine {
