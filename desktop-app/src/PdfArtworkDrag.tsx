@@ -137,6 +137,7 @@ export function PdfArtworkDrag({
     project.exportFormat,
     project.exportFontSize,
     itemSize,
+    defaultFontSize,
   ]);
   const bounds = artworkBounds(anchor);
   return (

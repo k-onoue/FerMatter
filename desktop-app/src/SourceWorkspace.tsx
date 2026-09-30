@@ -1,4 +1,4 @@
-import { OutputSizeOptions } from "./OutputSizeOptions";
+import { OutputSizeControl } from "./OutputSizeControl";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -41,7 +41,7 @@ export interface SourceSession {
   expanded: Set<string>;
   treeMode: "files" | "outline";
   query: string;
-  previewSize: number;
+  previewSize?: number;
   caret: { file: string; offset: number; line: number } | null;
   navigationNonce?: number;
 }
@@ -105,6 +105,7 @@ function PaneView({
 }
 export function SourceWorkspace({
   project,
+  defaultFontSize = 30,
   autoSave,
   onDrafts,
   onError,
@@ -118,6 +119,7 @@ export function SourceWorkspace({
   onSession,
 }: {
   project: Project;
+  defaultFontSize?: number;
   autoSave: boolean;
   onDrafts: (sources: Record<string, string>) => void;
   onError: (message: string) => void;
@@ -193,7 +195,7 @@ export function SourceWorkspace({
     endUTF16?: number;
   } | null>(null);
   const [drop, setDrop] = useState<{ pane: string; edge: string } | null>(null);
-  const [previewSize, setPreviewSize] = useState(session?.previewSize || 0);
+  const [previewSize, setPreviewSize] = useState(session?.previewSize);
   const refs = useRef({ buffers, layout, activePane });
   const processedNavigation = useRef(session?.navigationNonce);
   refs.current = { buffers, layout, activePane };
@@ -770,7 +772,7 @@ export function SourceWorkspace({
         project: project.id,
         card,
         format: project.exportFormat || "svg",
-        fontSize: previewSize,
+        fontSize: previewSize ?? project.exportFontSize ?? defaultFontSize,
       });
       await startDrag({ item: [path], icon: card.pngPath!, mode: "copy" });
     } catch (e) {
@@ -1152,16 +1154,12 @@ export function SourceWorkspace({
             <header>
               <span>{preview.kind === "figure" ? "Figure" : "Preview"}</span>
               <span className="spacer" />
-              <select
-                title="Output font size"
+              <OutputSizeControl
                 value={previewSize}
-                onChange={(e) => setPreviewSize(Number(e.target.value))}
-              >
-                <OutputSizeOptions
-                  value={previewSize}
-                  sourceSizes={[preview.sourceFontSize]}
-                />
-              </select>
+                defaultSize={project.exportFontSize ?? defaultFontSize}
+                sourceSizes={[preview.sourceFontSize]}
+                onChange={setPreviewSize}
+              />
               <button
                 title="Copy image"
                 disabled={preview.status !== "ready"}
@@ -1170,7 +1168,8 @@ export function SourceWorkspace({
                     project: project.id,
                     card: preview,
                     format: project.exportFormat || "svg",
-                    fontSize: previewSize,
+                    fontSize:
+                      previewSize ?? project.exportFontSize ?? defaultFontSize,
                   })
                     .then((path) => rpc("copy_images", { paths: [path] }))
                     .catch(fail)

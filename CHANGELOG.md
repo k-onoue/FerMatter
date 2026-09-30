@@ -43,6 +43,7 @@
 
 ### Changed
 
+- Apply the default output size to Library copy/drag/export and Source/PDF previews; replace fixed size presets with Default and decimal pt input while preserving saved overrides.
 - Keep font-size spinner arrows visible in dark mode, and start Instant preview drags without waiting for an artifact-retention request.
 - Restore SVG recipes with an automatic preview, and choose Instant output colors with default swatches, a draggable color picker, recent color history, and HEX input.
 - Reuse the running macOS app when launched again, including from another app copy, to prevent duplicate menu-bar icons.

@@ -220,8 +220,14 @@ pub fn validate(name: &str, v: &Value) -> Result<()> {
                 return Err("Invalid appearance".into());
             }
             if let Some(size) = v.get("exportFontSize") {
-                if !size.is_number() {
-                    return Err("Export font size must be a number.".into());
+                if !size
+                    .as_f64()
+                    .is_some_and(|n| n == 0. || (1. ..=200.).contains(&n))
+                {
+                    return Err(
+                        "Export font size must be between 1 and 200 pt (or 0 for the source size)."
+                            .into(),
+                    );
                 }
             }
             if !v["autoSave"].is_boolean() {
@@ -428,6 +434,23 @@ pub fn validate_templates(value: &Value) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn output_size_accepts_decimals_and_legacy_source_sizes_but_rejects_invalid_values() {
+        for size in [json!(1), json!(30.5), json!(200), json!(0)] {
+            assert!(validate(
+                "preferences.json",
+                &json!({"appearance":"light","autoSave":true,"exportFontSize":size})
+            )
+            .is_ok());
+        }
+        for size in [json!(-1), json!(0.5), json!(201), json!("30"), Value::Null] {
+            assert!(validate(
+                "preferences.json",
+                &json!({"appearance":"light","autoSave":true,"exportFontSize":size})
+            )
+            .is_err());
+        }
+    }
     #[test]
     fn oversized_settings_remain_untouched_and_cannot_be_saved_over() {
         let dir = tempfile::tempdir().unwrap();
