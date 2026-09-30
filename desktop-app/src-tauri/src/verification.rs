@@ -210,7 +210,7 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
         if fingerprint(&root)? != stamp {
             return Err(format!("{name}: original files changed"));
         }
-        let project = json!({"id":ident,"root":root,"main":main,"format":if main.ends_with(".typ"){"typst"}else{"latex"},"engine":"project","cards":cards,"outline":scanned["outline"],"warnings":scanned["warnings"],"files":scanned["files"],"customOrder":[],"sections":[],"sectionAssignments":{},"exportFormat":"svg","exportFontSize":0,"candidates":[main]});
+        let project = json!({"id":ident,"root":root,"main":main,"format":if main.ends_with(".typ"){"typst"}else{"latex"},"engine":"project","cards":cards,"outline":scanned["outline"],"warnings":scanned["warnings"],"files":scanned["files"],"customOrder":[],"sections":[],"sectionAssignments":{},"exportFormat":"svg","candidates":[main]});
         json_write(&project_dir.join("project.json"), &project)?;
         json_write(&project_dir.join("verification-document.json"), &document)?;
         results.push(json!({"project":name,"cards":cards.len(),"headings":scanned["outline"].as_array().unwrap().len(),"anchors":document["anchors"].as_array().unwrap().len(),"pdf":document["pdfPath"]}));

@@ -460,10 +460,7 @@ fn dispatch(
                     .find(|c| c["id"] == *id)
                     .ok_or("Equation not found")?;
                 store.allowed_artifact(Path::new(string(card, "svgPath")))?;
-                let size = card["exportFontSize"]
-                    .as_f64()
-                    .or(p["exportFontSize"].as_f64())
-                    .unwrap_or(0.);
+                let size = export::font_size(&Value::Null, card, &p, &runtime.settings)?;
                 let mut card = card.clone();
                 if string(&v, "format") == "svg" {
                     card["restoreMetadata"] = roundtrip::card_recipe(store, &p, &card, size)?;
@@ -607,16 +604,11 @@ fn dispatch(
                     &store.project_dir(ident)?.join("Cache/PDFArtwork"),
                     &c,
                 )?;
-                let size = v["fontSize"]
-                    .as_f64()
-                    .or_else(|| {
-                        p["cards"]
-                            .as_array()
-                            .and_then(|cards| cards.iter().find(|item| item["id"] == card["id"]))
-                            .and_then(|item| item["exportFontSize"].as_f64())
-                            .or(p["exportFontSize"].as_f64())
-                    })
-                    .unwrap_or(0.);
+                let item = p["cards"]
+                    .as_array()
+                    .and_then(|cards| cards.iter().find(|item| item["id"] == card["id"]))
+                    .unwrap_or(&Value::Null);
+                let size = export::font_size(&v["fontSize"], item, &p, &runtime.settings)?;
                 if string(&v, "format") == "svg" {
                     card["restoreMetadata"] = roundtrip::card_recipe(store, &p, &card, size)?;
                 }
@@ -647,10 +639,7 @@ fn dispatch(
             let mut card = v["card"].clone();
             store.allowed_artifact(Path::new(string(&card, "svgPath")))?;
             let p = store.load(ident)?;
-            let size = v["fontSize"]
-                .as_f64()
-                .or(p["exportFontSize"].as_f64())
-                .unwrap_or(0.);
+            let size = export::font_size(&v["fontSize"], &card, &p, &runtime.settings)?;
             if string(&v, "format") == "svg" {
                 card["restoreMetadata"] = roundtrip::card_recipe(store, &p, &card, size)?;
             }

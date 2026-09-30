@@ -118,6 +118,68 @@ async function workspace(autoSave = false) {
   const editor = await screen.findByRole("textbox", { name: "Source editor" });
   return { editor, onProjectChanged, onError };
 }
+it("copies caret previews at the default or decimal override and can return to Default", async () => {
+  const original = rpc.getMockImplementation()!;
+  rpc.mockImplementation(async (op, payload) => {
+    if (op === "source_preview")
+      return {
+        id: "eq",
+        tex: "x",
+        kind: "inline",
+        status: "ready",
+        sourceFontSize: 11,
+      };
+    if (op === "preview_export") return "export.svg";
+    return original(op, payload);
+  });
+  render(
+    <SourceWorkspace
+      project={project}
+      defaultFontSize={30}
+      autoSave={false}
+      session={{
+        buffers: { "main.typ": { ...disk, dirty: true } },
+        layout: { id: "pane", tabs: ["main.typ"], active: "main.typ" },
+        activePane: "pane",
+        expanded: new Set(),
+        treeMode: "files",
+        query: "",
+        caret: { file: "main.typ", line: 1, offset: 3 },
+      }}
+      onDrafts={() => {}}
+      onError={vi.fn()}
+      ask={async () => null}
+      onSaved={() => {}}
+      beforeMutation={async () => {}}
+      onProjectChanged={() => {}}
+      onCursor={() => {}}
+    />,
+  );
+  const input = await screen.findByRole("spinbutton", {
+    name: "Output font size",
+  });
+  expect((input as HTMLInputElement).value).toBe("30");
+  fireEvent.click(screen.getByTitle("Copy image"));
+  await waitFor(() =>
+    expect(rpc).toHaveBeenCalledWith(
+      "preview_export",
+      expect.objectContaining({ fontSize: 30 }),
+    ),
+  );
+  fireEvent.change(input, { target: { value: "31.25" } });
+  fireEvent.blur(input);
+  fireEvent.click(screen.getByTitle("Copy image"));
+  await waitFor(() =>
+    expect(rpc).toHaveBeenCalledWith(
+      "preview_export",
+      expect.objectContaining({ fontSize: 31.25 }),
+    ),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Use default output font size" }),
+  );
+  expect((input as HTMLInputElement).value).toBe("30");
+});
 it("flushes the mounted manual editor immediately, before its 700ms timer", async () => {
   const { editor } = await workspace();
   fireEvent.change(editor, { target: { value: "$ latest $" } });
