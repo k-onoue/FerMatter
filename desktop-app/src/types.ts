@@ -46,7 +46,7 @@ export interface Project {
   sections: { id: string; name: string }[];
   sectionAssignments: Record<string, string>;
   candidates: string[];
-  exportFontSize: number;
+  exportFontSize?: number;
   exportFormat: string;
   warnings?: string[];
   [key: string]: unknown;
@@ -92,6 +92,7 @@ export interface Preferences {
   pdfWidth: number;
   projectView: "grid" | "list";
   projectDirectory?: string;
+  exportFontSize?: number;
   [key: string]: unknown;
 }
 export interface Binding {

@@ -186,7 +186,7 @@ fn default_document(name: &str) -> Value {
             json!({"schemaVersion":1,"kind":"mathlidelux.keybindings","bindings":{}})
         }
         _ => {
-            json!({"appearance":"dark","autoSave":true,"opacity":0.88,"pdfWidth":420,"projectView":"grid"})
+            json!({"appearance":"dark","autoSave":true,"opacity":0.88,"pdfWidth":420,"projectView":"grid","exportFontSize":30})
         }
     }
 }
@@ -218,6 +218,11 @@ pub fn validate(name: &str, v: &Value) -> Result<()> {
             }
             if !["system", "light", "dark"].contains(&string(v, "appearance")) {
                 return Err("Invalid appearance".into());
+            }
+            if let Some(size) = v.get("exportFontSize") {
+                if !size.is_number() {
+                    return Err("Export font size must be a number.".into());
+                }
             }
             if !v["autoSave"].is_boolean() {
                 return Err("Auto Save must be a boolean.".into());
