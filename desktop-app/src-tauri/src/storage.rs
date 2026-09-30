@@ -100,7 +100,7 @@ impl Storage {
             // Swift may have hashed an alias such as /var rather than /private/var.
             // Match its saved root too, so canonicalizing does not lose variants.
             self.legacy_project(&ident, &root)?.unwrap_or_else(|| {
-                json!({"root":root,"cards":[],"customOrder":[],"sections":[],"sectionAssignments":{},"exportFormat":"svg","exportFontSize":0})
+                json!({"root":root,"cards":[],"customOrder":[],"sections":[],"sectionAssignments":{},"exportFormat":"svg"})
             })
         };
         let candidates = scan::candidates(&root)?;

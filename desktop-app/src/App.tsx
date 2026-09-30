@@ -76,6 +76,7 @@ const initialPreferences: Preferences = {
   theme: defaults.id,
   pdfWidth: 420,
   projectView: "grid",
+  exportFontSize: 30,
 };
 const initialKeys: Keybindings = {
   schemaVersion: 1,
@@ -1699,16 +1700,19 @@ export default function App() {
                     </select>
                     <select
                       title="Default output font size"
-                      value={project.exportFontSize || 0}
+                      value={project.exportFontSize ?? -1}
                       onChange={(e) =>
                         void persist({
                           ...project,
-                          exportFontSize: +e.target.value,
+                          exportFontSize: +e.target.value < 0 ? undefined : +e.target.value,
                         })
                       }
                     >
+                      <option value="-1">
+                        Global ({settings.exportFontSize === 0 ? "Source font size" : `${settings.exportFontSize ?? 30} pt`})
+                      </option>
                       <OutputSizeOptions
-                        value={project.exportFontSize || 0}
+                        value={project.exportFontSize ?? -1}
                         sourceSizes={project.cards.map(
                           (card) => card.sourceFontSize,
                         )}
@@ -1828,7 +1832,7 @@ export default function App() {
                       <OutputSizeOptions
                         value={selectedCard.exportFontSize ?? -1}
                         sourceSizes={[selectedCard.sourceFontSize]}
-                        projectSize={project.exportFontSize || 0}
+                        projectSize={project.exportFontSize ?? settings.exportFontSize ?? 30}
                       />
                     </select>
                   </label>
@@ -1878,7 +1882,7 @@ export default function App() {
                 }}
               />
               <div className="pdf-column" style={{ width: settings.pdfWidth }}>
-                <PdfPane
+                <PdfPane defaultFontSize={settings.exportFontSize ?? 30}
                   key={project.id}
                   document={pdf}
                   project={project}
@@ -2072,7 +2076,7 @@ export default function App() {
               project: project.id,
               card,
               format: project.exportFormat || "svg",
-              fontSize: editing.exportFontSize ?? project.exportFontSize,
+              fontSize: editing.exportFontSize ?? project.exportFontSize ?? settings.exportFontSize ?? 30,
             })
               .then((path) =>
                 startDrag({

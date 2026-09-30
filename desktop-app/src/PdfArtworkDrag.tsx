@@ -82,12 +82,14 @@ export function PdfArtworkDrag({
   anchor,
   document,
   project,
+  defaultFontSize,
   scale,
   onNavigate,
 }: {
   anchor: Anchor;
   document: DocumentPDF;
   project: Project;
+  defaultFontSize: number;
   scale: number;
   onNavigate: (anchor: Anchor) => void;
 }) {
@@ -114,7 +116,7 @@ export function PdfArtworkDrag({
         document,
         targetID: anchor.targetID,
         format: project.exportFormat || "svg",
-        fontSize: itemSize ?? project.exportFontSize ?? 0,
+        fontSize: itemSize ?? project.exportFontSize ?? defaultFontSize ?? 0,
       })
         .then((result) => {
           if (!gone) setPrepared(result);

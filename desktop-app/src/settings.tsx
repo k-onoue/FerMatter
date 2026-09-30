@@ -132,6 +132,20 @@ export function Settings({
             <p className="folder-path">
               {settings.projectDirectory || defaultProjectDirectory}
             </p>
+            <label className="setting-row">
+              <span>Default output font size</span>
+              <input
+                type="number"
+                min="0"
+                max="200"
+                step="1"
+                value={settings.exportFontSize ?? 30}
+                onChange={(e) => update({ exportFontSize: Math.max(0, +e.target.value) })}
+              />
+            </label>
+            <p className="muted">
+              0 pt uses the original paper's font size.
+            </p>
           </>
         )}
         {tab === "Appearance" && (
