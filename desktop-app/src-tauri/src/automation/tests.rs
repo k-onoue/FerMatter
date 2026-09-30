@@ -174,3 +174,23 @@ fn inherits_numeric_or_original_size_without_accepting_explicit_zero() {
     );
     assert!(service.size(Some(0.), None, None).is_err());
 }
+
+#[test]
+fn project_render_does_not_require_a_matching_standalone_template() {
+    let (_tmp, store, settings, p) = fixture();
+    let mut configuration = instant_settings::defaults();
+    configuration["templates"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|template| template["format"] == "latex");
+    settings.initialize("instant.json", &configuration).unwrap();
+    let service = Service {
+        store: &store,
+        settings: &settings,
+    };
+    let args: schema::Render =
+        parse(json!({"projectId":p["id"],"source":"x+1","outputDirectory":"/tmp"})).unwrap();
+    let draft = service.draft(&args, Some(&p), 30.).unwrap();
+    assert_eq!(draft["template"]["format"], "typst");
+    assert_eq!(draft["template"]["id"], "project");
+}

@@ -451,7 +451,10 @@ impl Service<'_> {
             .or_else(|| args.language.as_ref().map(schema::Language::as_str))
             .or_else(|| selected.map(|t| string(t, "format")))
             .unwrap_or("latex");
-        let template = selected
+        let project_template = json!({"id":"project","name":"Project","format":format,"source":"","compiler":"pdflatex"});
+        let template = project
+            .map(|_| &project_template)
+            .or(selected)
             .or_else(|| {
                 templates.iter().find(|t| {
                     string(t, "format") == format && t["id"] == configuration["defaultTemplateID"]
