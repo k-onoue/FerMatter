@@ -12,6 +12,7 @@
 
 ### Added
 
+- Diagnostic log in `~/Library/Logs/local.slidemath.prototype/`, recording compiler runs and app errors.
 - Library variants can override output color using the same picker as Instant, with unchanged project sources.
 - On-demand LaTeX/Typst formatting in Source, Library variants and Instant, with bundled formatters, undo, and cancellation when input changes.
 - Project workspace tabs that retain Library, Source and PDF state independently.

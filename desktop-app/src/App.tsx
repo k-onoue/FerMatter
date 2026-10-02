@@ -92,6 +92,7 @@ type PromptState = {
 import { NewProjectDialog } from "./NewProjectDialog";
 import { savedVariant } from "./variants";
 import { initialTemplates, type TemplateConfiguration } from "./templates";
+import { logError } from "./log";
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]),
     [project, setProject] = useState<Project | null>(null);
@@ -238,7 +239,10 @@ export default function App() {
   const ask: Ask = (title, value = "", label = "Name") =>
     new Promise((resolve) => setPrompt({ title, value, label, resolve }));
   function report(e: unknown) {
-    if (String(e) !== "Cancelled") setError(String(e));
+    if (String(e) !== "Cancelled") {
+      setError(String(e));
+      logError("report", e);
+    }
     if (String(e).includes("File:")) {
       void rpc<ProjectProblem[]>("project_problems")
         .then(setProjectProblems)
