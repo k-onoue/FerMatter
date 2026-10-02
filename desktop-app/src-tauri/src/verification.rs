@@ -218,6 +218,7 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
     verify_instant(&output)?;
     verify_project_instant(&output)?;
     verify_zip_compiler_defaults(&output)?;
+    crate::automation::verification::run(&output)?;
     let report = json!(results);
     json_write(&output.join("verification.json"), &report)?;
     json_write(

@@ -60,10 +60,18 @@ mod unix {
         }
     }
     pub fn claim(identity: &str) -> Result<Claim> {
+        claim_at(&directory(identity))
+    }
+    pub fn directory(identity: &str) -> PathBuf {
         let uid = unsafe { libc::geteuid() };
-        let directory =
-            std::env::temp_dir().join(format!("mathlidelux-{uid}-{}", crate::files::id(identity)));
-        claim_at(&directory)
+        let identity = match std::env::var_os("MATHLIDELUX_DATA_DIR") {
+            Some(path) => format!("{identity}:{}", PathBuf::from(path).display()),
+            None => identity.to_owned(),
+        };
+        std::env::temp_dir().join(format!("mathlidelux-{uid}-{}", crate::files::id(&identity)))
+    }
+    pub fn automation_path(identity: &str) -> PathBuf {
+        directory(identity).join("automation-v1")
     }
     fn claim_at(directory: &Path) -> Result<Claim> {
         let uid = unsafe { libc::geteuid() };
@@ -263,7 +271,7 @@ mod unix {
                             &socket,
                             &Launch {
                                 paths: vec![],
-                                activate: true,
+                                activate: !std::env::args().any(|a| a == "--automation-background"),
                             },
                         ) {
                             eprintln!("Could not activate Mathlidelux: {error}");

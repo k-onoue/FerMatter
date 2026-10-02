@@ -1,3 +1,4 @@
+import { mergeAutomationVariants } from "./automation";
 import { dropSVG } from "./svgImport";
 import { LibraryNavigation } from "./LibraryNavigation";
 import { VariantEditor } from "./VariantEditor";
@@ -729,6 +730,46 @@ export default function App() {
   }, []);
   useEffect(() => {
     if (ready && !setupRequired) void consumeImports.current().catch(report);
+  }, [ready, setupRequired]);
+  useEffect(() => {
+    if (!ready || setupRequired) return;
+    let stopped = false;
+    const merge = (saved: Project) => {
+      if (stopped) return;
+      const current = projectRef.current;
+      if (current?.id === saved.id) {
+        const next = mergeAutomationVariants(current, saved);
+        projectRef.current = next;
+        if (viewRef.current)
+          viewRef.current = { ...viewRef.current, project: next };
+        setProject(next);
+      }
+      setWorkspaces(
+        workspacesRef.current.map((workspace) => ({
+          ...workspace,
+          project: mergeAutomationVariants(workspace.project, saved),
+        })),
+      );
+      setProjects((all) =>
+        all.map((item) => mergeAutomationVariants(item, saved)),
+      );
+    };
+    const refresh = () => {
+      void rpc<Project[]>("automation_projects")
+        .then((all) => all.forEach(merge))
+        .catch(report);
+    };
+    const subscription = listen<Project>(
+      "automation-project-changed",
+      (event) => merge(event.payload),
+    );
+    void subscription.then(refresh).catch(report);
+    window.addEventListener("focus", refresh);
+    return () => {
+      stopped = true;
+      window.removeEventListener("focus", refresh);
+      void subscription.then((stop) => stop());
+    };
   }, [ready, setupRequired]);
   async function openProject(type = "folder") {
     const transition = ++projectTransition.current;

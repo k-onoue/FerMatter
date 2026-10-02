@@ -12,6 +12,7 @@
 
 ### Added
 
+- Local CLI and MCP tools for project/equation search, template-based or project-aware rendering, batch image export, additive Library variants and editable SVG review in the app.
 - Diagnostic log in `~/Library/Logs/local.slidemath.prototype/`, recording compiler runs and app errors.
 - Library variants can override output color using the same picker as Instant, with unchanged project sources.
 - On-demand LaTeX/Typst formatting in Source, Library variants and Instant, with bundled formatters, undo, and cancellation when input changes.
