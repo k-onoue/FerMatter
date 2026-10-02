@@ -91,9 +91,26 @@ fn check_logged(cancel: &Cancellation, program: &str) -> Result<()> {
     cancel.check().inspect_err(|_| info!("{program} cancelled"))
 }
 pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) -> Result<String> {
+    run_captured(program, args, cwd, cancel, false)
+}
+// JSON-producing commands must not mix successful output with stderr warnings.
+fn run_stdout(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) -> Result<String> {
+    run_captured(program, args, cwd, cancel, true)
+}
+fn run_captured(
+    program: &str,
+    args: &[String],
+    cwd: &Path,
+    cancel: &Cancellation,
+    stdout_only: bool,
+) -> Result<String> {
     check_logged(cancel, program)?;
     debug!("{program} args={args:?} cwd={}", cwd.display());
     let mut log = tempfile::tempfile().map_err(err)?;
+    let mut diagnostics = stdout_only
+        .then(tempfile::tempfile)
+        .transpose()
+        .map_err(err)?;
     let mut command = cancel.2.command(program)?;
     command
         .args(args)
@@ -102,7 +119,13 @@ pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) ->
         .env_remove("SYNCTEX_VIEWER")
         .stdin(Stdio::null())
         .stdout(log.try_clone().map_err(err)?)
-        .stderr(log.try_clone().map_err(err)?);
+        .stderr(
+            diagnostics
+                .as_ref()
+                .unwrap_or(&log)
+                .try_clone()
+                .map_err(err)?,
+        );
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;
@@ -119,7 +142,11 @@ pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) ->
     };
     let start = Instant::now();
     let status = loop {
-        let log_size = log.metadata().map(|m| m.len());
+        let log_size = log.metadata().and_then(|m| {
+            diagnostics.as_ref().map_or(Ok(m.len()), |d| {
+                d.metadata().map(|e| m.len().saturating_add(e.len()))
+            })
+        });
         let oversized_log = log_size.as_ref().is_ok_and(|size| *size > 8 * 1024 * 1024);
         if cancel.check().is_err()
             || log_size.is_err()
@@ -169,14 +196,15 @@ pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) ->
         warn!("{summary}");
     }
     check_logged(cancel, program)?;
-    use std::io::{Seek, SeekFrom};
-    log.seek(SeekFrom::Start(0)).map_err(err)?;
-    let mut bytes = vec![];
-    log.take(8 * 1024 * 1024 + 1)
-        .read_to_end(&mut bytes)
-        .map_err(err)?;
-    if bytes.len() > 8 * 1024 * 1024 {
-        return Err("Compiler output exceeds 8 MB.".into());
+    let mut bytes = read_output(&mut log, 8 * 1024 * 1024)?;
+    if let Some(diagnostics) = &mut diagnostics {
+        // Check the shared output budget again after process exit; a fast
+        // command can finish between polling iterations. Keep stderr on failure.
+        let stderr = read_output(diagnostics, 8 * 1024 * 1024 - bytes.len())?;
+        if !status.success() && !stderr.is_empty() {
+            bytes.push(b'\n');
+            bytes.extend(stderr);
+        }
     }
     let output = String::from_utf8_lossy(&bytes).into_owned();
     if !status.success() {
@@ -191,6 +219,18 @@ pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) ->
     }
     check_logged(cancel, program)?;
     Ok(output)
+}
+fn read_output(file: &mut fs::File, limit: usize) -> Result<Vec<u8>> {
+    use std::io::{Seek, SeekFrom};
+    file.seek(SeekFrom::Start(0)).map_err(err)?;
+    let mut bytes = vec![];
+    file.take(limit as u64 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(err)?;
+    if bytes.len() > limit {
+        return Err("Compiler output exceeds 8 MB.".into());
+    }
+    Ok(bytes)
 }
 pub fn args(values: &[&str]) -> Vec<String> {
     values.iter().map(|s| s.to_string()).collect()
@@ -645,7 +685,8 @@ fn render_typst(
             "--field",
             "value",
         ]));
-        let sizes: Vec<f64> = serde_json::from_str(&run("typst", &a, stage, c)?).map_err(err)?;
+        let sizes: Vec<f64> =
+            serde_json::from_str(&run_stdout("typst", &a, stage, c)?).map_err(err)?;
         let size = *sizes
             .first()
             .filter(|s| s.is_finite() && **s > 0.)
@@ -1008,7 +1049,8 @@ fn typst_document(
         "value",
         "--one",
     ]));
-    let records: Vec<Value> = serde_json::from_str(&run("typst", &a, stage, c)?).map_err(err)?;
+    let records: Vec<Value> =
+        serde_json::from_str(&run_stdout("typst", &a, stage, c)?).map_err(err)?;
     let mut anchors = vec![];
     for mut record in records {
         if let Some(ids) = targets.get_mut(string(&record, "key")) {
@@ -1117,6 +1159,77 @@ pub fn navigate(document: &Value, request: &Value, c: &Cancellation) -> Result<V
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn query_stdout_remains_json_when_stderr_contains_warnings() {
+        let root = tempfile::tempdir().unwrap();
+        let cancel = super::Cancellation::default();
+        for json in [
+            "[1.0,2.0]",
+            r#"[{"key":"equation","page":1,"x":10,"y":20}]"#,
+        ] {
+            let script = format!(
+                "printf '%s\\n' '{json}'; printf '%s\\n' 'warning: query is deprecated' >&2"
+            );
+            let args = super::args(&["-c", &script]);
+            let output = super::run_stdout("/bin/sh", &args, root.path(), &cancel).unwrap();
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(&output).unwrap(),
+                serde_json::from_str::<serde_json::Value>(json).unwrap()
+            );
+            // Other compiler commands still return their combined diagnostics.
+            assert!(super::run("/bin/sh", &args, root.path(), &cancel)
+                .unwrap()
+                .contains("warning: query is deprecated"));
+        }
+    }
+
+    #[test]
+    fn query_failure_keeps_stderr_and_invalid_stdout_is_not_silently_trimmed() {
+        let root = tempfile::tempdir().unwrap();
+        let cancel = super::Cancellation::default();
+        let error = super::run_stdout(
+            "/bin/sh",
+            &super::args(&[
+                "-c",
+                "printf 'partial'; printf 'unknown variable' >&2; exit 1",
+            ]),
+            root.path(),
+            &cancel,
+        )
+        .unwrap_err();
+        assert!(error.contains("partial") && error.contains("unknown variable"));
+        let output = super::run_stdout(
+            "/bin/sh",
+            &super::args(&["-c", "printf '[1] invalid'"]),
+            root.path(),
+            &cancel,
+        )
+        .unwrap();
+        assert!(serde_json::from_str::<serde_json::Value>(&output).is_err());
+    }
+
+    #[test]
+    fn query_output_limit_counts_both_streams() {
+        let root = tempfile::tempdir().unwrap();
+        let cancel = super::Cancellation::default();
+        let error = super::run_stdout(
+            "/bin/sh",
+            &super::args(&[
+                "-c",
+                "head -c 5000000 /dev/zero; head -c 4000000 /dev/zero >&2",
+            ]),
+            root.path(),
+            &cancel,
+        )
+        .unwrap_err();
+        assert!(error.contains("8 MB"), "{error}");
+        // Also cover the final read after a fast child exits between polls.
+        let mut file = tempfile::tempfile().unwrap();
+        use std::io::Write;
+        file.write_all(b"12345").unwrap();
+        assert!(super::read_output(&mut file, 4).is_err());
+    }
+
     #[test]
     fn run_summary_reports_program_exit_duration_and_cwd() {
         let cwd = std::path::Path::new("/tmp/work");
@@ -1234,16 +1347,24 @@ mod tests {
     use super::*;
     #[test]
     fn cancellation_kills_process_group() {
-        let d = tempfile::tempdir().unwrap();
-        let c = Cancellation::default();
-        let other = c.clone();
-        let root = d.path().to_owned();
-        let thread = std::thread::spawn(move || {
-            run("/bin/sh", &args(&["-c", "sleep 30 & wait"]), &root, &other)
-        });
-        std::thread::sleep(Duration::from_millis(100));
-        c.cancel();
-        assert_eq!(thread.join().unwrap().unwrap_err(), "Cancelled");
+        for stdout_only in [false, true] {
+            let d = tempfile::tempdir().unwrap();
+            let c = Cancellation::default();
+            let other = c.clone();
+            let root = d.path().to_owned();
+            let thread = std::thread::spawn(move || {
+                run_captured(
+                    "/bin/sh",
+                    &args(&["-c", "sleep 30 & wait"]),
+                    &root,
+                    &other,
+                    stdout_only,
+                )
+            });
+            std::thread::sleep(Duration::from_millis(100));
+            c.cancel();
+            assert_eq!(thread.join().unwrap().unwrap_err(), "Cancelled");
+        }
     }
     #[test]
     fn body_preserves_math_style() {

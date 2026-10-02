@@ -2,6 +2,69 @@
 use crate::{compiler, files::*, scan};
 use serde_json::{json, Value};
 use std::{fs, path::Path};
+/// Explicit compiler selection for compatibility checks without changing the
+/// installed tools or application settings. Covers both Typst JSON query paths.
+pub fn verify_typst_version(repository: &Path, output: &Path, executable: &Path) -> Result<Value> {
+    let output = fresh_workspace(&output.canonicalize().map_err(err)?)?;
+    let tools = crate::toolchain::Toolchain::from_value(&json!({
+        "schemaVersion":1, "kind":"mathlidelux.tools",
+        "paths":{"typst":executable.canonicalize().map_err(err)?}
+    }))?;
+    let cancel = compiler::Cancellation::with_tools(std::sync::Arc::new(tools));
+    let version = compiler::run("typst", &compiler::args(&["--version"]), &output, &cancel)?;
+    let mut projects = vec![];
+    for (name, count) in [("demo-typst", 20), ("demo-cetz", 3)] {
+        let root = output.join(name);
+        snapshot(&repository.join("examples").join(name), &root, &Value::Null)?;
+        let before = fingerprint(&root)?;
+        let scanned = scan::extract(&root, "main.typ", None)?;
+        let mut cards = vec![];
+        compiler::render(
+            &root,
+            "main.typ",
+            "project",
+            scanned["cards"].as_array().unwrap(),
+            &output.join(format!("{name}-cache")),
+            &cancel,
+            |card| cards.push(card),
+        )?;
+        if cards.len() != count
+            || cards
+                .iter()
+                .any(|c| c["status"] != "ready" || c["sourceFontSize"].as_f64().unwrap_or(0.) <= 0.)
+        {
+            return Err(format!(
+                "{name}: missing artwork or font-size metadata: {cards:?}"
+            ));
+        }
+        let document = compiler::document(
+            &root,
+            "main.typ",
+            "project",
+            &output.join(format!("{name}-pdf")),
+            &Value::Null,
+            &cancel,
+        )?;
+        if document["anchors"].as_array().is_none_or(Vec::is_empty) {
+            return Err(format!("{name}: missing PDF navigation anchors"));
+        }
+        for card in &cards {
+            for field in ["svgPath", "pngPath", "pdfPath"] {
+                if fs::metadata(string(card, field)).map_err(err)?.len() == 0 {
+                    return Err(format!("{name}: empty {field}"));
+                }
+            }
+        }
+        if fingerprint(&root)? != before {
+            return Err("Typst verification changed project sources".into());
+        }
+        projects.push(json!({"name":name,"cards":cards.len(),"document":document}));
+    }
+    let report = json!({"typst":version.trim(),"projects":projects});
+    json_write(&output.join("typst-verification.json"), &report)?;
+    Ok(report)
+}
+
 pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
     let report_folder = output.canonicalize().map_err(err)?;
     // A retained run directory gives inspection artifacts without ever reusing an
