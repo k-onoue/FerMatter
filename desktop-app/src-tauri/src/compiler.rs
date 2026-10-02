@@ -1,4 +1,5 @@
 use crate::{files::*, scan};
+use log::{debug, error, info, warn};
 use serde_json::{json, Value};
 use std::{
     fs,
@@ -78,8 +79,20 @@ impl Drop for ProcessRegistration {
         self.cancellation.1.lock().unwrap().remove(&self.id);
     }
 }
+fn run_summary(program: &str, code: Option<i32>, elapsed: Duration, cwd: &Path) -> String {
+    let exit = code.map_or("signal".to_string(), |code| code.to_string());
+    format!(
+        "{program} exit={exit} duration_ms={} cwd={}",
+        elapsed.as_millis(),
+        cwd.display()
+    )
+}
+fn check_logged(cancel: &Cancellation, program: &str) -> Result<()> {
+    cancel.check().inspect_err(|_| info!("{program} cancelled"))
+}
 pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) -> Result<String> {
-    cancel.check()?;
+    check_logged(cancel, program)?;
+    debug!("{program} args={args:?} cwd={}", cwd.display());
     let mut log = tempfile::tempfile().map_err(err)?;
     let mut command = cancel.2.command(program)?;
     command
@@ -95,7 +108,10 @@ pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) ->
         use std::os::unix::process::CommandExt;
         command.process_group(0);
     }
-    let mut child = command.spawn().map_err(|e| format!("{program}: {e}"))?;
+    let mut child = command.spawn().map_err(|e| {
+        error!("{program} failed to spawn: {e}");
+        format!("{program}: {e}")
+    })?;
     cancel.1.lock().unwrap().insert(child.id());
     let registration = ProcessRegistration {
         id: child.id(),
@@ -117,12 +133,19 @@ pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) ->
             let _ = child.kill();
             let _ = child.wait();
             return Err(if cancel.check().is_err() {
+                info!("{program} cancelled");
                 "Cancelled".into()
             } else if let Err(error) = log_size {
+                warn!("{program} output monitoring failed: {error}");
                 format!("Unable to monitor compiler output: {error}")
             } else if oversized_log {
+                warn!("{program} exceeded the 8 MB output limit");
                 format!("{program} exceeded the 8 MB output limit.")
             } else {
+                warn!(
+                    "{program} timed out after 180 seconds cwd={}",
+                    cwd.display()
+                );
                 format!("{program} timed out after 180 seconds.")
             });
         }
@@ -139,7 +162,13 @@ pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) ->
         std::thread::sleep(Duration::from_millis(25));
     };
     drop(registration);
-    cancel.check()?;
+    let summary = run_summary(program, status.code(), start.elapsed(), cwd);
+    if status.success() {
+        info!("{summary}");
+    } else {
+        warn!("{summary}");
+    }
+    check_logged(cancel, program)?;
     use std::io::{Seek, SeekFrom};
     log.seek(SeekFrom::Start(0)).map_err(err)?;
     let mut bytes = vec![];
@@ -160,7 +189,7 @@ pub fn run(program: &str, args: &[String], cwd: &Path, cancel: &Cancellation) ->
             .rev()
             .collect());
     }
-    cancel.check()?;
+    check_logged(cancel, program)?;
     Ok(output)
 }
 pub fn args(values: &[&str]) -> Vec<String> {
@@ -175,6 +204,11 @@ fn tex_args(stage: &Path, engine: &str, out: &Path, main: &str, pdf: bool) -> Re
         .find(|s| stage.join(s).is_file());
     let mut a = args(&["-norc"]);
     if let Some(rc) = rc {
+        if engine == "project" {
+            // A project rc may only set search paths. Default to direct PDF
+            // output before loading it so explicit project modes still win.
+            a.extend(args(&["-e", "$pdf_mode = 1;"]));
+        }
         a.extend(args(&["-r", rc]))
     }
     match engine {
@@ -1083,6 +1117,20 @@ pub fn navigate(document: &Value, request: &Value, c: &Cancellation) -> Result<V
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn run_summary_reports_program_exit_duration_and_cwd() {
+        let cwd = std::path::Path::new("/tmp/work");
+        let ok = super::run_summary(
+            "typst",
+            Some(0),
+            std::time::Duration::from_millis(1234),
+            cwd,
+        );
+        assert_eq!(ok, "typst exit=0 duration_ms=1234 cwd=/tmp/work");
+        let killed = super::run_summary("latexmk", None, std::time::Duration::ZERO, cwd);
+        assert_eq!(killed, "latexmk exit=signal duration_ms=0 cwd=/tmp/work");
+    }
+
     #[test]
     fn imported_cards_require_render_before_files_or_compilers_are_accessed() {
         let temp = tempfile::tempdir().unwrap();

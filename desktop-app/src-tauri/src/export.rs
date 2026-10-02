@@ -7,6 +7,27 @@ use std::{
     sync::Mutex,
 };
 static EXPORT: Mutex<()> = Mutex::new(());
+
+/// Resolve each export from persisted settings so every caller (including
+/// batch copies and native drags) uses the same inheritance rules.
+pub fn font_size(
+    request: &Value,
+    card: &Value,
+    project: &Value,
+    settings: &crate::settings::SettingsFiles,
+) -> Result<f64> {
+    if let Some(size) = request
+        .as_f64()
+        .or(card["exportFontSize"].as_f64())
+        .or(project["exportFontSize"].as_f64())
+    {
+        return Ok(size);
+    }
+    Ok(settings.load("preferences.json")?["exportFontSize"]
+        .as_f64()
+        .unwrap_or(30.))
+}
+
 pub fn image_file(card: &Value, format: &str, point_size: f64, folder: &Path) -> Result<PathBuf> {
     let _permit = EXPORT.lock().unwrap();
     if !["svg", "png", "jpeg", "pdf"].contains(&format) {
@@ -169,6 +190,55 @@ fn scale_pdf(source: &Path, dest: &Path, scale: f32) -> Result<()> {
 mod tests {
     use super::*;
     use serde_json::json;
+    #[test]
+    fn export_inherits_persisted_defaults_and_preserves_explicit_and_legacy_sizes() {
+        let temp = tempfile::tempdir().unwrap();
+        let settings = crate::settings::SettingsFiles::new(temp.path());
+        let mut prefs = json!({"appearance":"light","autoSave":true});
+        settings.initialize("preferences.json", &prefs).unwrap();
+        let source = temp.path().join("source.svg");
+        fs::write(&source, r#"<svg xmlns="http://www.w3.org/2000/svg" width="20pt" height="10pt" viewBox="0 0 20 10"/>"#).unwrap();
+        let card = json!({"svgPath":source,"sourceFontSize":10});
+        let project = json!({});
+        let resolve = |request: &Value, card: &Value, project: &Value| {
+            font_size(request, card, project, &settings).unwrap()
+        };
+        let size = resolve(&Value::Null, &card, &project);
+        assert_eq!(size, 30.);
+        let svg = image_file(&card, "svg", size, &temp.path().join("exports")).unwrap();
+        assert!(read(&svg).unwrap().contains("width=\"60pt\""));
+        let snapshot = settings.snapshot("preferences.json", false).unwrap();
+        prefs["exportFontSize"] = json!(31.25);
+        settings
+            .save("preferences.json", &prefs, string(&snapshot, "revision"))
+            .unwrap();
+        assert_eq!(resolve(&Value::Null, &card, &project), 31.25);
+        assert_eq!(
+            resolve(&Value::Null, &card, &json!({"exportFontSize":24})),
+            24.
+        );
+        assert_eq!(
+            resolve(
+                &Value::Null,
+                &json!({"exportFontSize":18.5}),
+                &json!({"exportFontSize":24})
+            ),
+            18.5
+        );
+        assert_eq!(
+            resolve(&json!(12.5), &json!({"exportFontSize":18}), &project),
+            12.5
+        );
+        assert_eq!(
+            resolve(&Value::Null, &json!({"exportFontSize":0}), &project),
+            0.
+        );
+        assert_eq!(
+            resolve(&Value::Null, &card, &json!({"exportFontSize":0})),
+            0.
+        );
+        assert_eq!(resolve(&json!(0), &card, &project), 0.);
+    }
     #[test]
     fn scales_svg_with_xml_declaration_without_changing_viewbox() {
         let temp = tempfile::tempdir().unwrap();

@@ -210,13 +210,14 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
         if fingerprint(&root)? != stamp {
             return Err(format!("{name}: original files changed"));
         }
-        let project = json!({"id":ident,"root":root,"main":main,"format":if main.ends_with(".typ"){"typst"}else{"latex"},"engine":"project","cards":cards,"outline":scanned["outline"],"warnings":scanned["warnings"],"files":scanned["files"],"customOrder":[],"sections":[],"sectionAssignments":{},"exportFormat":"svg","exportFontSize":0,"candidates":[main]});
+        let project = json!({"id":ident,"root":root,"main":main,"format":if main.ends_with(".typ"){"typst"}else{"latex"},"engine":"project","cards":cards,"outline":scanned["outline"],"warnings":scanned["warnings"],"files":scanned["files"],"customOrder":[],"sections":[],"sectionAssignments":{},"exportFormat":"svg","candidates":[main]});
         json_write(&project_dir.join("project.json"), &project)?;
         json_write(&project_dir.join("verification-document.json"), &document)?;
         results.push(json!({"project":name,"cards":cards.len(),"headings":scanned["outline"].as_array().unwrap().len(),"anchors":document["anchors"].as_array().unwrap().len(),"pdf":document["pdfPath"]}));
     }
     verify_instant(&output)?;
     verify_project_instant(&output)?;
+    verify_zip_compiler_defaults(&output)?;
     crate::automation::verification::run(&output)?;
     let report = json!(results);
     json_write(&output.join("verification.json"), &report)?;
@@ -232,6 +233,99 @@ fn fresh_workspace(output: &Path) -> Result<std::path::PathBuf> {
         .tempdir_in(output)
         .map_err(err)?
         .keep())
+}
+
+fn verify_zip_compiler_defaults(output: &Path) -> Result<()> {
+    use crate::storage::{import_zip, Storage};
+    use std::io::Write;
+    let workspace = output.join("zip-compiler-defaults");
+    fs::create_dir_all(&workspace).map_err(err)?;
+    let store = Storage::new(workspace.join("data"), workspace.join("legacy"))?;
+    let mut reports = vec![];
+    // Search-path-only rc files must use pdfLaTeX. Explicit LuaLaTeX and
+    // latex/DVI settings must override that fallback, for either rc filename.
+    for (name, rc_name, mode, engine_check) in [
+        (
+            "default",
+            "latexmkrc",
+            "",
+            r"\ifdefined\pdfoutput\ifnum\pdfoutput>0\else\errmessage{Expected direct PDF}\fi\else\errmessage{Expected pdfTeX}\fi",
+        ),
+        (
+            "lua",
+            ".latexmkrc",
+            "$pdf_mode = 4;",
+            r"\ifdefined\directlua\else\errmessage{Expected LuaLaTeX}\fi",
+        ),
+        (
+            "dvi",
+            "latexmkrc",
+            "$pdf_mode = 0;",
+            r"\ifnum\pdfoutput=0\else\errmessage{Expected DVI}\fi",
+        ),
+    ] {
+        let archive = workspace.join(format!("{name}.zip"));
+        let mut zip = zip::ZipWriter::new(fs::File::create(&archive).map_err(err)?);
+        let rc =
+            format!("$ENV{{'TEXINPUTS'}} = './styles//:' . ($ENV{{'TEXINPUTS'}} // '');\n{mode}\n");
+        let main = format!("\\documentclass{{article}}\n\\input{{definitions}}\n{engine_check}\n\\begin{{document}}\n$\\sample{{x}}$\n\\end{{document}}\n");
+        for (path, text) in [
+            ("main.tex", main.as_str()),
+            (rc_name, rc.as_str()),
+            (
+                "styles/definitions.tex",
+                r"\newcommand{\sample}[1]{#1^{2}+1}",
+            ),
+        ] {
+            zip.start_file(
+                format!("project/{path}"),
+                zip::write::SimpleFileOptions::default(),
+            )
+            .map_err(err)?;
+            zip.write_all(text.as_bytes()).map_err(err)?;
+        }
+        zip.finish().map_err(err)?;
+        let root = import_zip(&archive, &workspace.join("imports"))?;
+        let project = store.open(&root, Some("main.tex"))?;
+        let engine = string(&project, "engine");
+        if engine != "project" {
+            return Err("Imported rc was not selected as the compiler configuration.".into());
+        }
+        let before = fingerprint(&root)?;
+        let scanned = scan::extract(&root, "main.tex", None)?;
+        let cancel = compiler::Cancellation::default();
+        let mut rendered = vec![];
+        compiler::render(
+            &root,
+            "main.tex",
+            engine,
+            scanned["cards"].as_array().unwrap(),
+            &workspace.join(name).join("Cache"),
+            &cancel,
+            |card| rendered.push(card),
+        )?;
+        if rendered.len() != 1 || rendered[0]["status"] != "ready" {
+            return Err(format!("ZIP compiler {name}: {rendered:?}"));
+        }
+        for key in ["svgPath", "pngPath", "pdfPath"] {
+            if fs::metadata(string(&rendered[0], key)).map_err(err)?.len() == 0 {
+                return Err(format!("ZIP compiler {name}: empty {key}"));
+            }
+        }
+        let document = compiler::document(
+            &root,
+            "main.tex",
+            engine,
+            &workspace.join(name).join("Documents"),
+            &Value::Null,
+            &cancel,
+        )?;
+        if fingerprint(&root)? != before {
+            return Err("ZIP compilation changed project sources.".into());
+        }
+        reports.push(json!({"mode":name,"cards":rendered.len(),"pdf":document["pdfPath"]}));
+    }
+    json_write(&workspace.join("verification.json"), &json!(reports))
 }
 fn verify_project_instant(output: &Path) -> Result<()> {
     use crate::{instant, storage::Storage};

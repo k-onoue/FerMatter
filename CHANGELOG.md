@@ -13,6 +13,7 @@
 ### Added
 
 - Local CLI and MCP tools for project/equation search, template-based or project-aware rendering, batch image export, additive Library variants and editable SVG review in the app.
+- Diagnostic log in `~/Library/Logs/local.slidemath.prototype/`, recording compiler runs and app errors.
 - Library variants can override output color using the same picker as Instant, with unchanged project sources.
 - On-demand LaTeX/Typst formatting in Source, Library variants and Instant, with bundled formatters, undo, and cancellation when input changes.
 - Project workspace tabs that retain Library, Source and PDF state independently.
@@ -44,6 +45,8 @@
 
 ### Changed
 
+- Use direct PDF output when a project's `latexmkrc` does not choose an output mode, while respecting explicit project compiler settings.
+- Apply the default output size to Library copy/drag/export and Source/PDF previews; replace fixed size presets with Default and decimal pt input while preserving saved overrides.
 - Keep font-size spinner arrows visible in dark mode, and start Instant preview drags without waiting for an artifact-retention request.
 - Restore SVG recipes with an automatic preview, and choose Instant output colors with default swatches, a draggable color picker, recent color history, and HEX input.
 - Reuse the running macOS app when launched again, including from another app copy, to prevent duplicate menu-bar icons.

@@ -45,7 +45,7 @@ import { WorkspaceArtifacts, WorkspaceTabs } from "./WorkspaceTabs";
 import { newWorkspace, type WorkspaceState } from "./workspaces";
 import { restoredVariant } from "./restoredVariant";
 import type { InstantDraft } from "./instant";
-import { OutputSizeOptions } from "./OutputSizeOptions";
+import { OutputSizeControl } from "./OutputSizeControl";
 import { ImagePreview, Modal, Prompt, ContextMenu, type Ask } from "./ui";
 import { Settings } from "./settings";
 import { defaults } from "./appearance";
@@ -93,6 +93,7 @@ type PromptState = {
 import { NewProjectDialog } from "./NewProjectDialog";
 import { savedVariant } from "./variants";
 import { initialTemplates, type TemplateConfiguration } from "./templates";
+import { logError } from "./log";
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]),
     [project, setProject] = useState<Project | null>(null);
@@ -239,7 +240,10 @@ export default function App() {
   const ask: Ask = (title, value = "", label = "Name") =>
     new Promise((resolve) => setPrompt({ title, value, label, resolve }));
   function report(e: unknown) {
-    if (String(e) !== "Cancelled") setError(String(e));
+    if (String(e) !== "Cancelled") {
+      setError(String(e));
+      logError("report", e);
+    }
     if (String(e).includes("File:")) {
       void rpc<ProjectProblem[]>("project_problems")
         .then(setProjectProblems)
@@ -1042,7 +1046,7 @@ export default function App() {
   async function exported(ids = [...selected]) {
     if (!project) throw new Error("Open a project.");
     if (!ids.length) throw new Error("Select an equation or figure.");
-    await writer.current.flush();
+    await Promise.all([writer.current.flush(), preferencesDocument.flush()]);
     return rpc<string[]>("export", {
       project: project.id,
       ids,
@@ -1077,7 +1081,7 @@ export default function App() {
         filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
       });
       if (!dest) return;
-      await writer.current.flush();
+      await Promise.all([writer.current.flush(), preferencesDocument.flush()]);
       await rpc("export", {
         project: project.id,
         ids: [[...selected][0]],
@@ -1739,26 +1743,17 @@ export default function App() {
                         </option>
                       ))}
                     </select>
-                    <select
-                      title="Default output font size"
-                      value={project.exportFontSize ?? -1}
-                      onChange={(e) =>
-                        void persist({
-                          ...project,
-                          exportFontSize: +e.target.value < 0 ? undefined : +e.target.value,
-                        })
+                    <OutputSizeControl
+                      label="Project output font size"
+                      value={project.exportFontSize}
+                      defaultSize={settings.exportFontSize ?? 30}
+                      sourceSizes={project.cards.map(
+                        (card) => card.sourceFontSize,
+                      )}
+                      onChange={(exportFontSize) =>
+                        void persist({ ...project, exportFontSize })
                       }
-                    >
-                      <option value="-1">
-                        Global ({settings.exportFontSize === 0 ? "Source font size" : `${settings.exportFontSize ?? 30} pt`})
-                      </option>
-                      <OutputSizeOptions
-                        value={project.exportFontSize ?? -1}
-                        sourceSizes={project.cards.map(
-                          (card) => card.sourceFontSize,
-                        )}
-                      />
-                    </select>
+                    />
                     <button
                       title={
                         selected.size > 1
@@ -1785,6 +1780,7 @@ export default function App() {
                     style={{ display: mode === "source" ? "flex" : "none" }}
                   >
                     <SourceWorkspace
+                      defaultFontSize={settings.exportFontSize ?? 30}
                       key={project.id}
                       project={project}
                       autoSave={settings.autoSave}
@@ -1849,34 +1845,23 @@ export default function App() {
                     onDrag={(c) => void drag(c)}
                   />
                   <pre>{selectedCard.tex}</pre>
-                  <label>
-                    Output size
-                    <select
-                      value={selectedCard.exportFontSize ?? -1}
-                      onChange={(e) =>
-                        void persist({
-                          ...project,
-                          cards: project.cards.map((c) =>
-                            c.id === selectedCard.id
-                              ? {
-                                  ...c,
-                                  exportFontSize:
-                                    +e.target.value < 0
-                                      ? undefined
-                                      : +e.target.value,
-                                }
-                              : c,
-                          ),
-                        })
-                      }
-                    >
-                      <OutputSizeOptions
-                        value={selectedCard.exportFontSize ?? -1}
-                        sourceSizes={[selectedCard.sourceFontSize]}
-                        projectSize={project.exportFontSize ?? settings.exportFontSize ?? 30}
-                      />
-                    </select>
-                  </label>
+                  <OutputSizeControl
+                    value={selectedCard.exportFontSize}
+                    defaultSize={
+                      project.exportFontSize ?? settings.exportFontSize ?? 30
+                    }
+                    sourceSizes={[selectedCard.sourceFontSize]}
+                    onChange={(exportFontSize) =>
+                      void persist({
+                        ...project,
+                        cards: project.cards.map((c) =>
+                          c.id === selectedCard.id
+                            ? { ...c, exportFontSize }
+                            : c,
+                        ),
+                      })
+                    }
+                  />
                   <button
                     className="soft"
                     onClick={() => editCard(selectedCard)}
@@ -1923,7 +1908,8 @@ export default function App() {
                 }}
               />
               <div className="pdf-column" style={{ width: settings.pdfWidth }}>
-                <PdfPane defaultFontSize={settings.exportFontSize ?? 30}
+                <PdfPane
+                  defaultFontSize={settings.exportFontSize ?? 30}
                   key={project.id}
                   document={pdf}
                   project={project}
@@ -2104,6 +2090,7 @@ export default function App() {
       )}
       {editing && project && (
         <VariantEditor
+          defaultFontSize={settings.exportFontSize ?? 30}
           project={project}
           editing={editing}
           setEditing={setEditing}
@@ -2117,7 +2104,11 @@ export default function App() {
               project: project.id,
               card,
               format: project.exportFormat || "svg",
-              fontSize: editing.exportFontSize ?? project.exportFontSize ?? settings.exportFontSize ?? 30,
+              fontSize:
+                editing.exportFontSize ??
+                project.exportFontSize ??
+                settings.exportFontSize ??
+                30,
             })
               .then((path) =>
                 startDrag({

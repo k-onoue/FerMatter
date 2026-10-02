@@ -10,6 +10,24 @@ body,
   overflow: hidden;
   background: transparent;
 }
+.output-size-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.output-size-control input {
+  width: 76px;
+  min-width: 0;
+  padding: 4px 6px;
+}
+.output-size-control button {
+  padding: 4px 7px;
+}
+.output-size-control button[aria-pressed="true"] {
+  color: var(--accent);
+}
 [data-appearance="dark"] select,
 [data-appearance="dark"] input[type="number"] {
   color-scheme: dark;

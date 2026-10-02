@@ -470,10 +470,7 @@ fn dispatch(
                     .find(|c| c["id"] == *id)
                     .ok_or("Equation not found")?;
                 store.allowed_artifact(Path::new(string(card, "svgPath")))?;
-                let size = card["exportFontSize"]
-                    .as_f64()
-                    .or(p["exportFontSize"].as_f64())
-                    .unwrap_or(0.);
+                let size = export::font_size(&Value::Null, card, &p, &runtime.settings)?;
                 let mut card = card.clone();
                 if string(&v, "format") == "svg" {
                     card["restoreMetadata"] = roundtrip::card_recipe(store, &p, &card, size)?;
@@ -617,16 +614,11 @@ fn dispatch(
                     &store.project_dir(ident)?.join("Cache/PDFArtwork"),
                     &c,
                 )?;
-                let size = v["fontSize"]
-                    .as_f64()
-                    .or_else(|| {
-                        p["cards"]
-                            .as_array()
-                            .and_then(|cards| cards.iter().find(|item| item["id"] == card["id"]))
-                            .and_then(|item| item["exportFontSize"].as_f64())
-                            .or(p["exportFontSize"].as_f64())
-                    })
-                    .unwrap_or(0.);
+                let item = p["cards"]
+                    .as_array()
+                    .and_then(|cards| cards.iter().find(|item| item["id"] == card["id"]))
+                    .unwrap_or(&Value::Null);
+                let size = export::font_size(&v["fontSize"], item, &p, &runtime.settings)?;
                 if string(&v, "format") == "svg" {
                     card["restoreMetadata"] = roundtrip::card_recipe(store, &p, &card, size)?;
                 }
@@ -657,10 +649,7 @@ fn dispatch(
             let mut card = v["card"].clone();
             store.allowed_artifact(Path::new(string(&card, "svgPath")))?;
             let p = store.load(ident)?;
-            let size = v["fontSize"]
-                .as_f64()
-                .or(p["exportFontSize"].as_f64())
-                .unwrap_or(0.);
+            let size = export::font_size(&v["fontSize"], &card, &p, &runtime.settings)?;
             if string(&v, "format") == "svg" {
                 card["restoreMetadata"] = roundtrip::card_recipe(store, &p, &card, size)?;
             }
@@ -756,6 +745,27 @@ pub fn run() {
     #[cfg(unix)]
     let builder = builder.manage(guard);
     builder
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
+                        file_name: None,
+                    }),
+                ])
+                .level(if cfg!(debug_assertions) {
+                    log::LevelFilter::Debug
+                } else {
+                    log::LevelFilter::Info
+                })
+                .level_for("tauri", log::LevelFilter::Info)
+                .level_for("tao", log::LevelFilter::Info)
+                .level_for("wry", log::LevelFilter::Info)
+                .max_file_size(5 * 1024 * 1024)
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(3))
+                .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
+                .build(),
+        )
         .manage(resident::Resident::default())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
