@@ -13,7 +13,7 @@
 
 | Task | Read |
 | --- | --- |
-| Use the app | [Short user guides](user-docs/README.md) · [public website](https://k-onoue.github.io/mathlidelux/) |
+| Use the app | [Short user guides](user-docs/README.md) · [public website](https://k-onoue.github.io/FerMatter/) |
 | Build or contribute | [Development docs](dev-docs/README.md) · [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Work with an agent | [App automation (CLI / MCP)](dev-docs/reference/automation.md) · [AGENTS.md](AGENTS.md) |
 | Prepare a release | [Release checklist](dev-docs/releasing.md) · [CHANGELOG.md](CHANGELOG.md) |

@@ -35,7 +35,7 @@
 ## Prepare through a PR
 
 1. Choose version/scope; use a task branch, optionally `release/vX.Y.Z`.
-2. Finish [issue #7](https://github.com/k-onoue/mathlidelux/issues/7)'s verified release-blocking findings; document deferrals.
+2. Finish [issue #7](https://github.com/k-onoue/FerMatter/issues/7)'s verified release-blocking findings; document deferrals.
 3. Update versions, changelog, requirements, compatibility notes, and affected guides.
 4. Run the [automated release gate and final artifact checklist](reference/release-validation.md); verify real compilers and synthetic workflows.
 5. Review/merge the preparation PR; retest the exact resulting commit before tagging.

@@ -1,7 +1,7 @@
 # Updates — future integration contract
 
 - The current desktop app has no in-app release checker/downloader; install newer builds manually.
-- The Swift implementation was retired. Its [historical specification](https://github.com/k-onoue/mathlidelux/blob/629ec5445e09880e2aa1796603157f5bd73d8ab5/macos-app/UPDATES.md) remains a reference, not a current feature.
+- The Swift implementation was retired. Its [historical specification](https://github.com/k-onoue/FerMatter/blob/629ec5445e09880e2aa1796603157f5bd73d8ab5/macos-app/UPDATES.md) remains a reference, not a current feature.
 - The requirements below describe a future implementation; do not enable it against unnotarized prototype artifacts.
 - Repository was private at inspection; unauthenticated public release access must be verified before release activation.
 
@@ -16,7 +16,7 @@
 
 ## Release contract
 
-- Repository: `k-onoue/mathlidelux`; published stable release; valid SemVer tag with optional leading `v`.
+- Repository: `k-onoue/FerMatter`; published stable release; valid SemVer tag with optional leading `v`.
 - Exclude prerelease tags even when GitHub's prerelease flag is false.
 - Compare `CFBundleShortVersionString`; build metadata does not trigger an update.
 - Preferred asset: `FerMatter.dmg`; fallback: `FerMatter-<version>-macOS-arm64.dmg`.

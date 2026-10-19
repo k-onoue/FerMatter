@@ -66,7 +66,7 @@ FerMatter is licensed under Apache-2.0. LICENSE and NOTICE are included next
 to the app on the disk image and inside the app's Contents/Resources folder.
 The PKG installer includes the same files and displays the license.
 
-Project source and build instructions: https://github.com/k-onoue/mathlidelux
+Project source and build instructions: https://github.com/k-onoue/FerMatter
 
 Upgrading from Mathlidelux: quit the old app before opening FerMatter.
 After installing FerMatter.app, remove only the old Mathlidelux.app bundle.

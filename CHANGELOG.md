@@ -83,7 +83,7 @@
 
 - Obsolete web UI prototype; retain the native app and product site.
 
-[Unreleased]: https://github.com/k-onoue/mathlidelux/commits/main/
+[Unreleased]: https://github.com/k-onoue/FerMatter/commits/main/
 
 ### Security
 

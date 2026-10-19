@@ -52,7 +52,7 @@ git diff --check
 - Environment setup and preview: [documentation](documentation.md#build-and-preview).
 - Check desktop/mobile widths, keyboard navigation, light/dark appearance, and JavaScript disabled.
 - Check video play/pause, caption track, poster, and the same steps as text.
-- Serve only `docs/`; also test under the `/mathlidelux/` project subpath.
+- Serve only `docs/`; also test under the `/FerMatter/` project subpath.
 - CI checks guide freshness, local links, public fixtures, and whitespace.
 
 ## Record results

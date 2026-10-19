@@ -53,5 +53,5 @@ APPLE_SIGNING_IDENTITY='Developer ID Application: NAME (TEAM)' ./desktop-app/scr
 - Dependency license texts are included in `Contents/Resources/licenses/`, in addition to LICENSE, NOTICE and theme attribution.
 - These commands **submit binaries to Apple**; they are the explicit public-preparation path, not part of normal checks/prototype packaging.
 - Signing/notarization acceptance does not prove clean-Mac installation or upgrade behavior. Complete [final artifact validation](release-validation.md) before enabling downloads.
-- This path has not yet been exercised with production credentials at the documentation baseline; [issue #42](https://github.com/k-onoue/mathlidelux/issues/42) tracks the remaining checks.
+- This path has not yet been exercised with production credentials at the documentation baseline; [issue #42](https://github.com/k-onoue/FerMatter/issues/42) tracks the remaining checks.
 - References: [Apple notarization](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution), [Tauri signing](https://v2.tauri.app/distribute/sign/macos/).

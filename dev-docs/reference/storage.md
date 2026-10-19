@@ -87,7 +87,7 @@
 - `CacheMaintenance.json` records reclaimed/retained bytes. SourceDrafts, variants/project JSON, Instant sessions/history, project Undo data, original project folders and legacy storage are never eviction targets.
 - Unreferenced image previews regenerate from source/history after reclamation. A live document retains its matching source/navigation snapshot until released.
 - Compiler work in progress is separate from published cache admission: at most two jobs, source snapshots up to 1 GiB each (Typst document work retains a second navigation copy), generated images/PDFs up to 100 MiB. External compilers are not an OS resource sandbox; interrupted working directories are reclaimed on a later startup.
-- See [tests](../testing.md) and [issue #39](https://github.com/k-onoue/mathlidelux/issues/39).
+- See [tests](../testing.md) and [issue #39](https://github.com/k-onoue/FerMatter/issues/39).
 
 ## Closing and Source moves
 
