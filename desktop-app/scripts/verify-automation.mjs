@@ -76,6 +76,18 @@ await writeFile(
   }),
 );
 await mkdir(join(home, "Settings"), { recursive: true });
+// Optional compiler path makes version compatibility checks reproducible without
+// replacing the user's installed Typst or saved application settings.
+if (process.argv[3]) {
+  await writeFile(
+    join(home, "Settings", "tools.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      kind: "mathlidelux.tools",
+      paths: { typst: await realpath(process.argv[3]) },
+    }),
+  );
+}
 const emptyKey = {
   key: "",
   command: false,

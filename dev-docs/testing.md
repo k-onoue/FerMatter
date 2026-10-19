@@ -24,6 +24,20 @@
 - Test worker changes with cancellation and late results after switching projects.
 - Test exports by opening the result in the target app; do not infer drag support from copy support.
 
+### Typst version compatibility
+
+- Keep downloaded compiler binaries outside Git; leave installed tools/settings unchanged.
+- Run against each supported executable (including 0.14.2 and 0.15.1):
+
+```sh
+source desktop-app/scripts/environment.sh
+cargo run --manifest-path desktop-app/src-tauri/Cargo.toml --example verify -- . desktop-app/build/typst-compat /absolute/path/to/typst
+node desktop-app/scripts/verify-automation.mjs /absolute/path/to/Mathlidelux /absolute/path/to/typst
+```
+
+- The optional verifier argument checks all Typst/CeTZ sample cards, measured font sizes, document PDF navigation and source preservation in fresh snapshots.
+- The CLI/MCP check uses an isolated `tools.json` override and verifies exports, progress and cancellation.
+
 ## Documentation/site checks
 
 ```sh
