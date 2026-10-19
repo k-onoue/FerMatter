@@ -311,14 +311,14 @@ fn open_window(app: &tauri::AppHandle, project: Option<&Value>) -> tauri::Result
     )
     .title(if let Some(project) = project {
         format!(
-            "Mathlidelux — {} Instant",
+            "FerMatter — {} Instant",
             Path::new(string(project, "root"))
                 .file_name()
                 .unwrap_or_default()
                 .to_string_lossy()
         )
     } else {
-        "Mathlidelux — Instant".into()
+        "FerMatter — Instant".into()
     })
     .inner_size(780., 640.)
     .min_inner_size(480., 460.)

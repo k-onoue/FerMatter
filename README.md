@@ -1,4 +1,4 @@
-# Mathlidelux
+# FerMatter
 
 - Bring equations from a LaTeX or Typst paper into your presentation.
 - Browse equations and TikZ/CeTZ drawings; edit slide-specific variants; copy/export SVG, PDF, PNG, or JPEG.
@@ -51,5 +51,5 @@ node scripts/preview-site.mjs
 ## License
 
 - [Apache License 2.0](LICENSE); copyright and attribution: [NOTICE](NOTICE).
-- The license does not grant trademark permission; do not distribute modified builds under the Mathlidelux name or icon.
+- The license does not grant trademark permission; do not distribute modified builds under the FerMatter name or icon.
 - External tools retain their own licenses and are not bundled.

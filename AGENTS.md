@@ -1,4 +1,4 @@
-# Working on Mathlidelux
+# Working on FerMatter
 
 - Humans and agents use the same [development docs](dev-docs/README.md).
 - Read only the pages relevant to the task; keep personal preferences outside this file.

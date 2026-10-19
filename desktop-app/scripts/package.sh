@@ -18,7 +18,7 @@ Usage: ./desktop-app/scripts/package.sh [--app PATH] [--output DIR] [--overwrite
 
 Build and verify a prototype DMG and PKG for Apple Silicon, macOS 14+.
 Without --app, build.sh first builds the app from the current checkout.
---app PATH     Package an existing ad hoc signed Mathlidelux.app without rebuilding.
+--app PATH     Package an existing ad hoc signed FerMatter.app without rebuilding.
 --output DIR   Output directory; its parent must exist (default: build/distribution).
 --overwrite    Replace existing artifacts with the same version and build number.
 --help         Show this help.
@@ -66,14 +66,14 @@ else
 fi
 if [[ -z "$app_dir" ]]; then
     "$project_dir/scripts/build.sh"
-    app_dir="$project_dir/src-tauri/target/release/bundle/macos/Mathlidelux.app"
+    app_dir="$project_dir/src-tauri/target/release/bundle/macos/FerMatter.app"
 fi
 [[ -d "$app_dir/Contents" ]] || fail "App bundle not found: $app_dir"
 app_dir="$(cd "$app_dir" && pwd -P)"
 plist="$app_dir/Contents/Info.plist"
 plist_value() { /usr/libexec/PlistBuddy -c "Print :$1" "$plist"; }
 [[ "$(plist_value CFBundleIdentifier)" = local.slidemath.prototype ]] || fail "Unexpected app bundle identifier."
-[[ "$(plist_value CFBundleExecutable)" = Mathlidelux ]] || fail "Unexpected app executable."
+[[ "$(plist_value CFBundleExecutable)" = FerMatter ]] || fail "Unexpected app executable."
 version="$(plist_value CFBundleShortVersionString)"
 build="$(plist_value CFBundleVersion)"
 minimum_os="$(plist_value LSMinimumSystemVersion)"
@@ -81,7 +81,7 @@ minimum_os="$(plist_value LSMinimumSystemVersion)"
 [[ "$build" =~ ^[0-9]+$ ]] || fail "Expected a numeric build number, got: $build"
 [[ "$minimum_os" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]] || fail "Invalid minimum macOS version."
 [[ "${minimum_os%%.*}" -ge 14 ]] || fail "This prototype packaging requires macOS 14 or later."
-[[ "$(/usr/bin/lipo -archs "$app_dir/Contents/MacOS/Mathlidelux")" = arm64 ]] || fail "This prototype packaging supports an arm64-only app."
+[[ "$(/usr/bin/lipo -archs "$app_dir/Contents/MacOS/FerMatter")" = arm64 ]] || fail "This prototype packaging supports an arm64-only app."
 /usr/bin/codesign --verify --deep --strict "$app_dir"
 signature="$(/usr/bin/codesign --display --verbose=2 "$app_dir" 2>&1)"
 if [[ "$public" = 1 ]]; then
@@ -119,7 +119,7 @@ if [[ "$public" = 1 ]]; then
     suffix="notarized"
     readme="$project_dir/packaging/RELEASE-README.txt"
 fi
-artifact="Mathlidelux-${version}-build${build}-macOS-arm64-${suffix}"
+artifact="FerMatter-${version}-build${build}-macOS-arm64-${suffix}"
 for extension in dmg pkg sha256 validation.json notarization.json; do
     if [[ -e "$output_dir/$artifact.$extension" || -L "$output_dir/$artifact.$extension" ]]; then
         [[ "$overwrite" = 1 ]] || fail "Output exists: $output_dir/$artifact.$extension (use --overwrite)."
@@ -145,8 +145,8 @@ trap 'exit 143' TERM
 mkdir -p "$scratch/dmg" "$scratch/payload/Applications" "$scratch/resources" "$mount_dir"
 
 # Copy the signed bundle without modifying it or its extended attributes.
-/usr/bin/ditto "$app_dir" "$scratch/dmg/Mathlidelux.app"
-/usr/bin/codesign --verify --deep --strict "$scratch/dmg/Mathlidelux.app"
+/usr/bin/ditto "$app_dir" "$scratch/dmg/FerMatter.app"
+/usr/bin/codesign --verify --deep --strict "$scratch/dmg/FerMatter.app"
 notarize() {
     local target="$1" name="$2"
     /usr/bin/xcrun notarytool submit "$target" --keychain-profile "$notary_profile" --wait --output-format json > "$scratch/$name-notary.json"
@@ -154,15 +154,15 @@ notarize() {
 }
 if [[ "$public" = 1 ]]; then
     # Staple only the staging copy; the exact input bundle remains unchanged.
-    /usr/bin/ditto -c -k --keepParent "$scratch/dmg/Mathlidelux.app" "$scratch/Mathlidelux.zip"
-    notarize "$scratch/Mathlidelux.zip" app
-    /usr/bin/xcrun stapler staple "$scratch/dmg/Mathlidelux.app"
-    /usr/bin/xcrun stapler validate "$scratch/dmg/Mathlidelux.app"
-    /usr/sbin/spctl --assess --type execute --verbose=2 "$scratch/dmg/Mathlidelux.app"
+    /usr/bin/ditto -c -k --keepParent "$scratch/dmg/FerMatter.app" "$scratch/FerMatter.zip"
+    notarize "$scratch/FerMatter.zip" app
+    /usr/bin/xcrun stapler staple "$scratch/dmg/FerMatter.app"
+    /usr/bin/xcrun stapler validate "$scratch/dmg/FerMatter.app"
+    /usr/sbin/spctl --assess --type execute --verbose=2 "$scratch/dmg/FerMatter.app"
 fi
 ln -s /Applications "$scratch/dmg/Applications"
 {
-    printf 'Mathlidelux %s (build %s) — Apple Silicon, macOS %s+\n\n' "$version" "$build" "$minimum_os"
+    printf 'FerMatter %s (build %s) — Apple Silicon, macOS %s+\n\n' "$version" "$build" "$minimum_os"
     cat "$readme"
 } > "$scratch/dmg/README.txt"
 for legal_file in LICENSE NOTICE; do
@@ -171,14 +171,14 @@ for legal_file in LICENSE NOTICE; do
 done
 cp "$scratch/dmg/README.txt" "$scratch/resources/README.txt"
 cp "$scratch/dmg/LICENSE" "$scratch/resources/LICENSE.txt"
-/usr/bin/ditto "$scratch/dmg/Mathlidelux.app" "$scratch/payload/Applications/Mathlidelux.app"
+/usr/bin/ditto "$scratch/dmg/FerMatter.app" "$scratch/payload/Applications/FerMatter.app"
 
 # Disable relocation: Installer must use /Applications, not another detected copy.
 cat > "$scratch/components.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><array><dict>
-<key>RootRelativeBundlePath</key><string>Applications/Mathlidelux.app</string>
+<key>RootRelativeBundlePath</key><string>Applications/FerMatter.app</string>
 <key>BundleIsRelocatable</key><false/>
 <key>BundleIsVersionChecked</key><true/>
 <key>BundleHasStrictIdentifier</key><true/>
@@ -187,25 +187,25 @@ cat > "$scratch/components.plist" <<'PLIST'
 PLIST
 /usr/bin/pkgbuild --root "$scratch/payload" --component-plist "$scratch/components.plist" \
     --identifier local.slidemath.prototype.pkg --version "$version" \
-    --install-location / --ownership recommended "$scratch/Mathlidelux-component.pkg"
+    --install-location / --ownership recommended "$scratch/FerMatter-component.pkg"
 cat > "$scratch/Distribution.xml" <<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <installer-gui-script minSpecVersion="2">
-    <title>Mathlidelux ${version} — ${label}</title>
+    <title>FerMatter ${version} — ${label}</title>
     <readme file="README.txt" mime-type="text/plain"/>
     <license file="LICENSE.txt" mime-type="text/plain"/>
     <options customize="never" require-scripts="false" hostArchitectures="arm64"/>
     <domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
     <volume-check><allowed-os-versions><os-version min="${minimum_os}"/></allowed-os-versions></volume-check>
     <choices-outline><line choice="app"/></choices-outline>
-    <choice id="app" title="Mathlidelux" visible="false"><pkg-ref id="local.slidemath.prototype.pkg"/></choice>
-    <pkg-ref id="local.slidemath.prototype.pkg" version="${version}" onConclusion="none">Mathlidelux-component.pkg</pkg-ref>
+    <choice id="app" title="FerMatter" visible="false"><pkg-ref id="local.slidemath.prototype.pkg"/></choice>
+    <pkg-ref id="local.slidemath.prototype.pkg" version="${version}" onConclusion="none">FerMatter-component.pkg</pkg-ref>
 </installer-gui-script>
 XML
 product_args=(--distribution "$scratch/Distribution.xml" --package-path "$scratch" --resources "$scratch/resources")
 if [[ "$public" = 1 ]]; then product_args+=(--sign "$installer_identity" --timestamp); fi
 /usr/bin/productbuild "${product_args[@]}" "$scratch/$artifact.pkg"
-/usr/bin/hdiutil create -volname "Mathlidelux ${version} ${label}" -srcfolder "$scratch/dmg" \
+/usr/bin/hdiutil create -volname "FerMatter ${version} ${label}" -srcfolder "$scratch/dmg" \
     -fs HFS+ -format UDZO "$scratch/$artifact.dmg"
 
 if [[ "$public" = 1 ]]; then
@@ -223,21 +223,21 @@ fi
 mount_pending=1
 /usr/bin/hdiutil attach "$scratch/$artifact.dmg" -readonly -nobrowse -noautoopen -mountpoint "$mount_dir"
 [[ -L "$mount_dir/Applications" && "$(readlink "$mount_dir/Applications")" = /Applications ]] || fail "DMG Applications shortcut is invalid."
-/usr/bin/codesign --verify --deep --strict "$mount_dir/Mathlidelux.app"
+/usr/bin/codesign --verify --deep --strict "$mount_dir/FerMatter.app"
 for file in README.txt LICENSE NOTICE; do
     cmp "$scratch/dmg/$file" "$mount_dir/$file"
 done
 /usr/bin/hdiutil detach "$mount_dir"
 mount_pending=0
 /usr/sbin/pkgutil --expand-full "$scratch/$artifact.pkg" "$scratch/expanded"
-expanded_app="$scratch/expanded/Mathlidelux-component.pkg/Payload/Applications/Mathlidelux.app"
+expanded_app="$scratch/expanded/FerMatter-component.pkg/Payload/Applications/FerMatter.app"
 /usr/bin/codesign --verify --deep --strict "$expanded_app"
-diff -qr "$scratch/dmg/Mathlidelux.app" "$expanded_app"
-pkg_info="$scratch/expanded/Mathlidelux-component.pkg/PackageInfo"
+diff -qr "$scratch/dmg/FerMatter.app" "$expanded_app"
+pkg_info="$scratch/expanded/FerMatter-component.pkg/PackageInfo"
 [[ "$(/usr/bin/xmllint --xpath 'string(/pkg-info/@install-location)' "$pkg_info")" = / ]] || fail "Unexpected PKG installation root."
 [[ "$(/usr/bin/xmllint --xpath 'string(/pkg-info/@relocatable)' "$pkg_info")" = false ]] || fail "PKG must not be relocatable."
 [[ "$(/usr/bin/xmllint --xpath 'count(/pkg-info/relocate/bundle)' "$pkg_info")" = 0 ]] || fail "PKG must not relocate the app."
-[[ ! -e "$scratch/expanded/Mathlidelux-component.pkg/Scripts" ]] || fail "Unexpected installer scripts."
+[[ ! -e "$scratch/expanded/FerMatter-component.pkg/Scripts" ]] || fail "Unexpected installer scripts."
 if [[ "$public" = 1 ]]; then
     /usr/sbin/pkgutil --check-signature "$scratch/$artifact.pkg" > "$scratch/pkg-signature.txt"
     /usr/bin/grep -Fq "$installer_identity" "$scratch/pkg-signature.txt" || fail "Unexpected installer identity."

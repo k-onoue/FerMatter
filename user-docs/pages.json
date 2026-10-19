@@ -1,5 +1,5 @@
 [
-  {"source": "README.md", "slug": "index", "title": "Use Mathlidelux", "summary": "Short guides for bringing equations from your paper into your slides."},
+  {"source": "README.md", "slug": "index", "title": "Use FerMatter", "summary": "Short guides for bringing equations from your paper into your slides."},
   {"source": "paper-to-slides.md", "slug": "paper-to-slides", "title": "From your paper to a slide", "summary": "Open a project, choose an equation, and paste it into PowerPoint.", "video": "paper-to-slides"},
   {"source": "edit-equation.md", "slug": "edit-equation", "title": "Make a version for your talk", "summary": "Edit a presentation variant while keeping the manuscript unchanged."},
   {"source": "export.md", "slug": "export", "title": "Choose size and format", "summary": "Copy, drag, or export SVG, PDF, PNG, and JPEG."},

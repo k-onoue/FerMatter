@@ -45,7 +45,7 @@ function videoBlock(name, site) {
   if (!/^[a-z0-9-]+$/.test(name)) throw new Error(`Invalid media name: ${name}`);
   for (const suffix of ['.mp4', '.jpg', '.vtt']) publicFile(site, path.join(site, 'assets/tutorials', name + suffix));
   return `<figure class="tutorial">
-      <video controls playsinline preload="none" width="1440" height="920" poster="../assets/tutorials/${name}.jpg" aria-label="Three-step demonstration using Mathlidelux and PowerPoint">
+      <video controls playsinline preload="none" width="1440" height="920" poster="../assets/tutorials/${name}.jpg" aria-label="Three-step demonstration using FerMatter and PowerPoint">
         <source src="../assets/tutorials/${name}.mp4" type="video/mp4">
         <track kind="captions" src="../assets/tutorials/${name}.vtt" srclang="en" label="English">
         <a href="../assets/tutorials/${name}.mp4">Download the demonstration video</a>.

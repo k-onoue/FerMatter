@@ -1,4 +1,4 @@
-# Mathlidelux app icon
+# FerMatter app icon
 
 - Artwork supplied and selected by the repository owner on 2026-09-28.
 - An x² tile, cursor, and curved arrow point toward an image on a slide.

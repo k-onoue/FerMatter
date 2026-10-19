@@ -116,7 +116,7 @@ mod mac {
                 if std::env::var("MATHLIDELUX_DROP_DIAGNOSTICS").as_deref() == Ok("1") {
                     let kinds = crate::native_import::mac::types(board);
                     eprintln!(
-                        "Mathlidelux drop: {} types {:?}; internal={}",
+                        "FerMatter drop: {} types {:?}; internal={}",
                         kinds.len(),
                         kinds,
                         !external(info)

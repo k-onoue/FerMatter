@@ -49,7 +49,7 @@
           "licenseFile": "Licenses/akamud-vscode-theme-onedark.txt"
         }
       ],
-      "adaptation": "Palette mapped to Mathlidelux interface and syntax tokens; native glass, text opacity, and artwork colors are unchanged."
+      "adaptation": "Palette mapped to FerMatter interface and syntax tokens; native glass, text opacity, and artwork colors are unchanged."
     }
   }
 }

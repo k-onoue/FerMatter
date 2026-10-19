@@ -2,7 +2,10 @@
 
 ## Stable identity
 
-- Display/app/executable: `Mathlidelux`; bundle ID: `local.slidemath.prototype`.
+- Display/app/executable: `FerMatter` (formerly `Mathlidelux`); bundle ID: `local.slidemath.prototype`.
+- Renaming does not migrate data. Keep the existing Documents/Mathlidelux default, saved project roots, `mathlidelux.*` schemas/keys, SVG namespace, project UUID files and `MATHLIDELUX_*` environment variables.
+- Bundled demo contents remain unchanged so first-launch migration can still recognize existing samples.
+- Keep the same resident lock identity so launching an older app copy cannot create a second resident.
 - Preserve `~/Library/Application Support/Slide Math` and existing absolute source/cache paths.
 - Current metadata directory: `~/Library/Application Support/Slide Math/Rust Preview/`.
 - The internal preview directory name stays unchanged to preserve already-saved work after promotion.

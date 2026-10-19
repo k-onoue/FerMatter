@@ -1,6 +1,6 @@
 # Local signing and macOS folder access
 
-- macOS remembers **Files and Folders → Documents Folder** consent for the app's code identity, not for each Mathlidelux project.
+- macOS remembers **Files and Folders → Documents Folder** consent for the app's code identity, not for each FerMatter project.
 - Ad hoc signatures identify a particular build by its code hash. Rebuilding can invalidate earlier consent and trigger another prompt.
 - Use the same Apple Development certificate and bundle ID for successive local builds. This gives macOS a stable identity; revoked permissions, certificate/team changes and separately protected locations can still require approval.
 - Selecting the default parent folder in **Settings → Projects → Choose…** grants access to that selected location through the system picker. It does not fix a changing code identity across builds.
@@ -32,8 +32,8 @@
 ## Inspect
 
 ```sh
-codesign --verify --deep --strict desktop-app/src-tauri/target/release/bundle/macos/Mathlidelux.app
-codesign -d -r- desktop-app/src-tauri/target/release/bundle/macos/Mathlidelux.app
+codesign --verify --deep --strict desktop-app/src-tauri/target/release/bundle/macos/FerMatter.app
+codesign -d -r- desktop-app/src-tauri/target/release/bundle/macos/FerMatter.app
 ```
 
 - A default ad hoc requirement shows `cdhash`; a certificate-backed requirement includes the signing identity/anchor.

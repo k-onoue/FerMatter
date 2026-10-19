@@ -531,7 +531,7 @@ export default function InstantWindow() {
             ? projectName(projectContext.root) + " · Instant"
             : projectID
               ? "Instant"
-              : "Mathlidelux · Instant"}
+              : "FerMatter · Instant"}
         </span>
       </div>
       <header className="instant-toolbar">

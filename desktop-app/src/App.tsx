@@ -1399,7 +1399,7 @@ export default function App() {
         />
       )}
       <div className="titlebar" data-tauri-drag-region>
-        <span data-tauri-drag-region>Mathlidelux</span>
+        <span data-tauri-drag-region>FerMatter</span>
       </div>
       {ready && !setupRequired && (
         <WorkspaceTabs

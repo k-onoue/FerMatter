@@ -35,5 +35,5 @@
   download.href = `https://github.com/${config.repository}/releases/latest/download/${encodeURIComponent(config.assetName)}`;
   download.hidden = false;
   document.getElementById('download-pending').hidden = true;
-  document.getElementById('release-status').textContent = `Mathlidelux ${config.version} for Mac.`;
+  document.getElementById('release-status').textContent = `FerMatter ${config.version} for Mac.`;
 })();

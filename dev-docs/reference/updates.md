@@ -19,7 +19,7 @@
 - Repository: `k-onoue/mathlidelux`; published stable release; valid SemVer tag with optional leading `v`.
 - Exclude prerelease tags even when GitHub's prerelease flag is false.
 - Compare `CFBundleShortVersionString`; build metadata does not trigger an update.
-- Preferred asset: `Mathlidelux.dmg`; fallback: `Mathlidelux-<version>-macOS-arm64.dmg`.
+- Preferred asset: `FerMatter.dmg`; fallback: `FerMatter-<version>-macOS-arm64.dmg`.
 - Reject PKG, source archives, and `prototype-unnotarized` artifacts as update downloads.
 - Exact HTTPS repository/tag/filename; redirects restricted to the original URL or GitHub's release-assets CDN.
 - Verify declared size, 2,000,000,000-byte cap, UDIF trailer, and SHA-256 digest when supplied.

@@ -58,7 +58,7 @@
 | [Noctis](https://github.com/liviuschera/noctis) | Noctis Lux | Noctis |
 | [Min](https://github.com/miguelsolorio/min-theme) | Min Light | Min Dark |
 
-- Palettes are adapted to Mathlidelux; exported artwork retains its original rendering.
+- Palettes are adapted to FerMatter; exported artwork retains its original rendering.
 
 ## Manage shortcuts and themes as files
 
@@ -72,7 +72,8 @@
 ## Updates
 
 - This version uses manual updates; it has no in-app release checker or downloader.
-- Save your work, quit Mathlidelux, and replace the app in Applications with the newer build.
+- Save your work, quit FerMatter, and replace the app in Applications with the newer build.
+- Upgrading from Mathlidelux: quit the old app, install `FerMatter.app`, then remove only the old `Mathlidelux.app` bundle. Projects, settings, drafts and SVG re-editing remain available; project folders stay in place.
 - Projects and saved settings remain outside the application bundle.
 
 ## Keep equations beside your slides

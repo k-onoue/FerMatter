@@ -32,7 +32,7 @@
 ```sh
 source desktop-app/scripts/environment.sh
 cargo run --manifest-path desktop-app/src-tauri/Cargo.toml --example verify -- . desktop-app/build/typst-compat /absolute/path/to/typst
-node desktop-app/scripts/verify-automation.mjs /absolute/path/to/Mathlidelux /absolute/path/to/typst
+node desktop-app/scripts/verify-automation.mjs /absolute/path/to/FerMatter /absolute/path/to/typst
 ```
 
 - The optional verifier argument checks all Typst/CeTZ sample cards, measured font sizes, document PDF navigation and source preservation in fresh snapshots.

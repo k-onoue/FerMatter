@@ -66,9 +66,9 @@
 ## Edit an exported SVG
 
 - Export or copy **SVG** from Library, Source/PDF previews, or Instant to include editable source and output settings.
-- Choose **Open SVG** or **Edit from Clipboard** in Instant or the Mathlidelux menu-bar menu. Dropping an SVG into the app also restores it.
-- In Finder, use **Open With → Mathlidelux**, or drop the SVG onto the Dock icon.
-- Drag artwork from PowerPoint or drop an SVG file into Mathlidelux to reopen its source.
+- Choose **Open SVG** or **Edit from Clipboard** in Instant or the FerMatter menu-bar menu. Dropping an SVG into the app also restores it.
+- In Finder, use **Open With → FerMatter**, or drop the SVG onto the Dock icon.
+- Drag artwork from PowerPoint or drop an SVG file into FerMatter to reopen its source.
 - A matching project tab or Instant is reused. If neither is open, dropping into the main window opens a project tab; other entry points open Instant. Missing or ambiguous projects open the standalone Instant.
 - A project tab opens the imported source in **Edit Variant**. Its original source files stay unchanged; an existing Library draft is preserved as a variant. Instant keeps the previous draft in History.
 - Restored source renders automatically when its editor opens. Compiler errors remain editable; original project source files stay unchanged.
@@ -78,11 +78,11 @@
 
 ## Open Instant while another app is active
 
-- Keep Mathlidelux running and use its menu-bar menu.
+- Keep FerMatter running and use its menu-bar menu.
 - **Instant from Anywhere**: `⌃⌥⌘N`. **Edit SVG from Clipboard**: `⌃⌥⌘V`.
 - Change or disable either shortcut in **Settings → Shortcuts** or `keybindings.json`. If another app owns a shortcut, choose a different binding.
-- Closing the main window keeps the app available. **Quit Mathlidelux** (`⌘Q`) ends the app after saving recoverable work.
-- Reopening Mathlidelux through Spotlight or another app copy reuses the running app and its menu-bar icon.
+- Closing the main window keeps the app available. **Quit FerMatter** (`⌘Q`) ends the app after saving recoverable work.
+- Reopening FerMatter through Spotlight or another app copy reuses the running app and its menu-bar icon.
 - Login autostart is not enabled automatically.
 
 ## Current scope
