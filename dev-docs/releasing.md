@@ -6,7 +6,7 @@
 - No signed/notarized public download at this documentation baseline.
 - [Packaging](reference/packaging.md) keeps ad hoc prototypes separate from an explicit Developer ID/notarization path. Production credentials and clean-Mac final-artifact validation are still required; no public release is implied. In-app update transport is not yet implemented.
 - Repository is private as of 2026-09-28; Pages is public. Test release access without authentication before advertising downloads.
-- Keep `docs/site-config.js` → `releaseAvailable: false` until all public-release checks pass.
+- Keep `site/src/data/site.json` → `releaseAvailable: false` until all public-release checks pass.
 
 ## Versioning
 
@@ -71,8 +71,8 @@ git push origin vX.Y.Z
 
 ## Publish the website
 
-- Source: `main:/docs`, GitHub Pages → Deploy from a branch.
-- Commit generated guides alongside Markdown; CI checks they match.
-- Serve only `docs/`; developer notes and repository contents are not copied into the site.
-- Site/build procedure: [documentation](documentation.md).
+- Source: GitHub Actions; `.github/workflows/pages.yml` builds and deploys `site/dist/`.
+- Guide Markdown and Astro sources are reviewed; generated HTML is not committed.
+- Developer notes and repository contents are not copied into the site.
+- One-time migration setting, counters, and preview: [documentation](documentation.md).
 - Reference: [Pages publishing sources](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).

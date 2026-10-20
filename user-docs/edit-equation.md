@@ -1,4 +1,9 @@
-# Make a version for your talk
+---
+title: "Make a version for your talk"
+description: "Edit a presentation variant while keeping the manuscript unchanged."
+sidebar:
+  order: 3
+---
 
 1. Double-click an equation in **Library** (`⌘E`).
 2. Edit its source and wait for a successful preview.

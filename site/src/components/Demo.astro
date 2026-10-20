@@ -1,0 +1,20 @@
+---
+import demos from '../data/demos.json';
+import { href, guide } from '../data/links';
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+const images = import.meta.glob<{default: ImageMetadata}>('../../public/assets/demos/*.png', { eager: true });
+interface Props { id: string; eager?: boolean; }
+const demo = demos.find(item => item.id === Astro.props.id);
+if (!demo) throw new Error(`Unknown demo: ${Astro.props.id}`);
+const picture = images[`../../public/assets/demos/${demo.image}`]?.default;
+if (!picture) throw new Error(`Missing demo image: ${demo.image}`);
+---
+<article class="demo" id={demo.id}>
+  <a class="demo-visual" href={guide(demo.guide)}>
+    <Image src={picture} alt={demo.alt} widths={[640, 1280]} sizes="(max-width: 650px) 100vw, 50vw" loading={Astro.props.eager ? 'eager' : 'lazy'} quality={90} />
+  </a>
+  <h2><a href={guide(demo.guide)}>{demo.title}</a></h2>
+  <p>{demo.description}</p>
+  <div class="demo-links"><a href={guide(demo.guide)}>See how it works <span aria-hidden="true">→</span></a><a href={href(`downloads/${demo.sample}.zip`)} download>Try the sample ↓</a></div>
+</article>

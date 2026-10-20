@@ -1,0 +1,76 @@
+name: Publish website
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            site/package-lock.json
+            scripts/package-lock.json
+      - run: npm --prefix scripts ci && npm --prefix site ci
+      - name: Restore previous download counters
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site/public/stats
+          if [[ -n "$(git ls-remote --heads origin download-stats)" ]]; then
+            git fetch origin download-stats:refs/remotes/origin/download-stats
+            git show origin/download-stats:downloads.json > site/public/stats/downloads.json
+          fi
+      - name: Collect public release counters
+        id: statistics
+        continue-on-error: true
+        run: node scripts/download-stats.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # The collector rejects private repositories before reading any release metadata.
+      - name: Preserve successful counters
+        if: steps.statistics.outcome == 'success'
+        run: bash scripts/save-download-stats.sh
+      - run: npm --prefix scripts test
+      - run: node scripts/build-guides.mjs --check
+      - run: node scripts/check-publication.mjs
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: site/dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

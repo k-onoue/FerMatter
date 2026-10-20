@@ -1,4 +1,9 @@
-# Requirements
+---
+title: "Requirements"
+description: "Supported Macs and external tools for LaTeX and Typst."
+sidebar:
+  order: 11
+---
 
 - Development prototype; no signed, notarized public download yet.
 - Apple Silicon Mac. The app targets macOS 14+ and has been verified on macOS 26.

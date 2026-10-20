@@ -33,3 +33,8 @@
 # Generated assets for the Rust desktop bundle.
 desktop-app/public/vendor/
 desktop-app/src-tauri/gen/
+
+# Astro output and generated release-statistics snapshots.
+site/.astro/
+site/public/stats/
+site/public/downloads/

@@ -1,0 +1,27 @@
+{
+  "name": "fermatter-site",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "predev": "node scripts/prepare.mjs",
+    "dev": "astro dev --host 127.0.0.1 --port 4174",
+    "prebuild": "node scripts/prepare.mjs",
+    "build": "astro build",
+    "postbuild": "node scripts/legacy-redirects.mjs",
+    "preview": "astro preview --host 127.0.0.1 --port 4174",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/markdown-remark": "7.3.3",
+    "@astrojs/starlight": "0.42.6",
+    "astro": "7.4.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.9",
+    "typescript": "5.9.3"
+  },
+  "overrides": { "postcss-selector-parser": "7.1.6" }
+}
