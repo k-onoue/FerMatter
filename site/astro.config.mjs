@@ -12,9 +12,9 @@ export default defineConfig({
   markdown: { processor: unified({ remarkPlugins: [[remarkGuideLinks, { base: config.base }]] }) },
   integrations: [starlight({
     title: config.name,
-    description: 'Bring the mathematics in your paper into your slides.',
-    logo: { src: './public/assets/icon.png' },
-    favicon: '/assets/icon.png',
+    description: 'Browse, edit, and export LaTeX and Typst equations and diagrams.',
+    logo: { light: './public/assets/fermat-light.svg', dark: './public/assets/fermat-dark.svg' },
+    favicon: '/assets/favicon.svg',
     customCss: ['./src/styles/site.css'],
     components: {
       Header: './src/components/Header.astro',

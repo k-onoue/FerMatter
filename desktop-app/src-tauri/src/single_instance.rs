@@ -188,6 +188,10 @@ mod unix {
                                 if crate::lifecycle::quitting(&app) {
                                     return Err("FerMatter is saving and quitting.".into());
                                 }
+                                #[cfg(target_os = "macos")]
+                                if launch.activate || !launch.paths.is_empty() {
+                                    crate::usage_icon::opened(&app);
+                                }
                                 if !launch.paths.is_empty() {
                                     crate::resident::open_files(&app, launch.paths);
                                 } else if launch.activate {

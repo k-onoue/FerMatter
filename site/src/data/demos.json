@@ -1,8 +1,8 @@
 [
   {
     "id": "library",
-    "title": "Your paper, ready for your slides.",
-    "description": "Browse equations as a visual library. Select one—or a whole group—and drag them into your presentation.",
+    "title": "Library",
+    "description": "Browse equations, edit variants, and copy a selection into your presentation.",
     "image": "library.png",
     "alt": "FerMatter Library showing equations from the synthetic trajectory paper.",
     "guide": "paper-to-slides",
@@ -10,8 +10,8 @@
   },
   {
     "id": "instant",
-    "title": "A thought. An equation. A slide.",
-    "description": "Open Instant, type LaTeX or Typst, and take the result with you. Open it from a project to reuse its commands and packages.",
+    "title": "Instant",
+    "description": "Type an equation and preview it. Project Instant reuses the project's commands and packages.",
     "image": "instant.png",
     "alt": "Instant editor with editable mathematics and its rendered preview.",
     "guide": "instant",
@@ -19,8 +19,8 @@
   },
   {
     "id": "source",
-    "title": "Keep the context close.",
-    "description": "Move between the paper PDF and its source. A file tree, outline, completion, formatting, and split editors keep larger projects manageable.",
+    "title": "Source & PDF",
+    "description": "Edit project files with completion, formatting, split panes, and PDF navigation.",
     "image": "source.png",
     "alt": "Source editor beside the compiled synthetic paper PDF.",
     "guide": "source-editor",
@@ -28,8 +28,8 @@
   },
   {
     "id": "figures",
-    "title": "More than equations.",
-    "description": "Bring TikZ and CeTZ diagrams along, too. Export vector artwork that stays sharp as you arrange and resize your slides.",
+    "title": "TikZ & CeTZ",
+    "description": "Browse and export vector diagrams from LaTeX and Typst projects.",
     "image": "figures.png",
     "alt": "Synthetic CeTZ triangle and workflow diagrams in the Library.",
     "guide": "figures",

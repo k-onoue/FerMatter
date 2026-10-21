@@ -16,5 +16,5 @@ if (!picture) throw new Error(`Missing demo image: ${demo.image}`);
   </a>
   <h2><a href={guide(demo.guide)}>{demo.title}</a></h2>
   <p>{demo.description}</p>
-  <div class="demo-links"><a href={guide(demo.guide)}>See how it works <span aria-hidden="true">→</span></a><a href={href(`downloads/${demo.sample}.zip`)} download>Try the sample ↓</a></div>
+  <div class="demo-links"><a href={guide(demo.guide)}>Guide <span aria-hidden="true">→</span></a><a href={href(`downloads/${demo.sample}.zip`)} download>Sample ZIP ↓</a></div>
 </article>

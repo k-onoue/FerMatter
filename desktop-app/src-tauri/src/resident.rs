@@ -358,8 +358,17 @@ pub fn install(app: &tauri::AppHandle) -> tauri::Result<()> {
         app,
         &[&instant, &clipboard, &open, &projects, &separator, &quit],
     )?;
+    let tray = image::load_from_memory(include_bytes!("../icons/tray.png"))
+        .expect("The bundled menu-bar icon must be a valid PNG")
+        .into_rgba8();
+    let (width, height) = tray.dimensions();
     TrayIconBuilder::with_id("instant")
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(tauri::image::Image::new_owned(
+            tray.into_raw(),
+            width,
+            height,
+        ))
+        .icon_as_template(true)
         .tooltip("FerMatter")
         .menu(&menu)
         .on_menu_event(|app, event| {

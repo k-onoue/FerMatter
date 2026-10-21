@@ -281,7 +281,18 @@ small,
   align-items: center;
   gap: 12px;
 }
-.brand img {
+.brand-mark {
+  display: inline-block;
+  flex-shrink: 0;
+  background-color: currentColor;
+  mask-size: contain;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+}
+.brand .brand-mark {
   width: 42px;
   height: 42px;
 }

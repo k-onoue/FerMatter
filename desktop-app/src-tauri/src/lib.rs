@@ -26,6 +26,8 @@ mod source_commands;
 mod storage;
 mod svg_payload;
 mod toolchain;
+#[cfg(target_os = "macos")]
+mod usage_icon;
 pub mod verification;
 #[cfg(target_os = "macos")]
 mod wallpaper;
@@ -404,17 +406,27 @@ fn dispatch(
                     string(&v, "revision")
                 )?));
             }
-            Ok(json!(runtime.settings.save(
-                string(&v, "file"),
-                &v["value"],
-                string(&v, "revision")
-            )?))
+            let revision =
+                runtime
+                    .settings
+                    .save(string(&v, "file"), &v["value"], string(&v, "revision"))?;
+            drop(_guard);
+            #[cfg(target_os = "macos")]
+            if string(&v, "file") == "preferences.json" {
+                usage_icon::refresh(app);
+            }
+            Ok(json!(revision))
         }
         "reload_settings" => {
             let _guard = store.writes.lock().unwrap();
             let snapshot = runtime.settings.snapshot(string(&v, "file"), true)?;
             if string(&v, "file") == "keybindings.json" {
                 resident::apply_keys(app, &snapshot["value"])?;
+            }
+            drop(_guard);
+            #[cfg(target_os = "macos")]
+            if string(&v, "file") == "preferences.json" {
+                usage_icon::refresh(app);
             }
             Ok(snapshot)
         }
@@ -901,7 +913,13 @@ pub fn run() {
         .expect("Unable to start FerMatter")
         .run(|app, event| match event {
             #[cfg(unix)]
-            tauri::RunEvent::Ready => single_instance::primary_arguments(app),
+            tauri::RunEvent::Ready => {
+                #[cfg(target_os = "macos")]
+                if !std::env::args().any(|a| a == "--automation-background") {
+                    usage_icon::opened(app);
+                }
+                single_instance::primary_arguments(app);
+            }
             #[cfg(target_os = "macos")]
             tauri::RunEvent::Opened { urls } => resident::open_files(
                 app,
@@ -910,7 +928,10 @@ pub fn run() {
                     .collect(),
             ),
             #[cfg(target_os = "macos")]
-            tauri::RunEvent::Reopen { .. } => resident::show_projects(app),
+            tauri::RunEvent::Reopen { .. } => {
+                usage_icon::opened(app);
+                resident::show_projects(app);
+            }
             tauri::RunEvent::ExitRequested { api, .. } if !lifecycle::exiting(app) => {
                 api.prevent_exit();
                 lifecycle::request_quit(app);

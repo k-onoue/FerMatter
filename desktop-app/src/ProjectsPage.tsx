@@ -22,7 +22,7 @@ import { stepZoom } from "./scrollZoom";
 import { useControlScroll } from "./useControlScroll";
 import { projectSelection } from "./projectSelection";
 import type { Preferences, Project } from "./types";
-import icon from "../src-tauri/icons/icon.png";
+import { BrandMark } from "./BrandMark";
 type History = {
   undo: string | null;
   redo: string | null;
@@ -292,7 +292,7 @@ export function ProjectsPage({
       }}
     >
       <div className="brand">
-        <img src={icon} />
+        <BrandMark />
         <strong>FerMatter</strong>
         <span className="spacer" />
         <button
