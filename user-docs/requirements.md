@@ -5,7 +5,8 @@ sidebar:
   order: 11
 ---
 
-- Development prototype; no signed, notarized public download yet.
+- Public preview, not notarized. [Download and copy installation commands](https://fermatter.github.io/download/#install) for FerMatter, Typst and either full MacTeX or BasicTeX with TikZ.
+- If macOS blocks first launch, use **System Settings → Privacy & Security → Open Anyway**. [Apple's instructions](https://support.apple.com/102445).
 - Apple Silicon Mac. The app targets macOS 14+ and has been verified on macOS 26.
 - No Python, Node.js, Rust toolchain, Swift SDK, or Xcode installation is needed to run the packaged app.
 - Install the external compiler tools for your project format.

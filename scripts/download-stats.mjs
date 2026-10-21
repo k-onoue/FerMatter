@@ -19,7 +19,7 @@ export function accumulate(repository, releases, previous, now = new Date().toIS
   if (previous && validateSnapshot(previous).repository !== repository) throw new Error('Statistics repository mismatch.');
   const assets = new Map((previous?.assets ?? []).map(a => [a.id, a]));
   for (const release of releases) {
-    if (release.draft || release.prerelease) continue;
+    if (release.draft) continue;
     for (const a of release.assets) {
       if (!installer(a.name)) continue;
       if (!Number.isSafeInteger(a.id) || a.id < 1 || !Number.isSafeInteger(a.download_count) || a.download_count < 0 ||
@@ -54,7 +54,7 @@ export async function fetchReleases(repository, token, request = fetch) {
   }
   const releases = await pages('releases');
   for (const release of releases) {
-    if (release.draft || release.prerelease) continue;
+    if (release.draft) continue;
     if (!Number.isSafeInteger(release.id)) throw new Error('Invalid release ID.');
     release.assets = await pages(`releases/${release.id}/assets`);
   }
@@ -69,7 +69,7 @@ if (isMain(import.meta.url)) {
     const config = JSON.parse(readFileSync(path.join(ROOT, 'site/src/data/site.json'), 'utf8'));
     const file = path.join(ROOT, 'site/public/stats/downloads.json');
     const previous = readSnapshot(file);
-    const result = accumulate(config.repository, await fetchReleases(config.repository, process.env.GITHUB_TOKEN), previous);
+    const result = accumulate(config.releaseRepository, await fetchReleases(config.releaseRepository, process.env.GITHUB_TOKEN), previous);
     mkdirSync(path.dirname(file), { recursive: true });
     writeFileSync(`${file}.tmp`, JSON.stringify(result, null, 2) + '\n');
     renameSync(`${file}.tmp`, file);

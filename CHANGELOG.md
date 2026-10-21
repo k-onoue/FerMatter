@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Add public preview DMG and Homebrew downloads, copyable Typst/full TeX/BasicTeX setup commands, and TeX download/installed-size comparisons to the website.
+
 ## [0.11.0-preview.1] — 2026-10-21
 
 - First public, unnotarized preview for Apple Silicon, macOS 14+. Download the DMG from the website or install through `fermatter/tap`; first launch may require approval in macOS Privacy & Security.

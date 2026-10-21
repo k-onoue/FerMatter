@@ -4,10 +4,11 @@ import ThemeToggle from './ThemeToggle.astro';
 import config from '../data/site.json';
 import { href, guide, repository } from '../data/links';
 const path = Astro.url.pathname;
+const github = config.repositoryPublic ? repository : `https://github.com/${config.releaseRepository.split('/')[0]}`;
 const links = [{ label: 'Features', url: href('features/') }, { label: 'Guide', url: guide() }, { label: 'Download', url: href('download/') }];
 ---
 <div class="fm-header">
   <a class="fm-brand" href={href()} aria-label="FerMatter home"><span class="fm-brand-mark" style={`mask-image:url("${href('assets/fermat.svg')}");-webkit-mask-image:url("${href('assets/fermat.svg')}")`} aria-hidden="true"></span>FerMatter</a>
   <nav aria-label="Product">{links.map(link => <a href={link.url} aria-current={path.startsWith(link.url) ? 'page' : undefined}>{link.label}</a>)}</nav>
-  <div class="fm-header-tools"><a class="fm-github" href={repository} title={config.repositoryPublic ? 'GitHub' : 'GitHub (repository access required)'}>GitHub <span aria-hidden="true">↗</span></a><ThemeToggle /><Search /></div>
+  <div class="fm-header-tools"><a class="fm-github" href={github}>GitHub <span aria-hidden="true">↗</span></a><ThemeToggle /><Search /></div>
 </div>

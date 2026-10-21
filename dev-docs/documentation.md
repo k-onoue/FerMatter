@@ -19,6 +19,7 @@
 - Stack: [Astro](https://docs.astro.build/) + [Starlight](https://starlight.astro.build/); static HTML on GitHub Pages.
 - Search: [Pagefind](https://pagefind.app/), generated at build time; no search backend.
 - One canonical explanation per topic; short bullets, tables, commands, and primary-source links.
+- Release assets/counters use `releaseRepository`, separately from the application source `repository`. The download page owns the copyable full/BasicTeX/Typst install commands; requirements link there. Recheck installer and package-metadata sizes when changing the TeX release.
 - Publish only the allowlisted guides and reviewed assets; developer docs remain on GitHub.
 - No generated HTML in Git. `site/dist/`, `.astro/`, generated ZIP copies, and statistics are ignored.
 - Architecture decision: [0002 — Static product site and searchable guide](decisions/0002-starlight-site.md).
@@ -61,7 +62,7 @@ node scripts/preview-site.mjs
 4. After the new deployment is live, deploy `site/legacy-dist/` to the old project site. Old page URLs redirect to the same path on the new host, preserving query strings and fragments; existing assets and sample ZIPs remain available.
 5. Verify the new site and an old guide link without authentication.
 
-- App sources, issues, releases, settings and Git history stay in `k-onoue/FerMatter`. Site and guide sources also stay here; the public repository contains generated output and its deployment workflow.
+- App sources, issues, settings and Git history stay in `k-onoue/FerMatter`. Site and guide sources also stay here; the website repository contains generated output, its deployment workflow and public binary Releases.
 - `WEBSITE_DEPLOY_KEY` is a repository secret here. Its public key is a write-enabled deploy key on the website repository only; it grants no access to app sources. GitHub's SSH host key is pinned in `scripts/website-known-hosts`.
 - `scripts/publish-website.mjs` preserves the public repository's `.github/`, `.gitattributes`, `README.md` and `LICENSE`, removes retired generated assets, rejects symlinks, and uses a normal fast-forward push. Change public repository controls through a reviewed PR.
 - Bootstrap the public repository with `scripts/website-pages.yml` at `.github/workflows/pages.yml`, `scripts/website-gitattributes` at `.gitattributes`, `README.md`, `LICENSE` and the reviewed static build. Enable **Settings → Pages → GitHub Actions**. Its deployment environment admits `main`.
@@ -70,15 +71,15 @@ node scripts/preview-site.mjs
 - `Documentation` validates PRs without publishing; `Publish website` runs on main, published releases, daily schedule, and manual dispatch.
 - GitHub Pages environment approvals/rules still apply.
 - Keep `repositoryPublic: false` while source access is restricted; switch it only after verifying anonymous repository access.
-- Download availability is manual: keep `releaseAvailable: false` until anonymous release download and notarization/install checks pass. See [releasing](releasing.md).
+- Download availability is manual: keep `releaseAvailable: false` until anonymous download, checksum and the selected release-channel checks pass. Preview downloads must explicitly state their unnotarized status; stable releases retain the full signing/install checklist. See [releasing](releasing.md).
 - Review the Pages artifact and public-repository diff: app sources, Git history and secrets must not enter either. `deployment.json` exposes only the source commit ID for deployment readiness checks.
 
 ## Download counts
 
 - `node scripts/download-stats.mjs` reads GitHub release asset counters; no browser API calls, analytics SDK, tracking cookies, or unique-user claims.
 - CI uses its GitHub token for the API rate limit, but first checks repository visibility and rejects private repositories before reading release metadata. A private repository currently yields no new snapshot.
-- Only stable release installer names starting with FerMatter or legacy Mathlidelux count: DMG, PKG, EXE, MSI, AppImage, DEB, RPM.
-- Samples, source archives, checksums, signatures, drafts, and prereleases are excluded.
+- Published installer names starting with FerMatter or legacy Mathlidelux count, including previews: DMG, PKG, EXE, MSI, AppImage, DEB, RPM.
+- Samples, source archives, checksums, signatures and drafts are excluded.
 - Asset ID identifies a counter. Deleted assets retain their last observed count; replacement uploads get a new counter. Counts never decrease.
 - Successfully observed snapshots are committed only to `download-stats`, using a normal fast-forward push. Main is never auto-committed.
 - API failure preserves the prior snapshot and visible timestamp. No prior snapshot means “not available”, not zero.
