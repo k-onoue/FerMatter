@@ -36,5 +36,6 @@ desktop-app/src-tauri/gen/
 
 # Astro output and generated release-statistics snapshots.
 site/.astro/
+site/legacy-dist/
 site/public/stats/
 site/public/downloads/

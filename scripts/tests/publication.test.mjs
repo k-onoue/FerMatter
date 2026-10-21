@@ -92,7 +92,7 @@ test('preview serves only public files and blocks symlink escapes and writes', a
   const { root, write } = fixture(t);
   write('secret.txt', 'Private');
   symlinkSync(path.join(root, 'secret.txt'), path.join(root, 'site/dist/secret.txt'));
-  const server = previewServer(path.join(root, 'site/dist'));
+  const server = previewServer(path.join(root, 'site/dist'), '/FerMatter');
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); }));
   const base = `http://127.0.0.1:${server.address().port}`;

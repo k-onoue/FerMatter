@@ -52,7 +52,7 @@ git diff --check
 - Environment setup and preview: [documentation](documentation.md#build-and-preview).
 - Check desktop/mobile widths, keyboard navigation, light/dark appearance, and JavaScript disabled.
 - Check video play/pause, caption track, poster, and the same steps as text.
-- Serve only `site/dist/`; also test under the `/FerMatter/` project subpath.
+- Serve only `site/dist/`; also test at the root and under the legacy `/FerMatter/` project subpath.
 - CI checks Astro diagnostics, static output links, safe public fixtures, download counters, and whitespace.
 
 ## Record results

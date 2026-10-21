@@ -1,0 +1,2 @@
+# Pagefind's generated JavaScript contains literal whitespace in template strings.
+pagefind/** -whitespace

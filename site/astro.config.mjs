@@ -6,7 +6,7 @@ import { remarkGuideLinks } from '../scripts/lib/guide-links.mjs';
 
 export default defineConfig({
   site: config.url,
-  base: config.base,
+  base: config.base || '/',
   trailingSlash: 'always',
   output: 'static',
   markdown: { processor: unified({ remarkPlugins: [[remarkGuideLinks, { base: config.base }]] }) },

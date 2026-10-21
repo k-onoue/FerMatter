@@ -57,10 +57,39 @@ jobs:
       - run: npm --prefix scripts test
       - run: node scripts/build-guides.mjs --check
       - run: node scripts/check-publication.mjs
+      - name: Publish the organization website
+        env:
+          WEBSITE_DEPLOY_KEY: ${{ secrets.WEBSITE_DEPLOY_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$WEBSITE_DEPLOY_KEY" || { echo 'Configure the website-only deploy key first.' >&2; exit 1; }
+          sshdir="$(mktemp -d "$RUNNER_TEMP/website-ssh.XXXXXX")"
+          trap 'rm -r "$sshdir"' EXIT
+          printf '%s\n' "$WEBSITE_DEPLOY_KEY" > "$sshdir/key"
+          chmod 600 "$sshdir/key"
+          cp scripts/website-known-hosts "$sshdir/known_hosts"
+          export GIT_SSH_COMMAND="ssh -i '$sshdir/key' -o IdentitiesOnly=yes -o UserKnownHostsFile='$sshdir/known_hosts' -o StrictHostKeyChecking=yes"
+          node scripts/publish-website.mjs
+      - name: Wait for the organization site before redirecting old links
+        shell: bash
+        run: |
+          set -euo pipefail
+          commit="$(git rev-parse HEAD)"
+          for attempt in $(seq 1 60); do
+            if curl -fs "https://fermatter.github.io/deployment.json?commit=$commit" | jq -e --arg commit "$commit" '.commit == $commit' > /dev/null; then
+              echo 'Organization site is live.'
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'Organization deployment did not become ready; the old site was preserved.' >&2
+          exit 1
+      - run: node scripts/build-legacy-site.mjs
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
-          path: site/dist
+          path: site/legacy-dist
   deploy:
     needs: build
     runs-on: ubuntu-latest
