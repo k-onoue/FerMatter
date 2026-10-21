@@ -4,9 +4,10 @@ import { createServer } from 'node:http';
 import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { ROOT, publicFile, isMain, run } from './lib/paths.mjs';
+import config from '../site/src/data/site.json' with { type: 'json' };
 
 const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.wasm': 'application/wasm', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.mp4': 'video/mp4', '.vtt': 'text/vtt', '.zip': 'application/zip' };
-export function previewServer(site = path.join(ROOT, 'site/dist'), base = '/FerMatter') {
+export function previewServer(site = path.join(ROOT, 'site/dist'), base = config.base) {
   return createServer((req, res) => {
     if (!['GET', 'HEAD'].includes(req.method)) { res.writeHead(405, { Allow: 'GET, HEAD' }).end(); return; }
     try {
@@ -25,5 +26,5 @@ export function previewServer(site = path.join(ROOT, 'site/dist'), base = '/FerM
 if (isMain(import.meta.url)) run(() => {
   const port = Number(process.argv[2] ?? 4174);
   if (process.argv.length > 3 || !Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Usage: node scripts/preview-site.mjs [port]');
-  previewServer().on('error', error => { console.error(error.message); process.exitCode = 1; }).listen(port, '127.0.0.1', () => console.log(`Preview: http://127.0.0.1:${port}/FerMatter/ (site/dist only)`));
+  previewServer().on('error', error => { console.error(error.message); process.exitCode = 1; }).listen(port, '127.0.0.1', () => console.log(`Preview: http://127.0.0.1:${port}${config.base}/ (site/dist only)`));
 });

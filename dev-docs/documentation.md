@@ -36,10 +36,10 @@ node scripts/check-publication.mjs
 node scripts/preview-site.mjs
 ```
 
-- Open [localhost:4174/FerMatter/](http://localhost:4174/FerMatter/).
+- Open [localhost:4174](http://localhost:4174/).
 - `build-guides.mjs --check` runs Astro diagnostics and builds the complete site; retained as the repository's check entry point.
 - Fast editing: `npm --prefix site run dev`. Production search is verified after `npm --prefix site run build`.
-- Preview serves only `site/dist/`, under the same `/FerMatter/` prefix as Pages.
+- Preview serves only `site/dist/`, at `/`, matching the organization site.
 - Each guide has `title`, `description`, and `sidebar.order` frontmatter; add its filename to `pages.json` and navigation to `astro.config.mjs`.
 - Keep `.md` links readable on GitHub; the Markdown plugin validates and rewrites public guide/asset links.
 - Local links outside the guide allowlist, public assets, and sample ZIPs fail the build, including symlink escapes.
@@ -56,15 +56,22 @@ node scripts/preview-site.mjs
 ## Publish
 
 1. Review the PR; check the built site and publication scan.
-2. For the migration, select **Settings → Pages → Build and deployment → Source → GitHub Actions** before merging. The previous source was `main:/docs`.
-3. Merge into `main`; the **Publish website** workflow builds and deploys `site/dist/`.
-4. Verify [the public site](https://k-onoue.github.io/FerMatter/) without authentication.
+2. Merge into `k-onoue/FerMatter:main`; **Publish website** builds and validates `site/dist/`.
+3. The workflow pushes only static output to the public `FerMatter/fermatter.github.io:main`. That repository's **Publish website** workflow deploys to [fermatter.github.io](https://fermatter.github.io/).
+4. After the new deployment is live, deploy `site/legacy-dist/` to the old project site. Old page URLs redirect to the same path on the new host, preserving query strings and fragments; existing assets and sample ZIPs remain available.
+5. Verify the new site and an old guide link without authentication.
+
+- App sources, issues, releases, settings and Git history stay in `k-onoue/FerMatter`. Site and guide sources also stay here; the public repository contains generated output and its deployment workflow.
+- `WEBSITE_DEPLOY_KEY` is a repository secret here. Its public key is a write-enabled deploy key on the website repository only; it grants no access to app sources. GitHub's SSH host key is pinned in `scripts/website-known-hosts`.
+- `scripts/publish-website.mjs` preserves the public repository's `.github/`, `README.md` and `LICENSE`, removes retired generated assets, rejects symlinks, and uses a normal fast-forward push. Change public repository controls through a reviewed PR.
+- Bootstrap the public repository with `scripts/website-pages.yml` at `.github/workflows/pages.yml`, `README.md`, `LICENSE` and the reviewed static build. Enable **Settings → Pages → GitHub Actions**. Its deployment environment admits `main`.
+- Root-hosted links use an empty `base` in `site/src/data/site.json`; the Astro configuration normalizes this to `/`. Local preview is at `http://127.0.0.1:4174/`.
 
 - `Documentation` validates PRs without publishing; `Publish website` runs on main, published releases, daily schedule, and manual dispatch.
 - GitHub Pages environment approvals/rules still apply.
 - Keep `repositoryPublic: false` while source access is restricted; switch it only after verifying anonymous repository access.
 - Download availability is manual: keep `releaseAvailable: false` until anonymous release download and notarization/install checks pass. See [releasing](releasing.md).
-- Review the Pages artifact itself: repository files and secrets must not enter it.
+- Review the Pages artifact and public-repository diff: app sources, Git history and secrets must not enter either. `deployment.json` exposes only the source commit ID for deployment readiness checks.
 
 ## Download counts
 

@@ -2,8 +2,8 @@
   "name": "FerMatter",
   "repository": "k-onoue/FerMatter",
   "repositoryPublic": false,
-  "url": "https://k-onoue.github.io",
-  "base": "/FerMatter",
+  "url": "https://fermatter.github.io",
+  "base": "",
   "releaseAvailable": false,
   "version": "0.10.0",
   "assetName": "FerMatter.dmg"

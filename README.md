@@ -16,7 +16,7 @@
 
 | Task | Read |
 | --- | --- |
-| Use the app | [Short user guides](user-docs/README.md) · [public website](https://k-onoue.github.io/FerMatter/) |
+| Use the app | [Short user guides](user-docs/README.md) · [public website](https://fermatter.github.io/) |
 | Build or contribute | [Development docs](dev-docs/README.md) · [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Work with an agent | [MCP and CLI guide](user-docs/automation.md) · [Development API reference](dev-docs/reference/automation.md) · [AGENTS.md](AGENTS.md) |
 | Prepare a release | [Release checklist](dev-docs/releasing.md) · [CHANGELOG.md](CHANGELOG.md) |
@@ -51,7 +51,7 @@ npm --prefix site run build
 node scripts/preview-site.mjs
 ```
 
-- Open [localhost:4174/FerMatter/](http://localhost:4174/FerMatter/); Node.js 22.22+.
+- Open [localhost:4174](http://localhost:4174/); Node.js 22.22+.
 - Edit and publish: [documentation workflow](dev-docs/documentation.md).
 - Only the static `site/dist/` output is served.
 
