@@ -173,6 +173,7 @@ pub fn recipe(draft: &Value, project: Value) -> Value {
     if let Some(object) = draft.as_object_mut() {
         object.remove("requiresRender");
         object.remove("restorationProject");
+        object.remove("entryID");
     }
     json!({"schemaVersion":1,"kind":"mathlidelux.svg","draft":draft,"project":project})
 }
@@ -257,6 +258,9 @@ pub fn resolve(store: &Storage, value: &Value) -> Result<(Option<Value>, Value)>
         None
     };
     let mut draft = value["draft"].clone();
+    // Imported artwork is a new editable item, never authority to overwrite
+    // an existing entry in this installation's Instant library.
+    draft.as_object_mut().unwrap().remove("entryID");
     draft["requiresRender"] = json!(false);
     if let Some(p) = &project {
         let root = store.root(string(p, "id"))?;
@@ -316,6 +320,20 @@ mod tests {
         bad = value;
         bad["draft"]["contextFile"] = json!("../../private.tex");
         assert!(embed(&svg, &bad).is_err());
+    }
+    #[test]
+    fn imported_artwork_cannot_reuse_a_local_library_entry_id() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Storage::new(temp.path().join("data"), temp.path().join("legacy")).unwrap();
+        let mut draft = draft();
+        draft["entryID"] = json!("aaaa");
+        assert!(recipe(&draft, Value::Null)["draft"]
+            .get("entryID")
+            .is_none());
+        let mut incoming = recipe(&draft, Value::Null);
+        incoming["draft"]["entryID"] = json!("aaaa");
+        let (_, restored) = resolve(&store, &incoming).unwrap();
+        assert!(restored.get("entryID").is_none());
     }
     #[test]
     fn identity_survives_move_and_duplicates_are_independent() {

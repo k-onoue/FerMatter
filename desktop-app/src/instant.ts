@@ -9,6 +9,7 @@ export interface RenderedInstant {
 }
 
 export interface InstantDraft {
+  entryID?: string;
   requiresRender?: boolean;
   restorationProject?: { uuid: string; name?: string } | null;
   source: string;
@@ -50,6 +51,7 @@ export interface InstantSession {
 export const initialInstant = (
   template = builtinTemplates[0],
 ): InstantDraft => ({
+  entryID: crypto.randomUUID(),
   source: "",
   template,
   kind: /tikz|cetz/.test(template.id) ? "figure" : "block",

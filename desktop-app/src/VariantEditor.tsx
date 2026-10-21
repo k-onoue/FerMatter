@@ -92,6 +92,7 @@ export function VariantEditor({
           }
         />
         <ColorPicker
+          key={editing.id}
           value={color}
           onChange={(color) =>
             setEditing({ ...editing, instantColor: color.slice(1) })

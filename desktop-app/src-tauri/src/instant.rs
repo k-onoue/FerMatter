@@ -16,6 +16,15 @@ pub fn home(store: &Storage, project: &str) -> Result<PathBuf> {
 }
 
 pub fn validate(draft: &Value) -> Result<()> {
+    if let Some(ident) = draft.get("entryID") {
+        let ident = ident.as_str().ok_or("Invalid Instant entry ID.")?;
+        if ident.is_empty()
+            || ident.len() > 64
+            || !ident.bytes().all(|c| c.is_ascii_hexdigit() || c == b'-')
+        {
+            return Err("Invalid Instant entry ID.".into());
+        }
+    }
     let template = &draft["template"];
     if !["latex", "typst"].contains(&string(template, "format"))
         || !["inline", "block", "figure"].contains(&string(draft, "kind"))
@@ -62,29 +71,74 @@ fn load(home: &Path) -> Result<Value> {
     Ok(state)
 }
 
+// Older sessions used content hashes and saved entries only on export/switch.
+// Preserve every old entry, then give the working draft a stable identity so
+// ordinary typing and appearance edits update one reusable item.
+fn migrate_library(state: &mut Value) {
+    let draft_id = if state["draft"].is_null() {
+        String::new()
+    } else {
+        state["draft"]["entryID"]
+            .as_str()
+            .map(str::to_owned)
+            .unwrap_or_else(|| id(&state["draft"].to_string()))
+    };
+    for item in state["history"].as_array_mut().unwrap() {
+        let ident = item["id"]
+            .as_str()
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+            .unwrap_or_else(|| id(&item["draft"].to_string()));
+        item["id"] = json!(ident);
+        item["draft"]["entryID"] = json!(ident);
+    }
+    if !draft_id.is_empty() {
+        state["draft"]["entryID"] = json!(draft_id);
+        remember(state, &state["draft"].clone());
+    }
+}
+
+fn remember(state: &mut Value, draft: &Value) {
+    if string(draft, "source").trim().is_empty() {
+        return;
+    }
+    let ident = draft["entryID"]
+        .as_str()
+        .map(str::to_owned)
+        .unwrap_or_else(|| id(&draft.to_string()));
+    let mut draft = draft.clone();
+    draft["entryID"] = json!(ident);
+    let history = state["history"].as_array_mut().unwrap();
+    if let Some(item) = history.iter_mut().find(|item| item["id"] == ident) {
+        item["draft"] = draft;
+    } else {
+        history.insert(0, json!({"id":ident,"draft":draft}));
+    }
+}
+
 pub fn session(store: &Storage, request: &Value) -> Result<Value> {
     let _lock = store.writes.lock().unwrap();
     let home = home(store, string(request, "project"))?;
     let mut state = load(&home)?;
+    let previous = state.clone();
+    migrate_library(&mut state);
     match string(request, "action") {
         "save" => {
             validate(&request["draft"])?;
             state["draft"] = request["draft"].clone();
+            remember(&mut state, &request["draft"]);
         }
         "remember" => {
             let draft = &request["draft"];
             validate(draft)?;
-            if !string(draft, "source").trim().is_empty() {
-                let ident = id(&draft.to_string());
-                let history = state["history"].as_array_mut().unwrap();
-                history.retain(|v| v["id"] != ident);
-                history.insert(0, json!({"id":ident,"draft":draft}));
-            }
+            remember(&mut state, draft);
         }
-        "load" => return Ok(state),
+        "load" => {}
         _ => return Err("Unknown Instant history operation.".into()),
     }
-    json_write(&home.join("Instant/session.json"), &state)?;
+    if state != previous {
+        json_write(&home.join("Instant/session.json"), &state)?;
+    }
     Ok(state)
 }
 
@@ -362,12 +416,66 @@ mod tests {
             session(&store, &json!({"action":"remember","draft":d})).unwrap();
         }
         let state = session(&store, &json!({"action":"load"})).unwrap();
-        assert_eq!(state["draft"], d);
+        assert_eq!(state["draft"]["source"], d["source"]);
         assert_eq!(state["history"].as_array().unwrap().len(), 1);
         let path = store.home.join("Instant/session.json");
         fs::write(&path, "broken history").unwrap();
         assert!(session(&store, &json!({"action":"save","draft":d})).is_err());
         assert_eq!(fs::read_to_string(path).unwrap(), "broken history");
+    }
+    #[test]
+    fn autosaves_reusable_items_without_export_and_keeps_their_identity() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Storage::new(temp.path().join("data"), temp.path().join("legacy")).unwrap();
+        let mut first = draft();
+        first["entryID"] = json!("aaaa");
+        for (source, color, size) in [("x", "#000000", 24), ("x^2", "#123456", 30)] {
+            first["source"] = json!(source);
+            first["color"] = json!(color);
+            first["fontSize"] = json!(size);
+            session(&store, &json!({"action":"save", "draft":first})).unwrap();
+        }
+        let mut second = first.clone();
+        second["entryID"] = json!("bbbb");
+        second["color"] = json!("#ffffff");
+        session(&store, &json!({"action":"save", "draft":second})).unwrap();
+        let reopened = Storage::new(store.home.clone(), temp.path().join("legacy")).unwrap();
+        let state = session(&reopened, &json!({"action":"load"})).unwrap();
+        assert_eq!(state["history"].as_array().unwrap().len(), 2);
+        assert_eq!(state["history"][0]["draft"], second);
+        assert_eq!(state["history"][1]["draft"], first);
+        assert!(!store.home.join("Setup.json").exists());
+        // Clearing an editor does not erase its last nonempty saved item.
+        second["source"] = json!("");
+        let state = session(&store, &json!({"action":"save", "draft":second})).unwrap();
+        assert_eq!(state["history"].as_array().unwrap().len(), 2);
+        assert_eq!(state["history"][0]["draft"]["source"], "x^2");
+    }
+    #[test]
+    fn upgrades_old_history_once_without_dropping_styles_or_creating_duplicates() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Storage::new(temp.path().join("data"), temp.path().join("legacy")).unwrap();
+        let first = draft();
+        let mut second = first.clone();
+        second["color"] = json!("#ffffff");
+        let ident = id(&first.to_string());
+        let second_id = id(&second.to_string());
+        let path = store.home.join("Instant/session.json");
+        json_write(
+            &path,
+            &json!({"schemaVersion":1,"draft":first,"history":[
+            {"id":ident,"draft":first},{"id":second_id,"draft":second}
+        ], "unknown":"preserved"}),
+        )
+        .unwrap();
+        for _ in 0..3 {
+            let state = session(&store, &json!({"action":"load"})).unwrap();
+            assert_eq!(state["history"].as_array().unwrap().len(), 2);
+            assert_eq!(state["history"][0]["id"], ident);
+            assert_eq!(state["draft"]["entryID"], ident);
+            assert_eq!(state["history"][1]["draft"]["color"], "#ffffff");
+            assert_eq!(state["unknown"], "preserved");
+        }
     }
     #[test]
     fn rejects_unsafe_options_but_saves_unfinished_templates() {

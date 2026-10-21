@@ -1,5 +1,5 @@
 //! Platform entry points share a bounded, acknowledged Instant import queue.
-use crate::{files::*, instant, native_import, project_setup, roundtrip, Runtime};
+use crate::{files::*, instant, native_import, roundtrip, Runtime};
 use serde_json::{json, Value};
 use std::{
     collections::{HashMap, VecDeque},
@@ -41,11 +41,6 @@ pub fn open_instant(app: &tauri::AppHandle) -> Result<()> {
     if crate::lifecycle::quitting(app) {
         return Err("Finish saving before opening another editor.".into());
     }
-    let runtime = app.state::<Arc<Runtime>>();
-    if project_setup::required(&runtime.store)? {
-        show_projects(app);
-        return Err("Choose a project folder in the main window first.".into());
-    }
     instant::open(app, None).map_err(err)
 }
 pub fn import_svg(app: &tauri::AppHandle, sources: &[String]) -> Result<()> {
@@ -62,12 +57,6 @@ pub fn import_svg_to(app: &tauri::AppHandle, sources: &[String], target: &str) -
         return Err("SVG selection exceeds 64 MB.".into());
     }
     let runtime = app.state::<Arc<Runtime>>();
-    if project_setup::required(&runtime.store)? {
-        show_projects(app);
-        return Err(
-            "Choose a project folder in the main window first, then open the SVG again.".into(),
-        );
-    }
     // Validate every input before touching an existing draft or opening windows.
     let restored = sources
         .iter()

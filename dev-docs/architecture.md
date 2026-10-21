@@ -21,7 +21,7 @@
 | PDF viewer, source ranges and hit matching | `src/PdfPane.tsx`, `src/navigation.ts` |
 | Settings and project templates | `src/settings.tsx`, `src/templates.ts`, `src/NewProjectDialog.tsx` |
 | Shared theme palette and window/editor appearance | `src/appearance.ts`, `src/useAppearance.ts` |
-| Output color picker, HEX validation and recent colors | `src/ColorPicker.tsx`, `src/outputColor.ts`, `src/colorHistory.ts` |
+| Output color picker, HEX validation, recent colors and macOS screen sampler | `src/ColorPicker.tsx`, `src/outputColor.ts`, `src/colorHistory.ts`, `src-tauri/src/color_sampler.rs` |
 | Project-free Instant window, drafts and history | `src/InstantWindow.tsx`, `src/instant.ts`, `src-tauri/src/instant.rs` |
 | Instant preview gestures and native drag artifact lifetime | `src/InstantPreview.tsx`, `src/artifactLease.ts` |
 | Shortcut matching and defaults | `src/shortcuts.ts`; matching Rust validation in `src-tauri/src/settings.rs` |

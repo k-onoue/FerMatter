@@ -1,6 +1,8 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { HexColorPicker } from "react-colorful";
+import { Pipette, LoaderCircle } from "lucide-react";
+import { rpc } from "./api";
 import { loadColorHistory, rememberColor } from "./colorHistory";
 import { parseHexInput } from "./outputColor";
 import "./ColorPicker.css";
@@ -56,6 +58,19 @@ export function ColorPicker({
   onChange: (color: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [sampling, setSampling] = useState(false);
+  const [sampleError, setSampleError] = useState("");
+  const sampleSequence = useRef(0);
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  const changeRef = useRef(onChange);
+  changeRef.current = onChange;
+  useEffect(
+    () => () => {
+      sampleSequence.current++;
+    },
+    [],
+  );
   const [hex, setHex] = useState(value);
   const [history, setHistory] = useState(loadColorHistory);
   const [position, setPosition] = useState({ left: 0, top: 0 });
@@ -73,8 +88,26 @@ export function ColorPicker({
   };
   const remember = (color: string) => setHistory(rememberColor(color, history));
   const choose = (color: string) => {
-    onChange(color);
+    changeRef.current(color);
     remember(color);
+  };
+  const sample = async () => {
+    if (sampling) return;
+    const ticket = ++sampleSequence.current;
+    const original = value;
+    setSampling(true);
+    setSampleError("");
+    try {
+      const picked = await rpc<string | null>("sample_color");
+      if (sampleSequence.current !== ticket || valueRef.current !== original)
+        return;
+      const color = picked && parseHexInput(picked);
+      if (color) choose(color);
+    } catch (error) {
+      if (sampleSequence.current === ticket) setSampleError(String(error));
+    } finally {
+      if (sampleSequence.current === ticket) setSampling(false);
+    }
   };
   const rememberHex = () => {
     const color = parseHexInput(hex);
@@ -188,7 +221,22 @@ export function ColorPicker({
               value={value}
               onChoose={choose}
             />
-            <div className="instant-color-heading">Color Picker</div>
+            <div className="instant-color-heading instant-color-tools">
+              Color Picker
+              <button
+                aria-label="Pick color from screen"
+                title="Pick color from screen"
+                disabled={sampling}
+                onClick={() => void sample()}
+              >
+                {sampling ? (
+                  <LoaderCircle size={16} className="spin" />
+                ) : (
+                  <Pipette size={16} />
+                )}
+              </button>
+            </div>
+            {sampleError && <small role="alert">{sampleError}</small>}
             <HexColorPicker
               color={value}
               onChange={onChange}
