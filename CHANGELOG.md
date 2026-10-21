@@ -14,6 +14,7 @@
 - Choose a fixed Dock face or return to Automatic in Settings → Appearance; selections apply immediately and persist across launches.
 - Center the Instant window title and keep long project names clear of the macOS window controls.
 - Enlarge the menu-bar Fermat face by reducing transparent padding in its template image.
+- Present the menu-bar icon at 20 points and center it independently of text to align with neighboring status icons.
 - Simplify the product website with monochrome colors, left-aligned content, compact navigation and concise feature descriptions.
 - Detect the website's initial appearance from the OS; switch light/dark with one click on the sun/moon icon and remember the choice.
 - Add a public MCP and CLI guide with client setup, available tools, export examples and troubleshooting.

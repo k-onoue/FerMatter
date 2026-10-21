@@ -362,7 +362,7 @@ pub fn install(app: &tauri::AppHandle) -> tauri::Result<()> {
         .expect("The bundled menu-bar icon must be a valid PNG")
         .into_rgba8();
     let (width, height) = tray.dimensions();
-    TrayIconBuilder::with_id("instant")
+    let _tray = TrayIconBuilder::with_id("instant")
         .icon(tauri::image::Image::new_owned(
             tray.into_raw(),
             width,
@@ -405,6 +405,8 @@ pub fn install(app: &tauri::AppHandle) -> tauri::Result<()> {
             }
         })
         .build(app)?;
+    #[cfg(target_os = "macos")]
+    crate::native::configure_menu_bar_icon(&_tray)?;
     Ok(())
 }
 

@@ -29,7 +29,7 @@ git diff --check
 - Normal app/site builds consume committed assets; they need no image generation, tracing or icon-generation tools.
 - Edit the SVG master, then regenerate all derivatives together. The generator uses no private source files or network services.
 - ICNS includes 16, 32, 128, 256 and 512-point representations at 1×/2×, resized with Lanczos.
-- The 44-pixel menu-bar template trims the SVG margins and fits the face within 42 pixels; macOS presents it at 18 points.
+- The 44-pixel menu-bar template trims the SVG margins and fits the face within 42 pixels. `native::configure_menu_bar_icon` presents it at 20 points, centered as an image-only AppKit button instead of using the tray backend's 18-point, image-beside-title default.
 - Review the mark at small sizes on light, dark and colored backgrounds; check the blue app tile separately.
 - Historical screenshots/tutorial footage retain the interface actually captured; their provenance remains in [public asset notes](../../site/public/assets/README.md).
 - Dock thresholds and behavior: [preferences](../../user-docs/preferences.md#dock-icon). `usage_icon.rs` records local openings; `NSApplication.applicationIconImage` changes only the running Dock display, preserving the signed bundle.

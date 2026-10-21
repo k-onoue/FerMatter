@@ -38,8 +38,9 @@ copyFileSync(path.join(icons, 'icon.png'), path.join(assets, 'icon.png'));
 const whiteMark = path.join(work, 'fermat-white.svg');
 writeFileSync(whiteMark, colored(white));
 render(whiteMark, path.join(resources, 'AppIcon.icon/Assets/AppIcon.png'), 1024);
-// macOS displays this image at 18 pt. Remove the master mark's generous
-// margins so the face fills 42 of its 44 pixels, leaving an antialiasing inset.
+// macOS displays this image at 20 pt (native::configure_menu_bar_icon).
+// Remove the master mark's generous margins so the face fills 42 of its
+// 44 pixels, leaving an antialiasing inset.
 const traySource = path.join(work, 'tray-source.png');
 render(path.join(resources, 'fermat.svg'), traySource, 256);
 execFileSync('magick', [traySource, '-trim', '+repage', '-filter', 'Lanczos', '-resize', '42x42', '-gravity', 'center', '-background', 'none', '-extent', '44x44', '-depth', '8', '-define', 'png:color-type=6', path.join(icons, 'tray.png')]);

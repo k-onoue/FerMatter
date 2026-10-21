@@ -2284,6 +2284,7 @@ dependencies = [
  "log",
  "lopdf",
  "objc",
+ "objc2",
  "objc2-app-kit",
  "plist",
  "regex",

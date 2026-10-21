@@ -14,7 +14,8 @@ crate-type = ["lib", "cdylib", "staticlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["macos-private-api", "tray-icon"] }
+# Native menu-bar sizing uses Tauri's minor-version-specific inner tray API.
+tauri = { version = "~2.12", features = ["macos-private-api", "tray-icon"] }
 tauri-plugin-global-shortcut = "2"
 roxmltree = "0.20"
 tauri-plugin-dialog = "2"
@@ -43,8 +44,9 @@ tokio = { version = "1.53.1", features = ["rt-multi-thread", "io-std", "macros",
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
+objc2 = "0.6"
 block2 = "0.6"
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSColor", "NSColorSpace", "NSColorSampler", "block2"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSColor", "NSColorSpace", "NSColorSampler", "NSButton", "NSCell", "NSImage", "NSStatusBarButton", "NSStatusItem", "block2"] }
 plist = "1"
 url = "2"
 
