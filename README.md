@@ -7,7 +7,7 @@
 
 - Bring equations from a LaTeX or Typst paper into your presentation.
 - Browse equations and TikZ/CeTZ drawings; edit slide-specific variants; copy/export SVG, PDF, PNG, or JPEG.
-- Development prototype for **Apple Silicon Mac** (macOS 14+ build target; verified on macOS 26); no signed, notarized public download yet.
+- Unnotarized public preview for **Apple Silicon Mac** (macOS 14+ build target; verified on macOS 26): [DMG and Homebrew installation](https://fermatter.github.io/download/).
 - No Python or development SDK is needed to run the app. Compiler tools remain external: [requirements](user-docs/requirements.md).
 
 ![FerMatter Library with a synthetic sample](site/public/assets/demos/library.png)

@@ -86,6 +86,13 @@ html:has(.product-page) .sl-container { max-width: 74rem; }
 .download-section { padding-block: 2rem; border-top: 1px solid var(--fm-rule); }
 .download-section h2 { margin-bottom: .8rem; }
 .download-section p + p { margin-top: .8rem; }
+.download-section h3 { font-size: 1rem; margin: 1.5rem 0 .5rem; }
+.fm-command { margin-block: 1rem; min-width: 0; border: 1px solid var(--fm-rule); border-radius: .5rem; background: var(--fm-panel); }
+.fm-command-tools { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; padding: .5rem .75rem 0; font-size: .8125rem; color: var(--fm-muted); }
+.fm-command-tools button { border: 1px solid var(--fm-rule); border-radius: .25rem; background: var(--sl-color-bg); color: var(--fm-ink); padding: .2rem .6rem; font: inherit; cursor: pointer; }
+.fm-command-tools button[hidden] { display: none; }
+.fm-command pre { margin: 0; padding: .75rem 1rem 1rem; overflow-x: auto; font-size: .8125rem; line-height: 1.7; }
+.fm-command code { background: transparent; padding: 0; }
 .download-section ul { color: var(--fm-muted); padding-left: 1.25rem; }
 .sample-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0 2rem; margin-top: 1rem; }
 .sample-list a { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--fm-rule); text-decoration: none; }

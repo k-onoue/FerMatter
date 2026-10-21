@@ -9,9 +9,9 @@ import {fileURLToPath} from 'node:url';
 const repo = 'example/FerMatter';
 const release = (assets, extra = {}) => ({tag_name:'v1.0', assets, ...extra});
 const asset = (id, downloads, name = 'FerMatter.dmg') => ({id, download_count:downloads, name});
-test('stable installer downloads exclude samples, signatures, drafts and previews', () => {
+test('published installer downloads include previews and exclude samples, signatures and drafts', () => {
   const result = accumulate(repo, [release([asset(1,5),asset(2,8,'FerMatter.pkg'),asset(3,90,'demo.zip'),asset(4,12,'FerMatter.dmg.sig')]), release([asset(5,99)],{draft:true}),release([asset(6,99)],{prerelease:true})]);
-  assert.equal(result.assets.reduce((n,a)=>n+a.downloads,0),13);
+  assert.equal(result.assets.reduce((n,a)=>n+a.downloads,0),112);
   assert.equal(installer('FerMatter-linux.AppImage'),true);
   assert.equal(installer('Mathlidelux-0.1.dmg'),true);
   assert.equal(installer('../FerMatter.dmg'),false);
@@ -22,6 +22,21 @@ test('asset IDs retain deleted counters and distinguish replacement uploads', ()
   assert.deepEqual(result.assets.map(a=>a.downloads),[10,5,2]);
   assert.throws(()=>accumulate('other/repo',[],previous),/mismatch/);
   assert.throws(()=>accumulate(repo,[release([asset(3,-1)])]),/Invalid/);
+});
+test('fetching published previews includes their assets while keeping drafts private', async () => {
+  const fetched = [];
+  const releases = await fetchReleases(repo, null, async url => {
+    if (url.endsWith(repo)) return {ok:true,json:async()=>({private:false})};
+    if (url.includes('/releases?')) return {ok:true,json:async()=>[
+      {id:1,tag_name:'v1.0-preview.1',prerelease:true,draft:false},
+      {id:2,tag_name:'v1.0',prerelease:false,draft:true},
+    ]};
+    fetched.push(url);
+    return {ok:true,json:async()=>[asset(1,3)]};
+  });
+  assert.equal(fetched.length,1);
+  assert.match(fetched[0],/releases\/1\/assets/);
+  assert.equal(accumulate(repo,releases).assets[0].downloads,3);
 });
 test('pagination includes every release and asset, rejecting partial API failure', async () => {
   const calls=[];

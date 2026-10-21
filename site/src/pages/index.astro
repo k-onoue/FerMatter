@@ -1,13 +1,14 @@
 ---
 import Product from '../layouts/Product.astro';
 import { href, guide } from '../data/links';
+import config from '../data/site.json';
 ---
 <Product title="Equations for your slides" description="Browse, edit, and export LaTeX and Typst equations and diagrams.">
   <section class="home-intro">
     <h1>Equations for your slides.</h1>
     <p class="lead">Open a LaTeX or Typst project. Edit equations and diagrams, then copy them into your presentation.</p>
-    <div class="actions"><a class="button primary" href={guide()}>Get started</a><a href={href('features/')}>Features <span aria-hidden="true">→</span></a></div>
-    <p class="availability">macOS · Development preview</p>
+    <div class="actions"><a class="button primary" href={config.releaseAvailable ? href('download/#mac') : guide()}>{config.releaseAvailable ? 'Download for macOS ↓' : 'Get started'}</a><a href={guide()}>Guide <span aria-hidden="true">→</span></a></div>
+    <p class="availability">macOS · {config.releaseAvailable ? (config.releaseNotarized ? 'Apple Silicon' : 'Unnotarized preview') : 'Development preview'}</p>
   </section>
   <section class="three-steps" aria-label="Capabilities">
     <div><h2>LaTeX &amp; Typst</h2><p>Open an existing project or type in Instant.</p><a href={guide('instant')}>Instant →</a></div>

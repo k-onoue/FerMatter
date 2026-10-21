@@ -1,11 +1,12 @@
 ---
 import Product from '../layouts/Product.astro';
+import InstallCommand from '../components/InstallCommand.astro';
 import config from '../data/site.json';
-import { href, guide, repository } from '../data/links';
+import { href, guide, repository, releases, download } from '../data/links';
 import { readSnapshot } from '../../../scripts/download-stats.mjs';
 import { fileURLToPath } from 'node:url';
 const stats = readSnapshot(fileURLToPath(new URL('../../public/stats/downloads.json', import.meta.url)));
-if (stats && stats.repository !== config.repository) throw new Error('Wrong statistics repository');
+if (stats && stats.repository !== config.releaseRepository) throw new Error('Wrong statistics repository');
 const totals = new Map<string, number>();
 for (const asset of stats?.assets ?? []) totals.set(asset.version, (totals.get(asset.version) ?? 0) + asset.downloads);
 const total = [...totals.values()].reduce((sum, n) => sum + n, 0);
@@ -15,26 +16,50 @@ const samples = [
   { name: 'TikZ', id: 'tikz', detail: 'A triangle and a workflow' },
   { name: 'CeTZ', id: 'cetz', detail: 'Vector sketches in Typst' },
 ];
+const app = `brew install --cask ${config.homebrewCask}`;
+const converters = 'brew install typst pdf2svg poppler ghostscript';
+const full = `${app} mactex-no-gui\n${converters}`;
+const minimal = `${app} basictex\n${converters}\nsudo /Library/TeX/texbin/tlmgr update --self\nsudo /Library/TeX/texbin/tlmgr install latexmk preview pdfcrop pgf mathtools`;
 ---
 <Product title="Download" description="FerMatter for macOS: release status, requirements, example projects, and download statistics.">
   <header class="page-intro"><h1>Download</h1><p class="lead">Apple Silicon Mac · macOS 14 or later</p></header>
   <div class="download-layout">
     <section class="download-section" id="mac">
-      <h2>{config.releaseAvailable ? `FerMatter ${config.version}` : 'Development preview'}</h2>
+      <h2>{config.releaseAvailable ? `FerMatter ${config.releaseName}` : 'Development preview'}</h2>
       <p>{config.releaseAvailable ? 'Download the disk image and drag FerMatter into Applications.' : 'A signed, notarized public installer is not available yet.'}</p>
-      {!config.repositoryPublic && <p>Source builds and GitHub links currently require repository access.</p>}
+      {config.releaseAvailable && !config.releaseNotarized && <p><strong>Not notarized.</strong> If macOS blocks first launch, try opening the app once, then use <strong>System Settings → Privacy &amp; Security → Open Anyway</strong>. <a href="https://support.apple.com/102445">Apple’s instructions ↗</a></p>}
       <div class="actions">
-        {config.releaseAvailable && <a class="button primary" href={`${repository}/releases/download/v${config.version}/${config.assetName}`}>Download for macOS ↓</a>}
-        <a class={`button ${config.releaseAvailable ? '' : 'primary'}`} href={`${repository}/blob/main/dev-docs/development.md`}>Build from source ↗</a>
-        <a class="button" href={`${repository}/releases`}>GitHub Releases ↗</a>
+        {config.releaseAvailable && <><a class="button primary" href={download}>Download DMG ↓</a><a href={`${download}.sha256`}>SHA-256</a></>}
+        {config.repositoryPublic && <a class="button" href={`${repository}/blob/main/dev-docs/development.md`}>Build from source ↗</a>}
+        <a class="button" href={releases}>GitHub Releases ↗</a>
       </div>
     </section>
+    {config.releaseAvailable && <section class="download-section" id="install">
+      <h2>Install with Homebrew</h2>
+      <p>Requires <a href="https://brew.sh/">Homebrew</a>. Choose one option. If you already have TeX, keep it and install only the missing tools.</p>
+      <h3>FerMatter + Typst</h3>
+      <p>For Typst and CeTZ; no TeX installation needed.</p>
+      <InstallCommand label="Typst" command={`${app}\nbrew install typst`} />
+      <h3>Full TeX Live + Typst</h3>
+      <p>MacTeX without GUI apps includes the full TeX Live package set, including TikZ. Best for existing papers with many packages.</p>
+      <InstallCommand label="full TeX Live" command={full} />
+      <h3>Smaller TeX setup + Typst</h3>
+      <p>BasicTeX plus the packages FerMatter uses. The command explicitly includes TikZ (<code>pgf</code>); add packages or fonts if your paper needs more.</p>
+      <InstallCommand label="BasicTeX" command={minimal} />
+      <table><thead><tr><th scope="col">TeX option</th><th scope="col">Installer download</th><th scope="col">Installed TeX files</th></tr></thead><tbody>
+        <tr><th scope="row">Full MacTeX</th><td>≈6.4 GB</td><td>≈10 GB</td></tr>
+        <tr><th scope="row">BasicTeX + packages above</th><td>≈134 MB + extra packages</td><td>≈0.5–1.3 GB</td></tr>
+      </tbody></table>
+      <p>October 2026 estimates: BasicTeX’s base installer is about 98% smaller. Installed size varies with documentation and packages. Typst, conversion tools and Homebrew’s download cache are additional.</p>
+      <p><a href="https://www.tug.org/mactex/currentpackages-tug.html">Installer sizes ↗</a> · <a href="https://mirror.ctan.org/systems/texlive/tlnet/tlpkg/texlive.tlpdb.xz">TeX Live package-size metadata ↗</a> · <a href="https://ctan.org/pkg/pgf">TikZ/PGF ↗</a></p>
+      <p>MacTeX and BasicTeX conflict in Homebrew; install one. Installation may request your administrator password. Restart FerMatter after installing the tools.</p>
+    </section>}
     <section class="download-section" id="requirements"><h2>Before you start</h2><ul><li>Apple Silicon Mac; macOS 14 or later. Verified on macOS 26.</li><li>Typst CLI for Typst projects; TeX Live or MacTeX plus conversion tools for LaTeX.</li><li>Compiler paths can be selected in first-launch setup or Settings.</li><li>Windows and Linux builds are not available yet.</li></ul><a href={guide('requirements')}>Full requirements and tool installation →</a></section>
     <section class="download-section" id="samples"><h2>Sample projects</h2><p>Open a sample ZIP directly in FerMatter.</p><div class="sample-list">{samples.map(sample => <a href={href(`downloads/demo-${sample.id}.zip`)} download><span>{sample.name}<br/><small>{sample.detail}</small></span><span aria-hidden="true">↓</span></a>)}</div></section>
     <section class="download-section" id="statistics">
       <h2>Downloads</h2>
       {stats ? <><div class="stats-total">{total.toLocaleString('en-US')}</div><p>Installer downloads recorded by GitHub Releases.</p><p class="stats-date">Last updated <time datetime={stats.updatedAt}>{new Date(stats.updatedAt).toISOString().slice(0,10)} UTC</time></p>{totals.size > 0 && <table><thead><tr><th scope="col">Release</th><th scope="col">Downloads</th></tr></thead><tbody>{[...totals].reverse().map(([version,count]) => <tr><th scope="row">{version}</th><td>{count.toLocaleString('en-US')}</td></tr>)}</tbody></table>}<p><a href={href('stats/downloads.json')}>Download the data (JSON)</a></p></> : <p>No public installer statistics yet.</p>}
-      <details><summary>What is counted?</summary><p>GitHub's download counters for FerMatter and legacy Mathlidelux installer assets in public, stable releases. Repeat downloads count again. Source archives, sample projects, checksums, drafts, and prereleases are excluded. Counts are not the number of users or installations.</p><p>Snapshots refresh daily. Previously observed counts are retained if an asset is removed; downloads before our first observation of a deleted asset cannot be recovered. If collection fails, the last successful snapshot and its date stay visible.</p><p>No visitor analytics, tracking cookies, or browser calls to GitHub are used.</p></details>
+      <details><summary>What is counted?</summary><p>GitHub's download counters for published installer assets, including previews. Repeat downloads count again. Source archives, sample projects, checksums and drafts are excluded. Counts are not the number of users or installations.</p><p>Snapshots refresh daily. Previously observed counts are retained if an asset is removed; downloads before our first observation of a deleted asset cannot be recovered. If collection fails, the last successful snapshot and its date stay visible.</p><p>No visitor analytics, tracking cookies, or browser calls to GitHub are used.</p></details>
     </section>
   </div>
 </Product>
