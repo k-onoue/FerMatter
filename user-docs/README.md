@@ -31,6 +31,7 @@ sidebar:
 - [Edit the project source](source-editor.md).
 - [Use TikZ or CeTZ drawings](figures.md).
 - [Change shortcuts and appearance](preferences.md).
+- [Search, render and export through MCP or CLI](automation.md).
 - [Understand extraction limits](limits.md).
 - [Why FerMatter](why.md).
 

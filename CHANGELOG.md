@@ -13,6 +13,7 @@
 - Choose a fixed Dock face or return to Automatic in Settings → Appearance; selections apply immediately and persist across launches.
 - Simplify the product website with monochrome colors, left-aligned content, compact navigation and concise feature descriptions.
 - Detect the website's initial appearance from the OS; switch light/dark with one click on the sun/moon icon and remember the choice.
+- Add a public MCP and CLI guide with client setup, available tools, export examples and troubleshooting.
 
 - Bound published image/PDF caches with active-view, drag and clipboard leases; reclaim retired snapshots without deleting saved work.
 
