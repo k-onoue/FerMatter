@@ -3,6 +3,17 @@
 - Current implementation: [package.sh](../../desktop-app/scripts/package.sh); [recipient notes](../../desktop-app/packaging/PROTOTYPE-README.txt).
 - Ad hoc signed app; unsigned, unnotarized containers. Packaging does not create a public release.
 
+## Public preview
+
+```sh
+./desktop-app/scripts/package.sh --preview --app /path/to/ad-hoc/FerMatter.app
+```
+
+- Explicit owner-approved preview path; requires an existing ad hoc signed bundle. Normal local signing remains unchanged.
+- Names contain `preview-unnotarized`; the DMG/PKG include [preview installation notes](../../desktop-app/packaging/PREVIEW-README.txt).
+- Same archive/signature checks as prototype packaging; no Developer ID signing, notarization, Gatekeeper bypass, installation or publication.
+- Publish as a GitHub **prerelease**, with anonymous download/checksum verification and the [preview checklist](../releasing.md#unnotarized-public-preview).
+
 ## Build and inspect
 
 ```sh
@@ -27,7 +38,7 @@
 
 ## Public release boundary
 
-- Keep prototype artifacts separate from the public `FerMatter.dmg` asset; downloads remain disabled on the site.
+- Keep prototype artifacts separate from the public `FerMatter.dmg` asset; only an explicitly labeled preview may be offered without notarization.
 - Developer ID signing, notarization and clean-Mac installation/upgrade validation remain release work.
 - Keep Gatekeeper enabled; packaging must not remove quarantine or change security settings.
 - [Release checklist](../releasing.md), [Apple Developer ID](https://developer.apple.com/developer-id/), [Apple app-opening guidance](https://support.apple.com/102445).

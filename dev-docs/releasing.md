@@ -3,10 +3,22 @@
 ## Current boundary
 
 - Development prototype: Apple Silicon; macOS 14+ deployment target, verified on macOS 26. Only compiler tools remain external; no Python runtime.
-- No signed/notarized public download at this documentation baseline.
+- Public previews may be distributed with ad hoc signing and an explicit unnotarized label, as requested by the owner. Stable downloads still require Developer ID signing and notarization.
 - [Packaging](reference/packaging.md) keeps ad hoc prototypes separate from an explicit Developer ID/notarization path. Production credentials and clean-Mac final-artifact validation are still required; no public release is implied. In-app update transport is not yet implemented.
 - Repository is private as of 2026-09-28; Pages is public. Test release access without authentication before advertising downloads.
-- Keep `site/src/data/site.json` → `releaseAvailable: false` until all public-release checks pass.
+- Keep stable downloads disabled until all public-release checks pass. A preview download must identify its prerelease tag and unnotarized status; verify anonymous access and its checksum before enabling it.
+
+## Unnotarized public preview
+
+- First preview: app version `0.11.0`, build `12`, prerelease tag `v0.11.0-preview.1`.
+- Source remains private in `k-onoue/FerMatter`; publish only reviewed binaries and notices in `FerMatter/fermatter.github.io` Releases.
+- Run app checks, clippy, build, dependency audits and publication checks on the committed candidate. Record skipped native/clean-Mac checks honestly; a preview is not a stable-release validation pass.
+- Preserve the development-signed local bundle. Copy it to an ignored staging directory, sign that copy ad hoc, then run `package.sh --preview --app PATH`.
+- Create a draft **prerelease** with the DMG and SHA-256 manifest. Inspect the payload and bundled notices before publication. Keep published assets fixed.
+- The tap is `FerMatter/homebrew-tap`; the cask pins the version/build, URL and SHA-256. It installs only `FerMatter.app`, keeps quarantine enabled, and does not delete user data.
+- Verify anonymous DMG download, checksum, and a Homebrew install into an isolated `--appdir`; then enable the website download and Homebrew command in a separate reviewed site PR.
+- First launch may require **System Settings → Privacy & Security → Open Anyway**; link to [Apple's instructions](https://support.apple.com/102445). Never remove quarantine or disable Gatekeeper in the installer/cask.
+- Developer ID/public-mode packaging and the clean-Mac stable-release checklist remain separate requirements.
 
 ## Versioning
 

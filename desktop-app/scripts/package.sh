@@ -7,6 +7,7 @@ app_dir=""
 output_dir="$project_dir/build/distribution"
 overwrite=0
 public=0
+preview=0
 notary_profile=""
 installer_identity=""
 signing_identity=""
@@ -14,13 +15,14 @@ validation=""
 
 usage() {
     cat <<'USAGE'
-Usage: ./desktop-app/scripts/package.sh [--app PATH] [--output DIR] [--overwrite]
+Usage: ./desktop-app/scripts/package.sh [--app PATH] [--output DIR] [--overwrite] [--preview]
 
 Build and verify a prototype DMG and PKG for Apple Silicon, macOS 14+.
 Without --app, build.sh first builds the app from the current checkout.
 --app PATH     Package an existing ad hoc signed FerMatter.app without rebuilding.
 --output DIR   Output directory; its parent must exist (default: build/distribution).
 --overwrite    Replace existing artifacts with the same version and build number.
+--preview      Label an existing ad hoc --app as a public, unnotarized preview.
 --help         Show this help.
 
 Public preparation: add --public --notary-profile NAME --signing-identity NAME
@@ -37,6 +39,7 @@ fail() { printf 'package.sh: %s\n' "$*" >&2; exit 1; }
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --public) public=1; shift ;;
+        --preview) preview=1; shift ;;
         --notary-profile|--installer-identity|--signing-identity|--validation)
             [[ $# -ge 2 && -n "$2" ]] || fail "$1 requires a value"
             case "$1" in
@@ -57,6 +60,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ "$(uname -s)" = Darwin ]] || fail "Packaging requires macOS."
+[[ "$public$preview" != 11 ]] || fail "Choose --public or --preview."
+[[ "$preview" != 1 || -n "$app_dir" ]] || fail "Preview mode requires an explicit --app."
 if [[ "$public" = 1 ]]; then
     [[ -n "$app_dir" && -n "$notary_profile" && -n "$validation" ]] || fail "Public mode requires --app, --notary-profile and --validation."
     [[ "$signing_identity" = "Developer ID Application: "* ]] || fail "Use the exact Developer ID Application identity name."
@@ -118,6 +123,10 @@ if [[ "$public" = 1 ]]; then
     label="Release Candidate"
     suffix="notarized"
     readme="$project_dir/packaging/RELEASE-README.txt"
+elif [[ "$preview" = 1 ]]; then
+    label="Unnotarized Preview"
+    suffix="preview-unnotarized"
+    readme="$project_dir/packaging/PREVIEW-README.txt"
 fi
 artifact="FerMatter-${version}-build${build}-macOS-arm64-${suffix}"
 for extension in dmg pkg sha256 validation.json notarization.json; do
@@ -246,7 +255,7 @@ if [[ "$public" = 1 ]]; then
 else
     if /usr/sbin/pkgutil --check-signature "$scratch/$artifact.pkg" > "$scratch/pkg-signature.txt" 2>&1; then fail "Expected an unsigned prototype installer."; fi
     /usr/bin/grep -q 'Status: no signature' "$scratch/pkg-signature.txt" || fail "Could not confirm unsigned PKG status."
-    printf '{"status":"prototype-unnotarized"}\n' > "$scratch/$artifact.notarization.json"
+    printf '{"status":"%s"}\n' "$suffix" > "$scratch/$artifact.notarization.json"
     printf '{"status":"not-a-release-validation"}\n' > "$scratch/$artifact.validation.json"
 fi
 cat "$scratch/pkg-signature.txt"

@@ -308,7 +308,7 @@ pub fn import_zip(archive: &Path, parent: &Path) -> Result<PathBuf> {
     let mut total = 0u64;
     for i in 0..zip.len() {
         let file = zip.by_index(i).map_err(err)?;
-        relative(file.name().trim_end_matches('/'))?;
+        relative(file.name().map_err(err)?.trim_end_matches('/'))?;
         if file.unix_mode().is_some_and(|m| m & 0o170000 == 0o120000) {
             return Err("ZIP symbolic links are not supported.".into());
         }
@@ -325,7 +325,7 @@ pub fn import_zip(archive: &Path, parent: &Path) -> Result<PathBuf> {
         let mut file = zip.by_index(i).map_err(err)?;
         let out = temp
             .path()
-            .join(relative(file.name().trim_end_matches('/'))?);
+            .join(relative(file.name().map_err(err)?.trim_end_matches('/'))?);
         if file.is_dir() {
             fs::create_dir_all(&out).map_err(err)?
         } else {
