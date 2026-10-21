@@ -9,6 +9,7 @@
 ## [Unreleased]
 
 - Add public preview DMG and Homebrew downloads, copyable Typst/full TeX/BasicTeX setup commands, and TeX download/installed-size comparisons to the website.
+- Fix website download counts appearing unavailable despite a published snapshot; remove the checksum link from the download page.
 
 ## [0.11.0-preview.1] — 2026-10-21
 

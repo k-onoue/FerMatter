@@ -39,3 +39,4 @@ site/.astro/
 site/legacy-dist/
 site/public/stats/
 site/public/downloads/
+site/src/data/downloads.generated.json

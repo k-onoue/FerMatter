@@ -88,6 +88,32 @@ test('publication checks include ignored tracked files, paths, credentials and b
   for (const expected of ['publication candidate: target/build.txt', 'Personal absolute path', 'Credential-like', 'Broken local Markdown', 'Broken page anchor', 'out-of-site']) assert.ok(errors.includes(expected), expected);
 });
 
+test('published download totals, release counts and date must match the snapshot', t => {
+  const { root, write } = fixture(t);
+  const unavailable = '<section id="statistics">No public installer statistics yet.</section>';
+  write('site/dist/download/index.html', unavailable);
+  assert.deepEqual(checkPublication(root).errors, []);
+  const snapshot = {
+    schemaVersion: 1, repository: 'example/releases', updatedAt: '2026-10-21T12:00:00.000Z',
+    assets: [
+      { id: 1, name: 'FerMatter.dmg', version: 'v1', platform: 'macOS', downloads: 1234 },
+      { id: 2, name: 'FerMatter.pkg', version: 'v1', platform: 'macOS', downloads: 56 },
+      { id: 3, name: 'FerMatter.dmg', version: 'v2-preview', platform: 'macOS', downloads: 0 },
+    ],
+  };
+  write('site/dist/stats/downloads.json', JSON.stringify(snapshot));
+  assert.ok(checkPublication(root).errors.some(error => error.includes('total does not match')));
+  const rendered = '<section id="statistics"><div class="stats-total">1,290</div><time datetime="2026-10-21T12:00:00.000Z">2026-10-21 UTC</time><table><thead><tr><th>Release</th><th>Downloads</th></tr></thead><tbody><tr><th>v2-preview</th><td>0</td></tr><tr><th>v1</th><td>1,290</td></tr></tbody></table></section>';
+  write('site/dist/download/index.html', rendered);
+  assert.deepEqual(checkPublication(root).errors, []);
+  write('site/dist/download/index.html', rendered.replace('class="stats-total">1,290', 'class="stats-total">0').replace('<td>0</td>', '<td>1</td>').replace('>2026-10-21 UTC', '>2026-10-20 UTC'));
+  const errors = checkPublication(root).errors.join('\n');
+  for (const expected of ['total does not match', 'release counts do not match', 'timestamp does not match']) assert.ok(errors.includes(expected), expected);
+  rmSync(path.join(root, 'site/dist/stats/downloads.json'));
+  write('site/dist/download/index.html', rendered);
+  assert.ok(checkPublication(root).errors.some(error => error.includes('no snapshot')));
+});
+
 test('preview serves only public files and blocks symlink escapes and writes', async t => {
   const { root, write } = fixture(t);
   write('secret.txt', 'Private');
