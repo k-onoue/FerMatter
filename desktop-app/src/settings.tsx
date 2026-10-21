@@ -45,6 +45,11 @@ export function Settings({
   const [json, setJson] = useState<{ file: string; text: string } | null>(null);
   const [search, setSearch] = useState("");
   const bindings = effectiveBindings(keys);
+  const themeOptions = [
+    defaults,
+    ...[...themes].sort((a, b) => a.name.localeCompare(b.name)),
+  ];
+  const previewPalette = palette(theme, settings.appearance !== "light");
   const update = (patch: Partial<Preferences>) => onSettings(patch);
   async function importFile(file: string) {
     try {
@@ -190,20 +195,15 @@ export function Settings({
               <span>Color Theme</span>
               <select
                 value={
-                  [defaults, ...themes].some((t) => t.id === theme.id)
+                  themeOptions.some((t) => t.id === theme.id)
                     ? theme.id
                     : "custom"
                 }
                 onChange={(e) =>
-                  onTheme(
-                    [defaults, ...themes].find((t) => t.id === e.target.value)!,
-                  )
+                  onTheme(themeOptions.find((t) => t.id === e.target.value)!)
                 }
               >
-                {[
-                  defaults,
-                  ...themes.sort((a, b) => a.name.localeCompare(b.name)),
-                ].map((t) => (
+                {themeOptions.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
                   </option>
@@ -248,16 +248,14 @@ export function Settings({
             <div
               className="theme-preview"
               style={{
-                background: palette(theme, settings.appearance !== "light")
-                  .surfaceBackground,
-                color: palette(theme, settings.appearance !== "light").text,
+                background: previewPalette.surfaceBackground,
+                color: previewPalette.text,
               }}
             >
               <code>
                 <span
                   style={{
-                    color: palette(theme, settings.appearance !== "light")
-                      .command,
+                    color: previewPalette.command,
                   }}
                 >
                   \frac

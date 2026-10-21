@@ -14,7 +14,46 @@ use tauri::Manager;
 const WEEK: u64 = 7 * 24 * 60 * 60;
 const LIMIT: usize = 128;
 static ICON_REVISION: AtomicU64 = AtomicU64::new(0);
-static APPLIED_RANK: AtomicU8 = AtomicU8::new(0);
+static APPLIED_ICON: AtomicU8 = AtomicU8::new(0);
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[repr(u8)]
+enum DockIcon {
+    Detailed = 1,
+    Standard,
+    Smile,
+    Frown,
+}
+
+impl DockIcon {
+    fn automatic(count: usize) -> Self {
+        match count {
+            14.. => Self::Detailed,
+            7..=13 => Self::Standard,
+            3..=6 => Self::Smile,
+            _ => Self::Frown,
+        }
+    }
+
+    fn selected(preference: &str, automatic: Self) -> Self {
+        match preference {
+            "detailed" => Self::Detailed,
+            "standard" => Self::Standard,
+            "smile" => Self::Smile,
+            "frown" => Self::Frown,
+            _ => automatic,
+        }
+    }
+
+    fn png(self) -> &'static [u8] {
+        match self {
+            Self::Detailed => include_bytes!("../icons/usage-1.png"),
+            Self::Standard => include_bytes!("../icons/icon.png"),
+            Self::Smile => include_bytes!("../icons/usage-3.png"),
+            Self::Frown => include_bytes!("../icons/usage-4.png"),
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -23,54 +62,61 @@ struct History {
     openings: Vec<u64>,
 }
 
-fn rank(count: usize) -> u8 {
-    match count {
-        14.. => 1,
-        7..=13 => 2,
-        3..=6 => 3,
-        _ => 4,
+impl History {
+    fn load(path: &Path) -> Result<Self> {
+        let history = match path.symlink_metadata() {
+            Ok(_) => serde_json::from_slice::<Self>(&files::read_bounded(path, 16 * 1024)?)
+                .map_err(|_| "Cannot read icon usage history; the original was preserved.")?,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Self {
+                schema_version: 1,
+                openings: vec![],
+            },
+            Err(e) => return Err(files::err(e)),
+        };
+        if history.schema_version != 1
+            || history.openings.len() > LIMIT
+            || history.openings.windows(2).any(|pair| pair[0] > pair[1])
+        {
+            return Err("Unsupported icon usage history; the original was preserved.".into());
+        }
+        Ok(history)
     }
-}
 
-fn record(home: &Path, now: u64, opening: bool) -> Result<u8> {
-    let path = home.join("IconUsage.json");
-    let mut history = match path.symlink_metadata() {
-        Ok(_) => serde_json::from_slice::<History>(&files::read_bounded(&path, 16 * 1024)?)
-            .map_err(|_| "Cannot read icon usage history; the original was preserved.")?,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => History {
-            schema_version: 1,
-            openings: vec![],
-        },
-        Err(e) => return Err(files::err(e)),
-    };
-    if history.schema_version != 1
-        || history.openings.len() > LIMIT
-        || history.openings.windows(2).any(|pair| pair[0] > pair[1])
-    {
-        return Err("Unsupported icon usage history; the original was preserved.".into());
-    }
-    // Preserve history if the system clock moved backwards. Future entries
-    // must neither inflate the count nor cause an additional opening.
-    if !opening || history.openings.last().is_some_and(|last| *last > now) {
-        return Ok(rank(
-            history
-                .openings
+    fn icon(&self, now: u64) -> DockIcon {
+        DockIcon::automatic(
+            self.openings
                 .iter()
                 .filter(|t| **t <= now && now - **t < WEEK)
                 .count(),
-        ));
+        )
     }
-    history.openings.retain(|t| now - *t < WEEK);
-    // Ready/Reopen and a forwarded single-instance launch can describe the
-    // same opening. Coalesce only duplicate native events within two seconds.
-    if history.openings.last().is_none_or(|last| now - *last >= 2) {
-        history.openings.push(now);
+
+    // Preserve history if the system clock moved backwards. Future entries
+    // must neither inflate the count nor cause an additional opening.
+    fn record_opening(&mut self, now: u64) -> bool {
+        if self.openings.last().is_some_and(|last| *last > now) {
+            return false;
+        }
+        self.openings.retain(|t| now - *t < WEEK);
+        // Ready/Reopen and a forwarded single-instance launch can describe the
+        // same opening. Coalesce only duplicate native events within two seconds.
+        if self.openings.last().is_none_or(|last| now - *last >= 2) {
+            self.openings.push(now);
+        }
+        if self.openings.len() > LIMIT {
+            self.openings.drain(..self.openings.len() - LIMIT);
+        }
+        true
     }
-    if history.openings.len() > LIMIT {
-        history.openings.drain(..history.openings.len() - LIMIT);
+}
+
+fn record(home: &Path, now: u64, opening: bool) -> Result<DockIcon> {
+    let path = home.join("IconUsage.json");
+    let mut history = History::load(&path)?;
+    if opening && history.record_opening(now) {
+        files::atomic(&path, &serde_json::to_vec(&history).map_err(files::err)?)?;
     }
-    files::atomic(&path, &serde_json::to_vec(&history).map_err(files::err)?)?;
-    Ok(rank(history.openings.len()))
+    Ok(history.icon(now))
 }
 
 pub fn opened(app: &tauri::AppHandle) {
@@ -81,16 +127,6 @@ pub fn refresh(app: &tauri::AppHandle) {
     update(app, false);
 }
 
-fn selected_rank(selection: &str, automatic: u8) -> u8 {
-    match selection {
-        "detailed" => 1,
-        "standard" => 2,
-        "smile" => 3,
-        "frown" => 4,
-        _ => automatic,
-    }
-}
-
 fn update(app: &tauri::AppHandle, opening: bool) {
     let Some(runtime) = app.try_state::<Arc<crate::Runtime>>() else {
         return;
@@ -98,13 +134,13 @@ fn update(app: &tauri::AppHandle, opening: bool) {
     let Ok(now) = SystemTime::now().duration_since(UNIX_EPOCH) else {
         return;
     };
-    let (rank, revision) = {
+    let (icon, revision) = {
         let _lock = runtime.store.writes.lock().unwrap();
         let automatic = match record(&runtime.store.home, now.as_secs(), opening) {
-            Ok(rank) => rank,
+            Ok(icon) => icon,
             Err(error) => {
                 log::warn!("Dock icon usage unavailable: {error}");
-                2
+                DockIcon::Standard
             }
         };
         let preferences = runtime
@@ -112,26 +148,20 @@ fn update(app: &tauri::AppHandle, opening: bool) {
             .load("preferences.json")
             .unwrap_or_default();
         (
-            selected_rank(files::string(&preferences, "dockIcon"), automatic),
+            DockIcon::selected(files::string(&preferences, "dockIcon"), automatic),
             ICON_REVISION.fetch_add(1, Ordering::SeqCst).wrapping_add(1),
         )
-    };
-    let bytes: &'static [u8] = match rank {
-        1 => include_bytes!("../icons/usage-1.png"),
-        2 => include_bytes!("../icons/icon.png"),
-        3 => include_bytes!("../icons/usage-3.png"),
-        _ => include_bytes!("../icons/usage-4.png"),
     };
     let _ = app.run_on_main_thread(move || {
         // Check both ownership and the displayed image on the main thread:
         // an older native update may still be running when a new save arrives.
         if ICON_REVISION.load(Ordering::SeqCst) != revision
-            || APPLIED_RANK.load(Ordering::SeqCst) == rank
+            || APPLIED_ICON.load(Ordering::SeqCst) == icon as u8
         {
             return;
         }
-        match crate::native::set_application_icon(bytes) {
-            Ok(()) => APPLIED_RANK.store(rank, Ordering::SeqCst),
+        match crate::native::set_application_icon(icon.png()) {
+            Ok(()) => APPLIED_ICON.store(icon as u8, Ordering::SeqCst),
             Err(error) => log::warn!("Dock icon unchanged: {error}"),
         }
     });
@@ -140,6 +170,7 @@ fn update(app: &tauri::AppHandle, opening: bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use DockIcon::{Detailed, Frown, Smile, Standard};
     #[test]
     fn manual_preference_persists_and_refresh_does_not_count_an_opening() {
         let home = tempfile::tempdir().unwrap();
@@ -155,8 +186,14 @@ mod tests {
             )
             .unwrap();
         let loaded = settings.load("preferences.json").unwrap();
-        assert_eq!(selected_rank(files::string(&loaded, "dockIcon"), 1), 3);
-        assert_eq!(selected_rank(files::string(&loaded, "dockIcon"), 4), 3);
+        assert_eq!(
+            DockIcon::selected(files::string(&loaded, "dockIcon"), Detailed),
+            Smile
+        );
+        assert_eq!(
+            DockIcon::selected(files::string(&loaded, "dockIcon"), Frown),
+            Smile
+        );
         record(home.path(), WEEK * 2, true).unwrap();
         let path = home.path().join("IconUsage.json");
         let before = std::fs::read(&path).unwrap();
@@ -167,25 +204,31 @@ mod tests {
             .save("preferences.json", &preferences, &revision)
             .unwrap();
         assert_eq!(
-            selected_rank(
+            DockIcon::selected(
                 files::string(&settings.load("preferences.json").unwrap(), "dockIcon"),
                 automatic
             ),
-            4
+            Frown
         );
     }
     #[test]
     fn launches_cross_all_thresholds_and_expire_after_seven_days() {
         let home = tempfile::tempdir().unwrap();
         let start = WEEK * 2;
-        for (n, expected) in [4, 4, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 1]
-            .into_iter()
-            .enumerate()
+        for (n, expected) in [
+            Frown, Frown, Smile, Smile, Smile, Smile, Standard, Standard, Standard, Standard,
+            Standard, Standard, Standard, Detailed,
+        ]
+        .into_iter()
+        .enumerate()
         {
             let level = record(home.path(), start + n as u64 * 10, true).unwrap();
             assert_eq!(level, expected);
         }
-        assert_eq!(record(home.path(), start + WEEK + 130, true).unwrap(), 4);
+        assert_eq!(
+            record(home.path(), start + WEEK + 130, true).unwrap(),
+            Frown
+        );
         let state: History =
             serde_json::from_slice(&std::fs::read(home.path().join("IconUsage.json")).unwrap())
                 .unwrap();
