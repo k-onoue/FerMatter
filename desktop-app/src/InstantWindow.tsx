@@ -22,7 +22,7 @@ import {
   SunMoon,
   X,
 } from "lucide-react";
-import { asset, rpc, projectName } from "./api";
+import { asset, rpc } from "./api";
 import { CodeEditor, setProjectCompletions } from "./editor";
 import { InstantPreview } from "./InstantPreview";
 import { ColorPicker } from "./ColorPicker";
@@ -545,15 +545,7 @@ export default function InstantWindow() {
           style={{ backgroundImage: `url(${wallpaper})` }}
         />
       )}
-      <div className="titlebar" data-tauri-drag-region>
-        <span data-tauri-drag-region>
-          {projectContext
-            ? projectName(projectContext.root) + " · Instant"
-            : projectID
-              ? "Instant"
-              : "FerMatter · Instant"}
-        </span>
-      </div>
+      <div className="titlebar" data-tauri-drag-region />
       <header className="instant-toolbar">
         <button
           aria-label="Open SVG"
