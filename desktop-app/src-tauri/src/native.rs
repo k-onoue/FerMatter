@@ -4,6 +4,30 @@ use crate::files::*;
 use std::path::PathBuf;
 
 #[cfg(target_os = "macos")]
+pub fn configure_menu_bar_icon(tray: &tauri::tray::TrayIcon) -> tauri::Result<()> {
+    use objc2::MainThreadMarker;
+    use objc2_app_kit::{NSCellImagePosition, NSImageScaling};
+
+    // Tauri's tray backend defaults to an 18 pt image beside a text title.
+    // This status item has no title: center the image itself and give the
+    // detailed head 20 pt, with AppKit still handling template contrast.
+    tray.with_inner_tray_icon(|inner| {
+        let mtm = MainThreadMarker::new().expect("Tauri runs tray access on the main thread");
+        if let Some(button) = inner.ns_status_item().and_then(|item| item.button(mtm)) {
+            if let Some(image) = button.image() {
+                let mut size = image.size();
+                size.width = 20.0;
+                size.height = 20.0;
+                image.setSize(size);
+                button.setImage(Some(&image));
+            }
+            button.setImageScaling(NSImageScaling::ScaleNone);
+            button.setImagePosition(NSCellImagePosition::ImageOnly);
+        }
+    })
+}
+
+#[cfg(target_os = "macos")]
 pub fn set_application_icon(bytes: &[u8]) -> Result<()> {
     use objc::{class, msg_send, runtime::Object, sel, sel_impl};
     // Caller schedules this on the AppKit main thread. NSApplication retains
