@@ -8,18 +8,11 @@
 
 ## Connect an agent
 
-```sh
-codex mcp add mathlidelux -- /Applications/FerMatter.app/Contents/MacOS/FerMatter mcp
-claude mcp add --transport stdio mathlidelux -- /Applications/FerMatter.app/Contents/MacOS/FerMatter mcp
-```
-
-- Adjust the executable path if the app is installed elsewhere.
+- [Public MCP and CLI guide](../../user-docs/automation.md): client configuration, operations, examples and troubleshooting.
 - Build checkout: `desktop-app/src-tauri/target/release/bundle/macos/FerMatter.app/Contents/MacOS/FerMatter`.
 - Allow up to 300 seconds per tool call in the client's MCP configuration; compiler progress is forwarded when a progress token is supplied.
-- Codex: set `tool_timeout_sec = 300` in `[mcp_servers.mathlidelux]` after adding it.
 - Existing MCP configurations: update the executable path from `Mathlidelux.app/Contents/MacOS/Mathlidelux` to `FerMatter.app/Contents/MacOS/FerMatter`; keep the server key and tool names.
 - Connecting is an explicit user setup step; installing FerMatter does not modify agent configuration.
-- Suggested request: “Find the least-squares equations in my project, export them at 30 pt as SVG, inspect the previews, and use the returned sizes to place them on slides.”
 
 ## Tools
 

@@ -29,7 +29,7 @@ export default defineConfig({
       { label: 'Start here', items: ['guide', 'guide/paper-to-slides', 'guide/requirements'] },
       { label: 'Create & export', items: ['guide/instant', 'guide/edit-equation', 'guide/export', 'guide/new-project', 'guide/figures'] },
       { label: 'Your workspace', items: ['guide/navigate-paper', 'guide/source-editor', 'guide/preferences'] },
-      { label: 'Reference', items: ['guide/limits', 'guide/why'] },
+      { label: 'Reference', items: ['guide/automation', 'guide/limits', 'guide/why'] },
     ],
     credits: false,
     editLink: { baseUrl: `https://github.com/${config.repository}/edit/main/` },
