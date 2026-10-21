@@ -42,4 +42,4 @@ cargo install --locked cargo-audit --version 0.22.2 --root desktop-app/build/aud
 
 - Automated functional checks do not mark these rows as passed.
 - In-app automatic updates are not supplied by this packaging work; document manual replacement.
-- Keep the download link disabled until this checklist and [release conditions](../releasing.md#public-distribution-checklist) pass.
+- Keep stable download links disabled until this checklist and [release conditions](../releasing.md#public-distribution-checklist) pass. The owner-approved [unnotarized preview](../releasing.md#unnotarized-public-preview) uses a separate prerelease path and does not mark these rows as passed.

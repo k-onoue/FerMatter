@@ -1,7 +1,12 @@
 {
   "name": "mathlidelux-desktop",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
+  "overrides": {
+    "monaco-editor": {
+      "dompurify": "3.4.17"
+    }
+  },
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",

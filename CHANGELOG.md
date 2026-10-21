@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+## [0.11.0-preview.1] — 2026-10-21
+
+- First public, unnotarized preview for Apple Silicon, macOS 14+. Download the DMG from the website or install through `fermatter/tap`; first launch may require approval in macOS Privacy & Security.
+- Set the project copyright notice to `2026 k-onoue`; preserve bundled third-party notices.
+- Use DOMPurify 3.4.17 for Monaco's rendered documentation, fixing the advisories affecting its pinned 3.4.15 dependency.
+- Update ZIP handling to zip 9 for the extraction security fixes; retain bounded, entry-by-entry imports.
+
 - Publish the website at `fermatter.github.io`, keeping the application repository in place; redirect previous project-site page URLs.
 - Use the owner-supplied simplified Fermat head across the app, menu bar, website and guide; transparent SVG marks follow light/dark themes, while the app icon keeps its blue background.
 - Change the running macOS Dock icon among four Fermat faces according to local openings in the previous seven days (14+, 7–13, 3–6, or fewer than 3).
