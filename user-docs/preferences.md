@@ -74,6 +74,21 @@ sidebar:
 - Invalid files keep the last valid settings; reset shortcuts or select the Default theme to restore built-ins.
 - Theme files customize light/dark interface and editor colors; exported artwork keeps its original colors.
 
+## Dock icon
+
+- **Settings → Appearance → Dock icon** chooses Automatic or a fixed face: Detailed Fermat, Standard, Smiling, or Downturned mouth. Changes apply immediately and persist across launches.
+- Automatic follows the number of openings in the last seven days, including the current opening. Manual choices stay fixed until Automatic is selected again.
+
+| Openings | Face |
+| --- | --- |
+| 14 or more | Detailed Fermat portrait |
+| 7–13 | Standard |
+| 3–6 | Smiling |
+| 0–2 | Downturned mouth |
+
+- Launching FerMatter or reopening it from the Dock updates the count. Duplicate native events within two seconds count once; background automation does not count.
+- History stays on this Mac in `IconUsage.json`. Finder and the app at rest use the standard blue icon; the active Dock artwork is recalculated when opened.
+
 ## Updates
 
 - This version uses manual updates; it has no in-app release checker or downloader.

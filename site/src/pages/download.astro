@@ -17,11 +17,11 @@ const samples = [
 ];
 ---
 <Product title="Download" description="FerMatter for macOS: release status, requirements, example projects, and download statistics.">
-  <header class="page-intro"><p class="eyebrow">GET FERMATTER</p><h1>Make it part<br/>of your <em>workflow.</em></h1><p class="lead">For Apple Silicon Mac. LaTeX and Typst, in one workspace.</p></header>
+  <header class="page-intro"><h1>Download</h1><p class="lead">Apple Silicon Mac · macOS 14 or later</p></header>
   <div class="download-layout">
     <section class="download-section" id="mac">
-      <h2>{config.releaseAvailable ? `FerMatter ${config.version}` : 'The public build is on its way.'}</h2>
-      <p>{config.releaseAvailable ? 'Download the macOS disk image, then drag FerMatter into Applications.' : 'FerMatter is currently a development prototype. A signed, notarized public download is not available yet. Explore the example projects below.'}</p>
+      <h2>{config.releaseAvailable ? `FerMatter ${config.version}` : 'Development preview'}</h2>
+      <p>{config.releaseAvailable ? 'Download the disk image and drag FerMatter into Applications.' : 'A signed, notarized public installer is not available yet.'}</p>
       {!config.repositoryPublic && <p>Source builds and GitHub links currently require repository access.</p>}
       <div class="actions">
         {config.releaseAvailable && <a class="button primary" href={`${repository}/releases/download/v${config.version}/${config.assetName}`}>Download for macOS ↓</a>}
@@ -30,10 +30,10 @@ const samples = [
       </div>
     </section>
     <section class="download-section" id="requirements"><h2>Before you start</h2><ul><li>Apple Silicon Mac; macOS 14 or later. Verified on macOS 26.</li><li>Typst CLI for Typst projects; TeX Live or MacTeX plus conversion tools for LaTeX.</li><li>Compiler paths can be selected in first-launch setup or Settings.</li><li>Windows and Linux builds are not available yet.</li></ul><a href={guide('requirements')}>Full requirements and tool installation →</a></section>
-    <section class="download-section" id="samples"><h2>A few projects to try</h2><p>Synthetic papers and diagrams. Open a ZIP directly in FerMatter.</p><div class="sample-list">{samples.map(sample => <a href={href(`downloads/demo-${sample.id}.zip`)} download><span>{sample.name}<br/><small>{sample.detail}</small></span><span aria-hidden="true">↓</span></a>)}</div></section>
+    <section class="download-section" id="samples"><h2>Sample projects</h2><p>Open a sample ZIP directly in FerMatter.</p><div class="sample-list">{samples.map(sample => <a href={href(`downloads/demo-${sample.id}.zip`)} download><span>{sample.name}<br/><small>{sample.detail}</small></span><span aria-hidden="true">↓</span></a>)}</div></section>
     <section class="download-section" id="statistics">
       <h2>Downloads</h2>
-      {stats ? <><div class="stats-total">{total.toLocaleString('en-US')}</div><p>Installer downloads recorded by GitHub Releases.</p><p class="stats-date">Last updated <time datetime={stats.updatedAt}>{new Date(stats.updatedAt).toISOString().slice(0,10)} UTC</time></p>{totals.size > 0 && <table><thead><tr><th scope="col">Release</th><th scope="col">Downloads</th></tr></thead><tbody>{[...totals].reverse().map(([version,count]) => <tr><th scope="row">{version}</th><td>{count.toLocaleString('en-US')}</td></tr>)}</tbody></table>}<p><a href={href('stats/downloads.json')}>Download the data (JSON)</a></p></> : <p>Statistics will appear after the first successful collection on GitHub Pages. No count is available in this preview.</p>}
+      {stats ? <><div class="stats-total">{total.toLocaleString('en-US')}</div><p>Installer downloads recorded by GitHub Releases.</p><p class="stats-date">Last updated <time datetime={stats.updatedAt}>{new Date(stats.updatedAt).toISOString().slice(0,10)} UTC</time></p>{totals.size > 0 && <table><thead><tr><th scope="col">Release</th><th scope="col">Downloads</th></tr></thead><tbody>{[...totals].reverse().map(([version,count]) => <tr><th scope="row">{version}</th><td>{count.toLocaleString('en-US')}</td></tr>)}</tbody></table>}<p><a href={href('stats/downloads.json')}>Download the data (JSON)</a></p></> : <p>No public installer statistics yet.</p>}
       <details><summary>What is counted?</summary><p>GitHub's download counters for FerMatter and legacy Mathlidelux installer assets in public, stable releases. Repeat downloads count again. Source archives, sample projects, checksums, drafts, and prereleases are excluded. Counts are not the number of users or installations.</p><p>Snapshots refresh daily. Previously observed counts are retained if an asset is removed; downloads before our first observation of a deleted asset cannot be recovered. If collection fails, the last successful snapshot and its date stay visible.</p><p>No visitor analytics, tracking cookies, or browser calls to GitHub are used.</p></details>
     </section>
   </div>

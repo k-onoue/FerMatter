@@ -200,6 +200,14 @@ pub fn validate(name: &str, v: &Value) -> Result<()> {
         "theme.json" => theme(v),
         "keybindings.json" => keybindings(v),
         "preferences.json" => {
+            if let Some(icon) = v.get("dockIcon") {
+                if !matches!(
+                    icon.as_str(),
+                    Some("automatic" | "detailed" | "standard" | "smile" | "frown")
+                ) {
+                    return Err("Invalid Dock icon selection.".into());
+                }
+            }
             if let Some(path) = v.get("projectDirectory") {
                 crate::project_location::validate_path(
                     path.as_str()
@@ -433,6 +441,23 @@ pub fn validate_templates(value: &Value) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn dock_icon_settings_are_optional_and_validate_manual_choices() {
+        let mut preferences = super::default_document("preferences.json");
+        assert!(super::validate("preferences.json", &preferences).is_ok());
+        for choice in ["automatic", "detailed", "standard", "smile", "frown"] {
+            preferences["dockIcon"] = serde_json::json!(choice);
+            assert!(super::validate("preferences.json", &preferences).is_ok());
+        }
+        for invalid in [
+            serde_json::json!(null),
+            serde_json::json!(3),
+            serde_json::json!("unknown"),
+        ] {
+            preferences["dockIcon"] = invalid;
+            assert!(super::validate("preferences.json", &preferences).is_err());
+        }
+    }
     use super::*;
     #[test]
     fn output_size_accepts_decimals_and_legacy_source_sizes_but_rejects_invalid_values() {

@@ -1,7 +1,10 @@
 # Public assets
 
-- `app-light.jpg`: earlier Swift app, synthetic `examples/demo-paper/`, opaque background; used by the repository README.
-- `icon.png`: unchanged approved artwork from `desktop-app/resources/AppIcon.icon/Assets/AppIcon.png`; same source as PR #6.
+- `app-light.jpg`: historical Swift app with synthetic `examples/demo-paper/`, retained for older image links; the README uses the current desktop Library screenshot.
+- Fermat artwork selected by the repository owner on 2026-10-21; sources and regeneration: [artwork notes](../../../desktop-app/resources/AppIcon.md).
+- `fermat.svg`: transparent, recolorable head used as the product/guide header mask. Facial details and hair gaps remain transparent on every background.
+- `fermat-light.svg`, `fermat-dark.svg`: dark and off-white versions for standalone images and the README.
+- `favicon.svg`: transparent mark with an OS light/dark color query. `icon.png`: blue app tile for existing image links.
 - Never capture private manuscripts, project-history lists, accounts, or desktop notifications.
 
 ## Paper-to-slides tutorial

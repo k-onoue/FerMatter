@@ -46,6 +46,12 @@ node scripts/preview-site.mjs
 - Old `/guide/topic.html` URLs redirect to `/guide/topic/`; `/guide/index.html` still works.
 - UI checks: desktop/mobile, light/dark, keyboard navigation, search, old links, video controls/captions, sample downloads, no JavaScript for core reading/navigation.
 
+## Product design
+
+- Product design reference: [Ollama](https://ollama.com/), reviewed 2026-10-21. Use plain monochrome surfaces, left-aligned content, restrained type sizes, generous whitespace and a compact navigation bar.
+- Keep product copy functional: feature names, supported formats, requirements and release status. Avoid repeated slogans and decorative section labels.
+- Use the transparent Fermat mark for headers; reserve its blue tile for the application icon. See [artwork sources and regeneration](../desktop-app/resources/AppIcon.md).
+
 ## Publish
 
 1. Review the PR; check the built site and publication scan.

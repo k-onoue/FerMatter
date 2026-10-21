@@ -86,6 +86,7 @@ export interface Theme {
 }
 export interface Preferences {
   appearance: "light" | "dark" | "system";
+  dockIcon?: "automatic" | "detailed" | "standard" | "smile" | "frown";
   autoSave: boolean;
   opacity: number;
   theme: string;

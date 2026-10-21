@@ -1,5 +1,10 @@
 # FerMatter
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="site/public/assets/fermat-dark.svg">
+  <img src="site/public/assets/fermat-light.svg" width="96" height="96" alt="FerMatter — Pierre de Fermat">
+</picture>
+
 - Bring equations from a LaTeX or Typst paper into your presentation.
 - Browse equations and TikZ/CeTZ drawings; edit slide-specific variants; copy/export SVG, PDF, PNG, or JPEG.
 - Development prototype for **Apple Silicon Mac** (macOS 14+ build target; verified on macOS 26); no signed, notarized public download yet.

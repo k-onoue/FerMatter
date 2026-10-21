@@ -26,6 +26,7 @@
 | Instant preview gestures and native drag artifact lifetime | `src/InstantPreview.tsx`, `src/artifactLease.ts` |
 | Shortcut matching and defaults | `src/shortcuts.ts`; matching Rust validation in `src-tauri/src/settings.rs` |
 | IPC and request ownership | `src-tauri/src/lib.rs` |
+| Local opening counts and the running macOS Dock icon | `src-tauri/src/usage_icon.rs`, `src-tauri/src/native.rs` |
 | LaTeX/Typst extraction, includes and outline | `src-tauri/src/scan.rs` |
 | Compiler snapshots, cancellation and SyncTeX | `src-tauri/src/compiler.rs` |
 | Safe paths, atomic writes and conflict checks | `src-tauri/src/files.rs` |

@@ -4,7 +4,7 @@ import { FolderOpen, LoaderCircle, Zap } from "lucide-react";
 import { rpc } from "./api";
 import type { Preferences, Project } from "./types";
 import type { SettingsSnapshot } from "./settingsPersistence";
-import icon from "../src-tauri/icons/icon.png";
+import { BrandMark } from "./BrandMark";
 import { CompilerToolFields, useCompilerTools } from "./CompilerTools";
 
 type SetupResult = {
@@ -56,7 +56,7 @@ export function ProjectSetup({
   return (
     <main className="project-setup">
       <section aria-labelledby="setup-title">
-        <img className="setup-icon" src={icon} alt="" />
+        <BrandMark className="setup-icon" />
         <h1 id="setup-title">
           {step === "folder" ? "Choose your project folder" : "Compiler tools"}
         </h1>

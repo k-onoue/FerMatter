@@ -4,6 +4,29 @@ use crate::files::*;
 use std::path::PathBuf;
 
 #[cfg(target_os = "macos")]
+pub fn set_application_icon(bytes: &[u8]) -> Result<()> {
+    use objc::{class, msg_send, runtime::Object, sel, sel_impl};
+    // Caller schedules this on the AppKit main thread. NSApplication retains
+    // the image; only the running Dock presentation changes, never the bundle.
+    unsafe {
+        let pool: *mut Object = msg_send![class!(NSAutoreleasePool), new];
+        let data: *mut Object =
+            msg_send![class!(NSData), dataWithBytes:bytes.as_ptr() length:bytes.len()];
+        let image: *mut Object = msg_send![class!(NSImage), alloc];
+        let image: *mut Object = msg_send![image, initWithData:data];
+        if image.is_null() {
+            let _: () = msg_send![pool, drain];
+            return Err("Invalid bundled Dock icon.".into());
+        }
+        let app: *mut Object = msg_send![class!(NSApplication), sharedApplication];
+        let _: () = msg_send![app, setApplicationIconImage:image];
+        let _: () = msg_send![image, release];
+        let _: () = msg_send![pool, drain];
+        Ok(())
+    }
+}
+
+#[cfg(target_os = "macos")]
 pub fn choose_executable(name: &str, initial: &str) -> Result<Option<String>> {
     use objc::{class, msg_send, runtime::Object, sel, sel_impl};
     use std::ffi::CStr;

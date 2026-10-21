@@ -10,6 +10,7 @@ Import and Export. Shortcuts can be reset; choose Default to reset the theme.
 - `theme.json` contains the active theme, including both light and dark palettes.
 - `preferences.json` stores appearance, auto-save and window preferences. `projectView` is `grid` (default) or `list`; older files without it keep the grid view. Optional `projectDirectory` is an absolute path; missing/empty uses Documents/Mathlidelux. **Settings → Projects** changes it without moving existing projects.
 - `instant.json` stores reusable global Instant defaults; edit through the settings of Instant opened from Projects, or the revealed JSON file. Drafts/history are separate.
+- Optional `preferences.json.dockIcon`: `automatic` (default), `detailed`, `standard`, `smile`, or `frown`. Appearance saves and Preferences Reload apply it immediately without adding an opening; manual choices override usage history across launches.
 - `tools.json` stores compiler/converter executable overrides; first-launch setup and **Settings → Tools** edit it. Apply saves changes; Reload accepts external edits.
 
 Edit JSON opens the built-in editor. For external edits, save the file and choose
