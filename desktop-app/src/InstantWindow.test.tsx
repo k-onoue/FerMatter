@@ -160,12 +160,24 @@ beforeEach(() => {
       if (payload.action === "save") {
         await saveDraft?.(payload.draft);
         saved.push(structuredClone(payload.draft));
+        session.draft = structuredClone(payload.draft);
       }
       if (payload.action === "remember") {
         await rememberDraft?.();
         remembered.push(structuredClone(payload.draft));
       }
-      return session;
+      if (
+        ["save", "remember"].includes(payload.action) &&
+        payload.draft.source.trim()
+      ) {
+        const draft = structuredClone(payload.draft);
+        const existing = session.history.find(
+          (item) => item.id === draft.entryID,
+        );
+        if (existing) existing.draft = draft;
+        else session.history.unshift({ id: draft.entryID, draft });
+      }
+      return structuredClone(session);
     }
     if (operation === "instant_import_pending") {
       if (payload?.token) {
@@ -241,7 +253,42 @@ it("color changes re-render the preview and copy/export the new output", async (
       destination: "/synthetic/export.svg",
     }),
   );
-  expect(remembered.at(-1)?.color).toBe("#dc2626");
+  expect(saved.at(-1)?.color).toBe("#dc2626");
+});
+
+it("shows autosaved equations on reopen, updates one item, and duplicates without changing the original", async () => {
+  await openInstant();
+  expect(
+    screen.getByRole("complementary", { name: "Instant library" }),
+  ).toBeTruthy();
+  const firstID = session.draft!.entryID;
+  color("Blue");
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  await waitFor(() => expect(session.history[0].draft.color).toBe("#2563eb"));
+  expect(session.history).toHaveLength(1);
+  fireEvent.click(screen.getByRole("button", { name: "Duplicate equation" }));
+  await waitFor(() => expect(session.history).toHaveLength(2));
+  const secondID = session.draft!.entryID;
+  expect(secondID).not.toBe(firstID);
+  color("Red");
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  await waitFor(() => expect(session.history[0].draft.color).toBe("#dc2626"));
+  expect(session.history[1].draft.color).toBe("#2563eb");
+  fireEvent.click(screen.getByRole("button", { name: "New equation" }));
+  await waitFor(() => expect(session.draft!.source).toBe(""));
+  expect(session.history).toHaveLength(2);
+  cleanup();
+  render(<InstantWindow />);
+  await screen.findByRole("textbox", { name: "Equation source" });
+  fireEvent.change(screen.getByRole("textbox", { name: "Search equations" }), {
+    target: { value: "x" },
+  });
+  const items = screen.getAllByRole("button", { name: /x\s*LaTeX/ });
+  fireEvent.click(items[1]);
+  await waitFor(() => expect(session.draft!.entryID).toBe(firstID));
+  expect(session.draft!.color).toBe("#2563eb");
+  await waitFor(() => expect(previewPath()).toContain("2563eb"));
+  expect(rpc.mock.calls.some(([op]) => op === "copy_images")).toBe(false);
 });
 
 it("restores and renders an image automatically while preserving the previous draft and waiting to acknowledge its save", async () => {

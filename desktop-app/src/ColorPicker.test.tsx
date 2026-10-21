@@ -6,12 +6,19 @@ import {
   render,
   screen,
   within,
+  waitFor,
+  act,
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ColorPicker } from "./ColorPicker";
 import { loadColorHistory, rememberColor } from "./colorHistory";
+const { sampleColor } = vi.hoisted(() => ({ sampleColor: vi.fn() }));
+vi.mock("./api", () => ({ rpc: sampleColor }));
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  sampleColor.mockReset();
+});
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -35,6 +42,59 @@ function picker(initial = "#000000") {
   fireEvent.click(screen.getByRole("button", { name: "Equation color" }));
   return changed;
 }
+
+it("samples a screen color, remembers it, and leaves the choice unchanged on cancel", async () => {
+  const changed = picker();
+  sampleColor.mockResolvedValueOnce("#ab12ef");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Pick color from screen" }),
+  );
+  await waitFor(() => expect(changed).toHaveBeenLastCalledWith("#ab12ef"));
+  expect(sampleColor).toHaveBeenCalledWith("sample_color");
+  expect(loadColorHistory()).toEqual(["#ab12ef"]);
+  sampleColor.mockResolvedValueOnce(null);
+  await act(async () =>
+    fireEvent.click(
+      screen.getByRole("button", { name: "Pick color from screen" }),
+    ),
+  );
+  expect(changed).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+it("ignores a late sample after another color is chosen or the editor closes", async () => {
+  const changed = picker();
+  let finish!: (color: string) => void;
+  sampleColor.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Pick color from screen" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Red" }));
+  await act(async () => finish("#123456"));
+  expect(changed).toHaveBeenCalledTimes(1);
+  expect(changed).toHaveBeenLastCalledWith("#dc2626");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Pick color from screen" }),
+  );
+  cleanup();
+  await act(async () => finish("#abcdef"));
+  expect(changed).toHaveBeenCalledTimes(1);
+});
+
+it("reports picker failure without changing the current color", async () => {
+  const changed = picker();
+  sampleColor.mockRejectedValueOnce(new Error("Sampler unavailable"));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Pick color from screen" }),
+  );
+  await screen.findByRole("alert");
+  expect(changed).not.toHaveBeenCalled();
+});
 
 it("offers named color swatches and accepts a full HEX value without invoking a native picker", () => {
   const changed = picker();

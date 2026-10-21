@@ -11,7 +11,8 @@ import {
   ClipboardCopy,
   ClipboardPaste,
   Download,
-  History,
+  Library,
+  CopyPlus,
   LoaderCircle,
   Pin,
   Plus,
@@ -77,7 +78,7 @@ export default function InstantWindow() {
   const [error, setError] = useState(""),
     [notice, setNotice] = useState("");
   const [details, setDetails] = useState(false),
-    [historyOpen, setHistoryOpen] = useState(false);
+    [historyOpen, setHistoryOpen] = useState(true);
   const [query, setQuery] = useState("");
   const [importFocus, setImportFocus] = useState<string>();
   const [theme, setTheme] = useState<Theme>(defaults);
@@ -169,8 +170,10 @@ export default function InstantWindow() {
     });
     if (!next) return;
     const nextDraft = configuredInstant(next);
-    if (nextDraft.template.format === draftRef.current?.template.format)
+    if (nextDraft.template.format === draftRef.current?.template.format) {
       nextDraft.source = draftRef.current.source;
+      nextDraft.entryID = draftRef.current.entryID;
+    }
     setConfiguration(next);
     await replace(nextDraft);
   }
@@ -184,7 +187,11 @@ export default function InstantWindow() {
     }
     queue.current = queue.current
       .then(async () => {
-        await rpc("instant_session", { action: "save", draft: value });
+        const state = await rpc<InstantSession>("instant_session", {
+          action: "save",
+          draft: value,
+        });
+        setHistory(state.history);
         saveError.current = "";
         if (localStorage.getItem(pendingKey) === text)
           localStorage.removeItem(pendingKey);
@@ -203,11 +210,17 @@ export default function InstantWindow() {
     if (draftRef.current) change({ ...draftRef.current, ...value });
   };
   async function remember(value: InstantDraft) {
-    const state = await rpc<InstantSession>("instant_session", {
-      action: "remember",
-      draft: value,
+    // Keep all session writes in order; a delayed remember must not restore
+    // an older color/source over a more recent autosave of the same item.
+    const operation = queue.current.then(async () => {
+      const state = await rpc<InstantSession>("instant_session", {
+        action: "remember",
+        draft: value,
+      });
+      setHistory(state.history);
     });
-    setHistory(state.history);
+    queue.current = operation.catch(report);
+    await operation;
   }
   async function replace(value: InstantDraft) {
     const before = draftRef.current;
@@ -218,7 +231,11 @@ export default function InstantWindow() {
     setRendered(null);
     // Old SVG imports/history used an explicit-render gate. Opening them now
     // follows the same automatic preview flow as typing a new equation.
-    change(value.requiresRender ? { ...value, requiresRender: false } : value);
+    change({
+      ...value,
+      entryID: value.entryID || crypto.randomUUID(),
+      requiresRender: false,
+    });
     setCompileError("");
     return true;
   }
@@ -312,9 +329,14 @@ export default function InstantWindow() {
         if (pending) next = JSON.parse(pending);
         const enablePreview = next.requiresRender === true;
         if (enablePreview) next = { ...next, requiresRender: false };
-        if (pending || enablePreview) {
+        next = { ...next, entryID: next.entryID || crypto.randomUUID() };
+        if (pending || enablePreview || next.source.trim()) {
           // Validate recovery through the same backend before allowing further edits.
-          await rpc("instant_session", { action: "save", draft: next });
+          const saved = await rpc<InstantSession>("instant_session", {
+            action: "save",
+            draft: next,
+          });
+          if (!gone) setHistory(saved.history);
           localStorage.removeItem(pendingKey);
         }
         if (!gone) {
@@ -425,7 +447,6 @@ export default function InstantWindow() {
     setOutputBusy(true);
     try {
       await rpc("copy_images", { paths: [current.path] });
-      await remember(draft);
       setNotice("Copied");
     } catch (e) {
       report(e);
@@ -447,7 +468,6 @@ export default function InstantWindow() {
       });
       if (!destination) return;
       await rpc("instant_export", { path: result.path, destination });
-      await remember(snapshot);
       setNotice("Exported");
     } catch (e) {
       report(e);
@@ -558,12 +578,26 @@ export default function InstantWindow() {
           <Plus size={18} />
         </button>
         <button
-          aria-label="History"
-          title="History"
+          aria-label="Instant library"
+          title="Instant library"
+          aria-expanded={historyOpen}
           className={historyOpen ? "active" : ""}
           onClick={() => setHistoryOpen(!historyOpen)}
         >
-          <History size={18} />
+          <Library size={18} />
+        </button>
+        <button
+          aria-label="Duplicate equation"
+          title="Duplicate equation"
+          disabled={!draft?.source.trim()}
+          onClick={() =>
+            draft &&
+            void replace({ ...draft, entryID: crypto.randomUUID() }).catch(
+              report,
+            )
+          }
+        >
+          <CopyPlus size={18} />
         </button>
         <span className="spacer" />
         <button
@@ -612,6 +646,10 @@ export default function InstantWindow() {
                   if (template)
                     void replace({
                       ...draft,
+                      entryID:
+                        template.format === draft.template.format
+                          ? draft.entryID
+                          : crypto.randomUUID(),
                       template,
                       kind: /tikz|cetz/.test(template.id) ? "figure" : "block",
                       source:
@@ -673,10 +711,13 @@ export default function InstantWindow() {
           </div>
           <div className="instant-body">
             {historyOpen && (
-              <aside className="instant-history">
+              <aside className="instant-history" aria-label="Instant library">
+                <strong>
+                  Library <small>{history.length}</small>
+                </strong>
                 <input
-                  aria-label="Search history"
-                  placeholder="Search history"
+                  aria-label="Search equations"
+                  placeholder="Search equations"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                 />
@@ -687,11 +728,17 @@ export default function InstantWindow() {
                         .toLowerCase()
                         .includes(query.toLowerCase()),
                     )
-                    .slice(0, 100)
                     .map((item) => (
                       <button
                         key={item.id}
-                        onClick={() => void replace(item.draft).catch(report)}
+                        aria-pressed={draft.entryID === item.id}
+                        onClick={() => {
+                          if (draft.entryID !== item.id)
+                            void replace({
+                              ...item.draft,
+                              entryID: item.id,
+                            }).catch(report);
+                        }}
                         title={item.draft.source}
                       >
                         <code>{item.draft.source}</code>
@@ -701,7 +748,9 @@ export default function InstantWindow() {
                       </button>
                     ))}
                 </div>
-                {!history.length && <small>No history yet</small>}
+                {!history.length && (
+                  <small>Equations appear here as you type.</small>
+                )}
               </aside>
             )}
             <main className="instant-workspace">
@@ -832,7 +881,7 @@ export default function InstantWindow() {
                   busy={busy}
                   compileError={compileError}
                   onRender={refresh}
-                  onDragStarted={() => void remember(draft).catch(report)}
+                  onDragStarted={() => persist(draft)}
                   onError={report}
                 />
               </div>
@@ -872,6 +921,7 @@ export default function InstantWindow() {
               pt
             </label>
             <ColorPicker
+              key={draft.entryID}
               value={draft.color}
               onChange={(color) => patch({ color })}
             />

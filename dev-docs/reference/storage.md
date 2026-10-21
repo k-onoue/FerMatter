@@ -23,7 +23,7 @@
 | `MigratedSwiftDrafts/` | Original Swift draft backups and import markers |
 | `templates.json` | User templates |
 | `Setup.json` | Required first-launch folder selection, demo destinations, and resumable setup journal |
-| `Instant/session.json` | Project-free draft and deduplicated source/template history |
+| `Instant/session.json` | Project-free draft and reusable equations; stable `entryID` per library item |
 | `Instant/Cache/`, `Instant/Exports/` | Instant render artifacts and prepared drag/copy files |
 | `Projects/<project-id>/Instant/` | Per-project Instant draft/history and artifacts; independent of global Instant |
 | `Settings/instant.json` | Reusable global Instant templates and output defaults |
@@ -38,7 +38,7 @@
 
 ## First-launch project folder
 
-- The app requires a native folder-picker choice before Projects or Instant can open; this runs on first launch after DMG/PKG installation, including older prototype upgrades.
+- Projects requires a native folder-picker choice on first launch after DMG/PKG installation, including older prototype upgrades. Standalone Instant can open from setup, the menu bar, or shortcuts before this step; its private storage is created automatically without completing or modifying project setup.
 - Save the chosen folder in `preferences.json.projectDirectory`; stage the four publication-checked demo ZIPs under it and publish a unique `Demos` directory without overwriting existing files.
 - `Setup.json` journals publication before metadata/settings writes. Resume interrupted setup using the ownership token in `Demos/.mathlidelux-demos.json`; commit completion last. Corrupt setup records are kept and reported.
 - Existing projects matching a built-in demo name and source contents receive independent copied metadata, variants, drafts, and Instant sessions. Changed sources and projects with symlinks are not migrated.
@@ -57,6 +57,7 @@
 - Corrupt recovery data produces an error and is kept; it must not be replaced by an empty editor session.
 - Manual Library order metadata is retained; the current UI displays source order.
 - Instant stores schema-versioned drafts/history atomically. Invalid saved state is preserved and blocks replacement; a pending webview-local draft covers an interrupted save.
+- Instant autosaves nonempty drafts into `history`, now presented as Library. `entryID` updates one item while typing/styling; New, Duplicate, and imported artwork get independent IDs. Empty edits preserve the last nonempty entry. Load migrates older content-hash history in place without discarding entries or unknown fields; the current older draft joins the library. Schema version and paths remain unchanged. Entry IDs are stripped from exported/imported SVG recipes so opening artwork cannot overwrite an existing item.
 - Instant pending-recovery keys include the project ID; retain the original global key/path for compatibility. No source files move when opening either Instant mode.
 - Recent output colors use the WebView-local `mathlidelux.color-history.v1` key, shared across Instant and Library editors and capped at 16 opaque HEX values. This convenience history is independent of saved drafts and `Settings/instant.json`; invalid or unavailable history never blocks rendering.
 - The first global settings file is seeded from built-ins, existing shared templates, and a valid old Instant draft; keep the old session unchanged. Subsequent global defaults are independent of project templates.

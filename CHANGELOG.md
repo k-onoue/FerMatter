@@ -12,6 +12,8 @@
 
 ### Added
 
+- Instant library autosaves equations as you type, restores them across launches, and supports duplication for alternate styling. Standalone Instant is available before project-folder setup.
+- macOS screen eyedropper in the shared Instant and Library color picker.
 - Local CLI and MCP tools for project/equation search, template-based or project-aware rendering, batch image export, additive Library variants and editable SVG review in the app.
 - Diagnostic log in `~/Library/Logs/local.slidemath.prototype/`, recording compiler runs and app errors.
 - Library variants can override output color using the same picker as Instant, with unchanged project sources.

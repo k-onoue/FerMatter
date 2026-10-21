@@ -1,5 +1,6 @@
 mod automation;
 mod cache;
+mod color_sampler;
 mod compiler;
 mod export;
 mod files;
@@ -72,6 +73,9 @@ async fn request(
     operation: String,
     mut payload: Value,
 ) -> Result<Value> {
+    if operation == "sample_color" {
+        return color_sampler::sample(&app).await.map(|color| json!(color));
+    }
     if operation == "window_flush_complete" {
         lifecycle::complete(
             &app,
@@ -154,7 +158,7 @@ async fn request(
         if lifecycle::quitting(&app) {
             return Err("Finish saving before opening another editor.".into());
         }
-        if project_setup::required(&runtime.store)? {
+        if !string(&payload, "project").is_empty() && project_setup::required(&runtime.store)? {
             return Err("Choose a project folder in the main window first.".into());
         }
         let project = if string(&payload, "project").is_empty() {

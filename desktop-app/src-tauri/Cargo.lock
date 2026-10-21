@@ -2277,12 +2277,14 @@ name = "mathlidelux-desktop"
 version = "0.10.0"
 dependencies = [
  "base64 0.22.1",
+ "block2",
  "dirs 6.0.0",
  "image",
  "libc",
  "log",
  "lopdf",
  "objc",
+ "objc2-app-kit",
  "plist",
  "regex",
  "resvg",

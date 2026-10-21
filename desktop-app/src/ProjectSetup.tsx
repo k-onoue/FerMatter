@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { FolderOpen, LoaderCircle } from "lucide-react";
+import { FolderOpen, LoaderCircle, Zap } from "lucide-react";
 import { rpc } from "./api";
 import type { Preferences, Project } from "./types";
 import type { SettingsSnapshot } from "./settingsPersistence";
@@ -87,6 +87,13 @@ export function ProjectSetup({
               onClick={() => setStep("tools")}
             >
               Next
+            </button>
+            <button
+              onClick={() =>
+                void rpc("instant_open").catch((e) => setError(String(e)))
+              }
+            >
+              <Zap size={18} /> Open Instant
             </button>
           </>
         ) : (

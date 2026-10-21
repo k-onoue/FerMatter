@@ -29,13 +29,14 @@
 <li>Drag the preview into your slide, choose <strong>Copy</strong> (<code>⇧⌘C</code>), or export (<code>⇧⌘S</code>).</li>
 </ol>
 <ul>
-<li>Instant opens beside the main window; no project folder is created.</li>
+<li>Instant opens beside the main window. <strong>Open Instant</strong> on the setup screen lets you start without choosing a project folder; the app creates its private <code>Instant</code> storage automatically.</li>
 <li><strong>Display</strong> and <strong>Inline</strong> accept math without outer delimiters. Multiline input stays one equation.</li>
 <li>Use <strong>Code</strong> for complete environments, TikZ, CeTZ, or Typst markup.</li>
 <li>Existing <a href="requirements.html">compiler requirements</a> still apply.</li>
 <li>Images have a transparent background; JPEG uses white. The checkerboard is only the preview background.</li>
 <li>Output color is independent of the app theme. The opacity slider changes the window background, not text or exported artwork.</li>
 <li>Click the color swatch for <strong>Default</strong> colors, a draggable <strong>Color Picker</strong>, <strong>History</strong>, and <strong>HEX</strong> input. Arrow keys also work in the picker. Changes update the preview and exported artwork.</li>
+<li>On macOS, the eyedropper beside <strong>Color Picker</strong> samples a color anywhere on screen. Click to apply it, or press <code>Esc</code> to cancel. The same picker is available in Library's variant editor.</li>
 <li><strong>History</strong> keeps the last 16 chosen colors across Instant and Library editors and app restarts. Dragging adds the final color, not every intermediate shade.</li>
 </ul>
 <h2 id="editing-and-templates">Editing and templates</h2>
@@ -51,30 +52,32 @@
 <li>Choose a LaTeX, Typst, TikZ, or CeTZ template. <strong>Instant settings</strong> edits the template and compiler; keep one <code>{{content}}</code> placeholder.</li>
 <li>Template definitions are available to syntax completion and compilation.</li>
 <li><strong>Save defaults</strong> writes the current template, input mode, size, color, and output format to <code>Settings/instant.json</code>.</li>
-<li><strong>New equation</strong> starts from these saved defaults; the current draft is kept in history.</li>
+<li><strong>New equation</strong> starts from these saved defaults; the current equation stays in the Instant library.</li>
 <li>The folder button reveals <code>instant.json</code> in Finder. Edit it with a text editor and choose <strong>Reload defaults</strong> to validate and apply it. JSON stores template source as a string; the in-app template editor avoids manual escaping.</li>
-<li>Reload keeps the current equation when the language matches. A language change preserves the old draft in history before starting empty.</li>
+<li>Reload keeps the current equation when the language matches. A language change preserves the old draft in the library before starting empty.</li>
 <li>Invalid settings leave the current defaults active. Valid backups and external-edit conflict checks use the same mechanism as other <a href="preferences.html">settings files</a>.</li>
 <li>Initial defaults copy existing custom project templates and a valid earlier Instant draft once. Later edits are independent of shared project templates.</li>
 <li>For templates requiring companion files, open Instant from within the project.</li>
 </ul>
 <h2 id="within-a-project">Within a project</h2>
 <ul>
-<li>One separate window, draft, and history per project. Standalone and project windows can coexist; the title identifies the project.</li>
+<li>One separate window, draft, and library per project. Standalone and project windows can coexist; the title identifies the project.</li>
 <li>LaTeX uses the project's main preamble, included definition/package files, compiler, and <code>latexmkrc</code>.</li>
 <li>Typst uses the selected context file's top-level definitions/imports, including definitions after its last equation. Choose another <code>.typ</code> file for definitions in that module; imported modules keep their normal scope.</li>
 <li>Syntax completion reads the project's <code>.tex</code>, <code>.sty</code>, <code>.cls</code>, and <code>.typ</code> files.</li>
 <li>Source files remain unchanged. Instant reads saved project files; save Source edits first when using manual save.</li>
-<li>Returning to the window or choosing refresh reloads the project context. If the project entry file's language changed, choose <strong>New equation</strong> for a fresh compatible draft; the previous draft stays in history.</li>
+<li>Returning to the window or choosing refresh reloads the project context. If the project entry file's language changed, choose <strong>New equation</strong> for a fresh compatible draft; the previous draft stays in the library.</li>
 <li>Add packages or shared definitions in the project's Source editor. The local settings panel shows the entry file/compiler and reveals the project folder.</li>
 </ul>
 <h2 id="come-back-later">Come back later</h2>
 <ul>
-<li>Drafts save automatically, including unfinished input and template edits.</li>
+<li>Drafts save automatically, including unfinished input and template edits. No copy, export, or folder selection is required.</li>
 <li>Closing and reopening Instant restores the draft.</li>
-<li><strong>History</strong> stores copied, exported, or dragged entries and drafts replaced with <strong>New equation</strong> (<code>⌘N</code>), another history entry, or a different template.</li>
-<li>Search history and click an entry to restore its source, template, color, size, and format.</li>
-<li>Changing between LaTeX and Typst starts an empty input and keeps the previous nonempty draft in history; it does not translate source.</li>
+<li><strong>Library</strong> is visible when Instant opens. Search and select an equation to restore its source, template, color, size, and format. The library toolbar button hides or shows the list.</li>
+<li>Editing text, color, or size updates the selected item. <strong>New equation</strong> (<code>⌘N</code>) creates another item; <strong>Duplicate equation</strong> keeps the original while you make another version.</li>
+<li>Empty new equations do not fill the list. Clearing the current editor keeps its last nonempty entry in the library.</li>
+<li>Existing history entries are retained when upgrading. Standalone and project Instant libraries remain separate.</li>
+<li>Changing between LaTeX and Typst starts an empty input and keeps the previous nonempty draft in the library; it does not translate source.</li>
 <li>Ordinary <code>⌘C</code> copies selected editor text; <code>⇧⌘C</code> copies the rendered image.</li>
 <li>The New Instant, copy, export, new equation, and pin shortcuts follow <a href="preferences.html">custom keybindings</a>.</li>
 </ul>
@@ -92,16 +95,16 @@
 </tr>
 <tr>
 <td><code>Instant/session.json</code></td>
-<td>Global working draft and history</td>
+<td>Standalone working draft and reusable library</td>
 </tr>
 <tr>
 <td><code>Projects/&lt;id&gt;/Instant/session.json</code></td>
-<td>That project's working draft and history</td>
+<td>That project's working draft and reusable library</td>
 </tr>
 </tbody>
 </table>
 <ul>
-<li>Session files are app-managed. Keep them for backup/recovery; use the UI to edit drafts and history.</li>
+<li>Session files are app-managed. Keep them for backup/recovery; use the UI to edit drafts and library items.</li>
 <li>Each scope has its own <code>Instant/Cache/</code> and <code>Instant/Exports/</code>; these contain generated artwork.</li>
 </ul>
 <h2 id="edit-an-exported-svg">Edit an exported SVG</h2>
@@ -111,11 +114,11 @@
 <li>In Finder, use <strong>Open With → Mathlidelux</strong>, or drop the SVG onto the Dock icon.</li>
 <li>Drag artwork from PowerPoint or drop an SVG file into Mathlidelux to reopen its source.</li>
 <li>A matching project tab or Instant is reused. If neither is open, dropping into the main window opens a project tab; other entry points open Instant. Missing or ambiguous projects open the standalone Instant.</li>
-<li>A project tab opens the imported source in <strong>Edit Variant</strong>. Its original source files stay unchanged; an existing Library draft is preserved as a variant. Instant keeps the previous draft in History.</li>
+<li>A project tab opens the imported source in <strong>Edit Variant</strong>. Its original source files stay unchanged; an existing Library draft is preserved as a variant. Instant keeps the previous draft in its library.</li>
 <li>Restored source renders automatically when its editor opens. Compiler errors remain editable; original project source files stay unchanged.</li>
 <li>SVG source includes the equation and template/preamble. Review it before sharing; the complete manuscript and app storage paths are not embedded.</li>
 <li>Project-specific Typst definitions, imported files, packages and fonts may still require the original project. Standalone fallback cannot recreate missing dependencies.</li>
-<li>Other applications may strip SVG metadata when pasting or copying it. Keep the original SVG or use Instant History if the copied artwork has no editable source. SVGs exported by older versions have no restoration metadata.</li>
+<li>Other applications may strip SVG metadata when pasting or copying it. Keep the original SVG or use the Instant library if the copied artwork has no editable source. SVGs exported by older versions have no restoration metadata.</li>
 </ul>
 <h2 id="open-instant-while-another-app-is-active">Open Instant while another app is active</h2>
 <ul>

@@ -118,6 +118,7 @@
 }
 .instant-history {
   width: 190px;
+  flex-shrink: 0;
   padding: 4px 8px 12px 14px;
   display: flex;
   flex-direction: column;
@@ -130,6 +131,15 @@
 }
 .instant-history > div {
   overflow: auto;
+}
+.instant-history > strong {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+.instant-history button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-radius: 7px;
 }
 .instant-history button {
   flex-direction: column;

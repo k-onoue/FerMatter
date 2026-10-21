@@ -39,10 +39,12 @@ lopdf = "0.42"
 typstyle-core = "=0.15.1"
 typst-syntax = "=0.15.1"
 rmcp = { version = "3.5.0", default-features = false, features = ["server", "transport-io"] }
-tokio = { version = "1.53.1", features = ["rt-multi-thread", "io-std", "macros"] }
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "io-std", "macros", "sync"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
+block2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSColor", "NSColorSpace", "NSColorSampler", "block2"] }
 plist = "1"
 url = "2"
 
