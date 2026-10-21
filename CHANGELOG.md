@@ -12,6 +12,7 @@
 - Change the running macOS Dock icon among four Fermat faces according to local openings in the previous seven days (14+, 7–13, 3–6, or fewer than 3).
 - Choose a fixed Dock face or return to Automatic in Settings → Appearance; selections apply immediately and persist across launches.
 - Simplify the product website with monochrome colors, left-aligned content, compact navigation and concise feature descriptions.
+- Detect the website's initial appearance from the OS; switch light/dark with one click on the sun/moon icon and remember the choice.
 
 - Bound published image/PDF caches with active-view, drag and clipboard leases; reclaim retired snapshots without deleting saved work.
 

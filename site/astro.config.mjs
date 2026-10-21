@@ -18,6 +18,8 @@ export default defineConfig({
     customCss: ['./src/styles/site.css'],
     components: {
       Header: './src/components/Header.astro',
+      ThemeProvider: './src/components/ThemeProvider.astro',
+      ThemeSelect: './src/components/ThemeToggle.astro',
       PageTitle: './src/components/PageTitle.astro',
       Footer: './src/components/Footer.astro',
       EditLink: './src/components/EditLink.astro',
