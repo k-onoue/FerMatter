@@ -168,21 +168,6 @@ small,
   height: 36px;
   flex-shrink: 0;
 }
-.instant-app .titlebar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* Reserve equal space around the macOS window controls to keep the title centered. */
-  padding-inline: 80px;
-  font-size: 12px;
-  font-weight: 500;
-}
-.instant-app .titlebar span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .workspace-tabs {
   display: flex;
   flex-shrink: 0;
