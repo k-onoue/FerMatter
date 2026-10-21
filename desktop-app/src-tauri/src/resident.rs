@@ -33,7 +33,7 @@ pub fn report(app: &tauri::AppHandle, error: String) {
     use tauri_plugin_dialog::DialogExt;
     app.dialog()
         .message(error)
-        .title("Mathlidelux")
+        .title("FerMatter")
         .kind(tauri_plugin_dialog::MessageDialogKind::Error)
         .show(|_| {});
 }
@@ -363,7 +363,7 @@ pub fn install(app: &tauri::AppHandle) -> tauri::Result<()> {
     )?;
     let open = MenuItem::with_id(app, "resident-open", "Open SVG…", true, None::<&str>)?;
     let projects = MenuItem::with_id(app, "resident-projects", "Projects", true, None::<&str>)?;
-    let quit = PredefinedMenuItem::quit(app, Some("Quit Mathlidelux"))?;
+    let quit = PredefinedMenuItem::quit(app, Some("Quit FerMatter"))?;
     let separator = PredefinedMenuItem::separator(app)?;
     let menu = Menu::with_items(
         app,
@@ -371,7 +371,7 @@ pub fn install(app: &tauri::AppHandle) -> tauri::Result<()> {
     )?;
     TrayIconBuilder::with_id("instant")
         .icon(app.default_window_icon().unwrap().clone())
-        .tooltip("Mathlidelux")
+        .tooltip("FerMatter")
         .menu(&menu)
         .on_menu_event(|app, event| {
             let result = match event.id.as_ref() {

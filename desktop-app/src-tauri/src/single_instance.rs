@@ -171,7 +171,7 @@ mod unix {
         let mut ack = [0];
         stream.read_exact(&mut ack).map_err(err)?;
         if ack[0] != 1 {
-            return Err("The running Mathlidelux could not accept this launch.".into());
+            return Err("The running FerMatter could not accept this launch.".into());
         }
         Ok(())
     }
@@ -186,7 +186,7 @@ mod unix {
                         Ok((mut stream, _)) => {
                             let result = read_launch(&mut stream).and_then(|launch| {
                                 if crate::lifecycle::quitting(&app) {
-                                    return Err("Mathlidelux is saving and quitting.".into());
+                                    return Err("FerMatter is saving and quitting.".into());
                                 }
                                 if !launch.paths.is_empty() {
                                     crate::resident::open_files(&app, launch.paths);
@@ -245,7 +245,7 @@ mod unix {
                 Ok(())
             })
             .build(context)
-            .expect("Unable to forward Mathlidelux launch");
+            .expect("Unable to forward FerMatter launch");
         app.run(move |app, event| match event {
             tauri::RunEvent::Ready => {
                 let app = app.clone();
@@ -274,7 +274,7 @@ mod unix {
                                 activate: !std::env::args().any(|a| a == "--automation-background"),
                             },
                         ) {
-                            eprintln!("Could not activate Mathlidelux: {error}");
+                            eprintln!("Could not activate FerMatter: {error}");
                         }
                     }
                     app.exit(0);

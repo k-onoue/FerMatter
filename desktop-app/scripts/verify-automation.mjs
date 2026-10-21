@@ -15,7 +15,7 @@ import { setTimeout as delay } from "node:timers/promises";
 
 const executable = resolve(
   process.argv[2] ||
-    "desktop-app/src-tauri/target/release/bundle/macos/Mathlidelux.app/Contents/MacOS/Mathlidelux",
+    "desktop-app/src-tauri/target/release/bundle/macos/FerMatter.app/Contents/MacOS/FerMatter",
 );
 const parent = resolve("desktop-app/build");
 await mkdir(parent, { recursive: true });

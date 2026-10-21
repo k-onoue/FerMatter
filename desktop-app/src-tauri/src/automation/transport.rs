@@ -281,12 +281,12 @@ mod local {
                 if existing {
                     return Err(ApiError::new(
                         "restart_required",
-                        "Restart Mathlidelux using the updated app to enable its local API.",
+                        "Restart FerMatter using the updated app to enable its local API.",
                     ));
                 }
                 return Err(ApiError::new(
                     "connection_error",
-                    "Mathlidelux did not start its local API. Open the app and try again.",
+                    "FerMatter did not start its local API. Open the app and try again.",
                 ));
             }
             std::thread::sleep(Duration::from_millis(60));

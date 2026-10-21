@@ -1,6 +1,6 @@
 {
   "identifier": "main",
-  "description": "Local Mathlidelux window",
+  "description": "Local FerMatter window",
   "windows": ["main", "instant", "instant-*"],
   "permissions": [
     "core:default",

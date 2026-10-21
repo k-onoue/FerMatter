@@ -1398,9 +1398,7 @@ export default function App() {
           style={{ backgroundImage: `url(${desktopBackground})` }}
         />
       )}
-      <div className="titlebar" data-tauri-drag-region>
-        <span data-tauri-drag-region>Mathlidelux</span>
-      </div>
+      <div className="titlebar" data-tauri-drag-region />
       {ready && !setupRequired && (
         <WorkspaceTabs
           workspaces={workspaces}

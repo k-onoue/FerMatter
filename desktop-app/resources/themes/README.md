@@ -4,7 +4,7 @@
 - The original Default theme remains native and requires no JSON resource.
 - Source repositories, pinned revisions, source files, and license paths live in each document's `extensions.org.mathlidelux.theme-source` metadata.
 - Original MIT notices are preserved verbatim in `Licenses/`; shipped in the app's `Contents/Resources/Mathlidelux_SlideMath.bundle/Themes/`.
-- These are palette adaptations for Mathlidelux's eight tokens, not complete VS Code extensions. No extension code is included or executed.
+- These are palette adaptations for FerMatter's eight tokens, not complete VS Code extensions. No extension code is included or executed.
 
 | Pair | Palette source | Mapping |
 | --- | --- | --- |

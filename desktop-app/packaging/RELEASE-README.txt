@@ -1,4 +1,4 @@
-Install Mathlidelux by dragging Mathlidelux.app into Applications, or open the PKG installer.
+Install FerMatter by dragging FerMatter.app into Applications, or open the PKG installer.
 
 On first launch, choose a folder for projects and the included demos. Configure
 LaTeX/Typst and conversion tools in the setup screen or Settings. The app does
@@ -12,4 +12,8 @@ The containers have been signed and notarized. Keep Gatekeeper enabled. A
 notarization check is separate from functional installation/upgrade validation;
 consult the release's validation results and supported macOS/architecture list.
 
-License notices are included in Mathlidelux.app/Contents/Resources.
+License notices are included in FerMatter.app/Contents/Resources.
+
+Upgrading from Mathlidelux: quit the old app before opening FerMatter.
+After installing FerMatter.app, remove only the old Mathlidelux.app bundle.
+Keep your project folders and Application Support data; FerMatter reuses them.

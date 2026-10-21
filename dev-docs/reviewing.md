@@ -26,7 +26,7 @@
 - Reproduce or trace a suspected problem before changing behavior.
 - Prioritize data loss, security boundaries, crashes, and broken core workflows.
 - Record verified fixes, dismissed findings with reasons, and explicitly deferred work.
-- Pre-release tracking: [issue #7](https://github.com/k-onoue/mathlidelux/issues/7).
+- Pre-release tracking: [issue #7](https://github.com/k-onoue/FerMatter/issues/7).
 
 ## References
 

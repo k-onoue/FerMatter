@@ -1,6 +1,6 @@
 # SVG restoration recipes
 
-- Design tracking: [issue #43](https://github.com/k-onoue/mathlidelux/issues/43).
+- Design tracking: [issue #43](https://github.com/k-onoue/FerMatter/issues/43).
 - Shared format and restore logic live in `roundtrip.rs`; native entry points in `resident.rs` and `native_import.rs`.
 - macOS first. Windows/Linux entry points and clipboard adapters remain future work.
 

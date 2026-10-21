@@ -9,15 +9,16 @@
 ## Connect an agent
 
 ```sh
-codex mcp add mathlidelux -- /Applications/Mathlidelux.app/Contents/MacOS/Mathlidelux mcp
-claude mcp add --transport stdio mathlidelux -- /Applications/Mathlidelux.app/Contents/MacOS/Mathlidelux mcp
+codex mcp add mathlidelux -- /Applications/FerMatter.app/Contents/MacOS/FerMatter mcp
+claude mcp add --transport stdio mathlidelux -- /Applications/FerMatter.app/Contents/MacOS/FerMatter mcp
 ```
 
 - Adjust the executable path if the app is installed elsewhere.
-- Build checkout: `desktop-app/src-tauri/target/release/bundle/macos/Mathlidelux.app/Contents/MacOS/Mathlidelux`.
+- Build checkout: `desktop-app/src-tauri/target/release/bundle/macos/FerMatter.app/Contents/MacOS/FerMatter`.
 - Allow up to 300 seconds per tool call in the client's MCP configuration; compiler progress is forwarded when a progress token is supplied.
 - Codex: set `tool_timeout_sec = 300` in `[mcp_servers.mathlidelux]` after adding it.
-- Connecting is an explicit user setup step; installing Mathlidelux does not modify agent configuration.
+- Existing MCP configurations: update the executable path from `Mathlidelux.app/Contents/MacOS/Mathlidelux` to `FerMatter.app/Contents/MacOS/FerMatter`; keep the server key and tool names.
+- Connecting is an explicit user setup step; installing FerMatter does not modify agent configuration.
 - Suggested request: “Find the least-squares equations in my project, export them at 30 pt as SVG, inspect the previews, and use the returned sizes to place them on slides.”
 
 ## Tools
@@ -31,9 +32,9 @@ claude mcp add --transport stdio mathlidelux -- /Applications/Mathlidelux.app/Co
 | `render_equation` | `source`, existing absolute `outputDirectory`; optional `projectId` or `templateId`, `language`, `kind`, `contextFile`, `fontSize`, `color`, `format` |
 | `export_equations` | `projectId`, 1–64 unique `equationIds`, `outputDirectory`; optional `fontSize`, `format` |
 | `create_variant` | `projectId`, base `equationId`, `name`, `source`, `expectedRevision`, `requestId`; optional `fontSize`, `color` |
-| `open_in_app` | Absolute `path` to a Mathlidelux SVG; queues the normal editable import flow |
+| `open_in_app` | Absolute `path` to a FerMatter SVG; queues the normal editable import flow |
 
-- Full JSON input schemas: `Mathlidelux cli tools` or MCP `tools/list`.
+- Full JSON input schemas: `FerMatter cli tools` or MCP `tools/list`.
 - Unknown fields, unknown formats and invalid values return structured errors.
 - Pagination: default 50, maximum 200. Query matches equation name, source, file, or outline title.
 - Standalone language defaults to LaTeX; project/template language is inferred. A supplied language must match.
@@ -45,7 +46,7 @@ claude mcp add --transport stdio mathlidelux -- /Applications/Mathlidelux.app/Co
 ## CLI examples
 
 ```sh
-APP=/Applications/Mathlidelux.app/Contents/MacOS/Mathlidelux
+APP=/Applications/FerMatter.app/Contents/MacOS/FerMatter
 "$APP" cli list_projects
 "$APP" cli list_templates
 "$APP" cli render_equation --input - <<'JSON'
@@ -84,7 +85,7 @@ JSON
 - GUI/project snapshots carry `automationGeneration`; API cards also store their birth generation and request hash. Old project metadata needs no migration; missing generation is zero.
 - `MATHLIDELUX_DATA_DIR` also isolates the resident identity for disposable verification.
 - `check.sh` runs service, schema, conflict/merge and real compiler tests with synthetic data.
-- After building: `node desktop-app/scripts/verify-automation.mjs /absolute/path/to/Mathlidelux` checks actual CLI/MCP/resident communication in isolated storage.
+- After building: `node desktop-app/scripts/verify-automation.mjs /absolute/path/to/FerMatter` checks actual CLI/MCP/resident communication in isolated storage.
 
 ## References
 

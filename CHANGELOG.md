@@ -45,6 +45,7 @@
 
 ### Changed
 
+- Rename the app and distribution bundles to FerMatter; preserve existing project locations, settings, drafts, editable SVG metadata and bundle identity.
 - Keep Typst query JSON separate from stderr warnings so Typst 0.15 renders equations and PDF navigation correctly, while retaining diagnostics on failure.
 - Use direct PDF output when a project's `latexmkrc` does not choose an output mode, while respecting explicit project compiler settings.
 - Apply the default output size to Library copy/drag/export and Source/PDF previews; replace fixed size presets with Default and decimal pt input while preserving saved overrides.
@@ -82,7 +83,7 @@
 
 - Obsolete web UI prototype; retain the native app and product site.
 
-[Unreleased]: https://github.com/k-onoue/mathlidelux/commits/main/
+[Unreleased]: https://github.com/k-onoue/FerMatter/commits/main/
 
 ### Security
 

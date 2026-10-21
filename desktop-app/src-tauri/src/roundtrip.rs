@@ -13,7 +13,7 @@ pub fn read_svg(path: &Path) -> Result<String> {
         .extension()
         .is_some_and(|e| e.eq_ignore_ascii_case("svg"))
     {
-        return Err("Choose an SVG exported by Mathlidelux.".into());
+        return Err("Choose an SVG exported by FerMatter.".into());
     }
     String::from_utf8(read_bounded(path, SVG_LIMIT)?).map_err(err)
 }
@@ -27,7 +27,7 @@ pub fn project_uuid(root: &Path, create: bool) -> Result<Option<String>> {
     };
     if let Some(metadata) = metadata {
         if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() > 4096 {
-            return Err("Invalid Mathlidelux project identity; the file was preserved.".into());
+            return Err("Invalid FerMatter project identity; the file was preserved.".into());
         }
         let value: Value = serde_json::from_slice(&read_bounded(&path, 4096)?).map_err(err)?;
         let uuid = string(&value, "uuid");
@@ -35,7 +35,7 @@ pub fn project_uuid(root: &Path, create: bool) -> Result<Option<String>> {
             || value["kind"] != "mathlidelux.project"
             || uuid::Uuid::parse_str(uuid).is_err()
         {
-            return Err("Invalid Mathlidelux project identity; the file was preserved.".into());
+            return Err("Invalid FerMatter project identity; the file was preserved.".into());
         }
         return Ok(Some(uuid.to_owned()));
     }
@@ -90,7 +90,7 @@ fn relative(path: &str) -> bool {
 
 fn validate(value: &Value) -> Result<()> {
     if value["schemaVersion"] != 1 || value["kind"] != "mathlidelux.svg" {
-        return Err("This SVG uses an unsupported Mathlidelux recipe version.".into());
+        return Err("This SVG uses an unsupported FerMatter recipe version.".into());
     }
     instant::validate(&value["draft"])?;
     let template = &value["draft"]["template"];
@@ -136,7 +136,7 @@ pub fn decode(svg: &str) -> Result<Value> {
                 .is_some_and(|p| p.has_tag_name(("http://www.w3.org/2000/svg", "metadata")))
     });
     let node = recipes.next().ok_or(
-        "This SVG has no editable Mathlidelux source. Use the original SVG or Instant history.",
+        "This SVG has no editable FerMatter source. Use the original SVG or Instant history.",
     )?;
     if recipes.next().is_some() {
         return Err("SVG contains more than one recipe.".into());
