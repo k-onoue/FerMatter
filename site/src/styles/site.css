@@ -37,7 +37,11 @@ html { scroll-padding-top: 7rem; }
 .fm-header nav a:hover, .fm-header nav a[aria-current] { text-decoration: underline; text-underline-offset: .3em; }
 .fm-header-tools { gap: 1rem; }
 .fm-github { color: var(--fm-ink); white-space: nowrap; }
-.fm-header starlight-theme-select select { max-width: 6rem; }
+.fm-theme-toggle { display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; padding: .6rem; border: 0; border-radius: .4rem; background: transparent; color: var(--fm-ink); cursor: pointer; }
+.fm-theme-toggle:hover { background: var(--fm-panel); }
+.fm-theme-toggle[hidden], .fm-theme-dark { display: none; }
+:root[data-theme='light'] .fm-theme-light { display: none; }
+:root[data-theme='light'] .fm-theme-dark { display: block; }
 .fm-header site-search button[data-open-modal] { width: auto; min-width: 0; border: 0; background: transparent; }
 a:focus-visible, button:focus-visible { outline: 2px solid var(--fm-ink); outline-offset: 4px; }
 html:has(.product-page) .content-panel:first-child { padding: 0; border: 0; }
@@ -106,8 +110,6 @@ html:has(.product-page) .sl-container { max-width: 74rem; }
   .fm-brand { font-size: 1rem; }
   .fm-brand-mark { width: 34px; height: 34px; }
   .fm-header-tools { margin-left: auto; gap: .4rem; }
-  .fm-header starlight-theme-select select { width: 1.8rem; color: transparent; }
-  .fm-header starlight-theme-select option { color: var(--fm-ink); background: var(--sl-color-bg); }
   .home-intro { padding: 3rem 0 2.5rem; }
   .page-intro { padding: 2.5rem 0 2rem; }
   .product-page .lead { font-size: 1rem; }
