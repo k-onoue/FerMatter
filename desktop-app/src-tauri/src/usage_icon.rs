@@ -116,9 +116,6 @@ fn update(app: &tauri::AppHandle, opening: bool) {
             ICON_REVISION.fetch_add(1, Ordering::SeqCst).wrapping_add(1),
         )
     };
-    if APPLIED_RANK.load(Ordering::SeqCst) == rank {
-        return;
-    }
     let bytes: &'static [u8] = match rank {
         1 => include_bytes!("../icons/usage-1.png"),
         2 => include_bytes!("../icons/icon.png"),
@@ -126,7 +123,11 @@ fn update(app: &tauri::AppHandle, opening: bool) {
         _ => include_bytes!("../icons/usage-4.png"),
     };
     let _ = app.run_on_main_thread(move || {
-        if ICON_REVISION.load(Ordering::SeqCst) != revision {
+        // Check both ownership and the displayed image on the main thread:
+        // an older native update may still be running when a new save arrives.
+        if ICON_REVISION.load(Ordering::SeqCst) != revision
+            || APPLIED_RANK.load(Ordering::SeqCst) == rank
+        {
             return;
         }
         match crate::native::set_application_icon(bytes) {
