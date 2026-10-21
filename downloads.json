@@ -1,6 +1,14 @@
 {
   "schemaVersion": 1,
-  "repository": "k-onoue/FerMatter",
-  "updatedAt": "2026-10-21T13:01:24.889Z",
-  "assets": []
+  "repository": "FerMatter/fermatter.github.io",
+  "updatedAt": "2026-10-21T13:05:55.716Z",
+  "assets": [
+    {
+      "id": 662529970,
+      "name": "FerMatter.dmg",
+      "version": "v0.11.0-preview.1",
+      "platform": "macOS",
+      "downloads": 0
+    }
+  ]
 }
