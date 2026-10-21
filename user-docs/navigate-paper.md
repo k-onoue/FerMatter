@@ -1,4 +1,9 @@
-# Find an equation in the paper
+---
+title: "Find an equation in the paper"
+description: "Navigate between the paper PDF, outline, and equation library."
+sidebar:
+  order: 7
+---
 
 1. Open your project and choose **PDF** (`⌥⌘P`).
 2. Use the outline to narrow the Library, then select an equation card to reveal and highlight its PDF location.

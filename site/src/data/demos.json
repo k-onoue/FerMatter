@@ -1,0 +1,38 @@
+[
+  {
+    "id": "library",
+    "title": "Your paper, ready for your slides.",
+    "description": "Browse equations as a visual library. Select one—or a whole group—and drag them into your presentation.",
+    "image": "library.png",
+    "alt": "FerMatter Library showing equations from the synthetic trajectory paper.",
+    "guide": "paper-to-slides",
+    "sample": "demo-paper"
+  },
+  {
+    "id": "instant",
+    "title": "A thought. An equation. A slide.",
+    "description": "Open Instant, type LaTeX or Typst, and take the result with you. Open it from a project to reuse its commands and packages.",
+    "image": "instant.png",
+    "alt": "Instant editor with editable mathematics and its rendered preview.",
+    "guide": "instant",
+    "sample": "demo-typst"
+  },
+  {
+    "id": "source",
+    "title": "Keep the context close.",
+    "description": "Move between the paper PDF and its source. A file tree, outline, completion, formatting, and split editors keep larger projects manageable.",
+    "image": "source.png",
+    "alt": "Source editor beside the compiled synthetic paper PDF.",
+    "guide": "source-editor",
+    "sample": "demo-paper"
+  },
+  {
+    "id": "figures",
+    "title": "More than equations.",
+    "description": "Bring TikZ and CeTZ diagrams along, too. Export vector artwork that stays sharp as you arrange and resize your slides.",
+    "image": "figures.png",
+    "alt": "Synthetic CeTZ triangle and workflow diagrams in the Library.",
+    "guide": "figures",
+    "sample": "demo-cetz"
+  }
+]

@@ -1,4 +1,9 @@
-# Make an equation instantly
+---
+title: "Make an equation instantly"
+description: "Write, preview, and drag an equation without creating a project."
+sidebar:
+  order: 6
+---
 
 1. Choose **Instant** beside Projects for standalone work, or the lightning button inside a project to use that project's definitions. `⇧⌘K` follows the current workspace.
 2. Type an equation. The preview updates automatically.

@@ -1,4 +1,9 @@
-# Choose size and format
+---
+title: "Choose size and format"
+description: "Copy, drag, or export SVG, PDF, PNG, and JPEG."
+sidebar:
+  order: 4
+---
 
 1. Select an equation or figure.
 2. Choose **SVG**, **PNG**, **JPEG**, or **PDF**.

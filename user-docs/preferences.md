@@ -1,4 +1,9 @@
-# Shortcuts and appearance
+---
+title: "Shortcuts and appearance"
+description: "Change editing shortcuts and keep the app beside your slides."
+sidebar:
+  order: 10
+---
 
 - Open **Settings** using the gear button or `⌘,`.
 - **Shortcuts**: record a shortcut, reset one assignment, or restore defaults; changes persist.

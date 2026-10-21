@@ -53,7 +53,8 @@ export function checkPublication(root = ROOT) {
     if (/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/.test(content)) errors.push(`Private key found: ${name}`);
     if (/(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,})/.test(content)) errors.push(`Credential-like content found: ${name}`);
   }
-  const site = realpathSync(path.join(root, 'docs'));
+  const site = realpathSync(path.join(root, 'site/dist'));
+  const base = JSON.parse(readFileSync(path.join(root, 'site/src/data/site.json'), 'utf8')).base;
   for (const html of htmlFiles(site)) {
     const parsed = links(readFileSync(html, 'utf8'));
     for (const reference of parsed.references) {
@@ -64,8 +65,9 @@ export function checkPublication(root = ROOT) {
         if (url.fragment && !parsed.ids.has(url.fragment)) errors.push(`Broken anchor in ${path.basename(html)}: ${reference}`);
         continue;
       }
-      if (url.pathname.startsWith('/')) { errors.push(`Use a relative URL for project Pages: ${reference}`); continue; }
-      const target = path.resolve(path.dirname(html), url.pathname);
+      if (url.pathname.startsWith('/') && !url.pathname.startsWith(base + '/')) { errors.push(`URL escapes the Pages base: ${reference}`); continue; }
+      let target = url.pathname.startsWith('/') ? path.resolve(site, '.' + url.pathname.slice(base.length)) : path.resolve(path.dirname(html), url.pathname);
+      if (existsSync(target) && lstatSync(target).isDirectory()) target = path.join(target, 'index.html');
       if (!existsSync(target) || !inside(site, realpathSync(target))) {
         errors.push(`Missing or out-of-site asset in ${path.basename(html)}: ${reference}`);
       } else if (path.extname(target) === '.html' && url.fragment && !links(readFileSync(target, 'utf8')).ids.has(url.fragment)) {
@@ -88,7 +90,9 @@ export function checkPublication(root = ROOT) {
   for (const [demo, sources] of Object.entries(DEMOS)) {
     try {
       const names = [];
-      const archive = unzipSync(readFileSync(path.join(site, 'downloads', `${demo}.zip`)), { filter: entry => { names.push(entry.name); return true; } });
+      const sourceZip = readFileSync(path.join(root, 'docs/downloads', `${demo}.zip`));
+      if (!sourceZip.equals(readFileSync(path.join(site, 'downloads', `${demo}.zip`)))) errors.push(`${demo} published ZIP differs from the reviewed source archive.`);
+      const archive = unzipSync(sourceZip, { filter: entry => { names.push(entry.name); return true; } });
       const expected = sources.map(name => `${demo}/${name}`);
       if (names.length !== expected.length || new Set(names).size !== expected.length || names.some(name => !expected.includes(name))) errors.push(`${demo} ZIP must contain only the allowlisted demo sources.`);
       for (const name of sources) {
@@ -97,6 +101,8 @@ export function checkPublication(root = ROOT) {
       }
     } catch (error) { errors.push(`${demo} ZIP: ${error.message}`); }
   }
+  const publishedDownloads = readdirSync(path.join(site, 'downloads')).sort();
+  if (JSON.stringify(publishedDownloads) !== JSON.stringify(Object.keys(DEMOS).map(name => `${name}.zip`).sort())) errors.push('Published downloads must contain only the allowlisted demo ZIPs.');
   return { files: files.length, errors };
 }
 

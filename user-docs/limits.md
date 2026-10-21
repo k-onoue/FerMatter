@@ -1,4 +1,9 @@
-# Limits and troubleshooting
+---
+title: "Limits and troubleshooting"
+description: "Check missing equations, compiler errors, and current limitations."
+sidebar:
+  order: 12
+---
 
 ## Missing equations
 

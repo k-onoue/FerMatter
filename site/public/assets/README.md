@@ -28,3 +28,14 @@
 - MP4 is about 212 KiB; poster about 84 KiB in this revision.
 - Page policy: controls, no autoplay/loop, `preload="none"`, text steps available without playback.
 - References: [video performance](https://web.dev/learn/performance/video-performance), [HTML video](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/video).
+
+## Current desktop screenshots
+
+- Captured 2026-10-20, FerMatter 0.10.0, Rust/Tauri interface, name-change branch plus titlebar cleanup (`d3ea55a`).
+- `demos/library.png`: rendered `examples/demo-paper` equations.
+- `demos/source.png`: `sections/model.tex` beside its compiled PDF.
+- `demos/instant.png`: the same trajectory equation in project Instant.
+- `demos/figures.png`: rendered `examples/demo-cetz` examples.
+- Captured through the native window API in an isolated demo app/data directory; no personal projects, accounts, absolute paths, or desktop contents are visible.
+- Original reviewed PNGs are retained; Astro emits responsive WebP derivatives for the site.
+- Demo title, alt text, guide, and sample links: `site/src/data/demos.json`.

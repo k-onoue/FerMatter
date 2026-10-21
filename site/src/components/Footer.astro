@@ -1,0 +1,9 @@
+---
+import Footer from '@astrojs/starlight/components/Footer.astro';
+import { href, guide, repository } from '../data/links';
+---
+{Astro.locals.starlightRoute.hasSidebar && <Footer />}
+<footer class="fm-footer not-content" data-pagefind-ignore>
+  <div><a class="fm-brand" href={href()}>FerMatter</a><p>Give your mathematics room to speak.</p></div>
+  <nav aria-label="Footer"><a href={href('features/')}>Features</a><a href={guide()}>Guide</a><a href={href('download/')}>Download</a><a href={repository}>GitHub ↗</a><a href={`${repository}/blob/main/CONTRIBUTING.md`}>Contribute ↗</a></nav>
+</footer>
