@@ -38,7 +38,11 @@ copyFileSync(path.join(icons, 'icon.png'), path.join(assets, 'icon.png'));
 const whiteMark = path.join(work, 'fermat-white.svg');
 writeFileSync(whiteMark, colored(white));
 render(whiteMark, path.join(resources, 'AppIcon.icon/Assets/AppIcon.png'), 1024);
-render(path.join(resources, 'fermat.svg'), path.join(icons, 'tray.png'), 44);
+// macOS displays this image at 18 pt. Remove the master mark's generous
+// margins so the face fills 42 of its 44 pixels, leaving an antialiasing inset.
+const traySource = path.join(work, 'tray-source.png');
+render(path.join(resources, 'fermat.svg'), traySource, 256);
+execFileSync('magick', [traySource, '-trim', '+repage', '-filter', 'Lanczos', '-resize', '42x42', '-gravity', 'center', '-background', 'none', '-extent', '44x44', '-depth', '8', '-define', 'png:color-type=6', path.join(icons, 'tray.png')]);
 for (const [rank, name] of [[1, 'fermat-active'], [3, 'fermat-smile'], [4, 'fermat-frown']]) {
   const source = path.join(work, `usage-${rank}.svg`);
   writeFileSync(source, appIcon(readFileSync(path.join(resources, `${name}.svg`), 'utf8')));
