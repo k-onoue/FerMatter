@@ -9,7 +9,7 @@
 
 ```sh
 ./desktop-app/scripts/build.sh
-open desktop-app/src-tauri/target/release/bundle/macos/Mathlidelux.app
+open desktop-app/src-tauri/target/release/bundle/macos/FerMatter.app
 ```
 
 - Output defaults to an ad hoc signed local app; no notarization. For remembered folder consent across rebuilds, configure [local signing](reference/signing.md).

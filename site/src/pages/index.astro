@@ -1,0 +1,30 @@
+---
+import Product from '../layouts/Product.astro';
+import { href, guide, repository } from '../data/links';
+import { Image } from 'astro:assets';
+import library from '../../public/assets/demos/library.png';
+---
+<Product title="Give your mathematics room to speak." description="Bring equations and diagrams from LaTeX and Typst into your slides. A visual library, an instant editor, and editable vector exports.">
+  <section class="home-intro">
+    <p class="eyebrow">FROM PAPER TO PRESENTATION</p>
+    <h1>Give your mathematics<br/><em>room to speak.</em></h1>
+    <p class="lead">The equations are already in your paper.<br class="wide-only"/> Bring them into your slides, and make them your own.</p>
+    <div class="actions"><a class="button primary" href={href('features/')}>Explore features <span aria-hidden="true">→</span></a><a class="button" href={guide()}>Get started</a></div>
+    <p class="availability"><a href={href('download/')}>macOS development preview</a> <span aria-hidden="true">·</span> LaTeX &amp; Typst <span aria-hidden="true">·</span> Vector exports</p>
+  </section>
+  <figure class="hero-shot">
+    <Image src={library} alt="FerMatter's visual equation library, using a synthetic trajectory paper." widths={[720,1440,2720]} sizes="(max-width: 1200px) 100vw, 1152px" quality={90} loading="eager" fetchpriority="high" />
+    <figcaption>A library for your mathematics. Your original paper stays yours.</figcaption>
+  </figure>
+  <section id="workflow" class="three-steps">
+    <div><span class="step-number">01</span><h2>Start with your paper.</h2><p>Open a LaTeX or Typst project. Equations and diagrams become a browsable library.</p><a href={guide('paper-to-slides')}>Open a project →</a></div>
+    <div><span class="step-number">02</span><h2>Make space for the idea.</h2><p>Adjust the source, size, and color for your talk. Library edits leave the manuscript unchanged.</p><a href={guide('edit-equation')}>Make a presentation variant →</a></div>
+    <div><span class="step-number">03</span><h2>Take it to your slides.</h2><p>Drag, copy, or export. SVG keeps the result sharp; embedded source lets you return to it later.</p><a href={guide('export')}>Choose an export →</a></div>
+  </section>
+  <section class="closing">
+    <p class="eyebrow">A SMALL TOOL, A SHORTER PATH</p>
+    <h2>One equation, or a whole paper.</h2>
+    <p>Use Instant for a quick idea. Open a project when you need its context.</p>
+    <div class="actions"><a class="button primary" href={guide('instant')}>Try Instant →</a><a class="button" href={repository}>View on GitHub ↗</a></div>
+  </section>
+</Product>

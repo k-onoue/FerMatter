@@ -1,4 +1,9 @@
-# Start from pasted equations
+---
+title: "Start from pasted equations"
+description: "Create a LaTeX or Typst project from text and a template."
+sidebar:
+  order: 5
+---
 
 1. Choose **New Project** (`⇧⌘N`) and enter a name.
 2. Choose **LaTeX**, **Typst**, **LaTeX + TikZ**, or **Typst + CeTZ**.

@@ -14,6 +14,7 @@
 
 - Instant library autosaves equations as you type, restores them across launches, and supports duplication for alternate styling. Standalone Instant is available before project-folder setup.
 - macOS screen eyedropper in the shared Instant and Library color picker.
+- Product website with visual feature demos, searchable user guides, download requirements and scheduled GitHub release counters.
 - Local CLI and MCP tools for project/equation search, template-based or project-aware rendering, batch image export, additive Library variants and editable SVG review in the app.
 - Diagnostic log in `~/Library/Logs/local.slidemath.prototype/`, recording compiler runs and app errors.
 - Library variants can override output color using the same picker as Instant, with unchanged project sources.
@@ -47,6 +48,7 @@
 
 ### Changed
 
+- Rename the app and distribution bundles to FerMatter; preserve existing project locations, settings, drafts, editable SVG metadata and bundle identity.
 - Keep Typst query JSON separate from stderr warnings so Typst 0.15 renders equations and PDF navigation correctly, while retaining diagnostics on failure.
 - Use direct PDF output when a project's `latexmkrc` does not choose an output mode, while respecting explicit project compiler settings.
 - Apply the default output size to Library copy/drag/export and Source/PDF previews; replace fixed size presets with Default and decimal pt input while preserving saved overrides.
@@ -84,7 +86,7 @@
 
 - Obsolete web UI prototype; retain the native app and product site.
 
-[Unreleased]: https://github.com/k-onoue/mathlidelux/commits/main/
+[Unreleased]: https://github.com/k-onoue/FerMatter/commits/main/
 
 ### Security
 

@@ -1,4 +1,9 @@
-# From your paper to a slide
+---
+title: "From your paper to a slide"
+description: "Open a project, choose an equation, and paste it into PowerPoint."
+sidebar:
+  order: 2
+---
 
 1. Choose **Open Project** (`⌘O`); select your LaTeX/Typst folder. Use **Open file or ZIP** for an archive or main file.
 2. Select an equation; use the outline, search, or **Block** filter to find it.

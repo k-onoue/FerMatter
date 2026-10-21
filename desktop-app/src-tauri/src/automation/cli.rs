@@ -18,7 +18,7 @@ pub fn entry() -> bool {
         .to_owned();
     let result = if args[0] == "mcp" {
         if args.len() != 1 {
-            Err(ApiError::new("invalid_arguments", "Usage: Mathlidelux mcp"))
+            Err(ApiError::new("invalid_arguments", "Usage: FerMatter mcp"))
         } else {
             super::mcp::run(identity).map(|_| Value::Null)
         }
@@ -45,13 +45,13 @@ pub fn entry() -> bool {
 fn execute(identity: &str, args: &[String]) -> ApiResult {
     if args.is_empty() || matches!(args[0].as_str(), "--help" | "help" | "tools") {
         return Ok(
-            json!({"apiVersion":1,"usage":"Mathlidelux cli TOOL [--input FILE|-]","tools":super::tools()}),
+            json!({"apiVersion":1,"usage":"FerMatter cli TOOL [--input FILE|-]","tools":super::tools()}),
         );
     }
     if !super::tools().iter().any(|t| t.name == args[0]) {
         return Err(ApiError::new(
             "unknown_operation",
-            "Use `Mathlidelux cli tools` to list operations and JSON schemas.",
+            "Use `FerMatter cli tools` to list operations and JSON schemas.",
         ));
     }
     let arguments = match args.len() {
@@ -79,7 +79,7 @@ fn execute(identity: &str, args: &[String]) -> ApiResult {
         _ => {
             return Err(ApiError::new(
                 "invalid_arguments",
-                "Usage: Mathlidelux cli TOOL [--input FILE|-]",
+                "Usage: FerMatter cli TOOL [--input FILE|-]",
             ))
         }
     };

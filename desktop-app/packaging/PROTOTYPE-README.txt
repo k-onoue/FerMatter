@@ -1,4 +1,4 @@
-Mathlidelux — local development prototype
+FerMatter — local development prototype
 
 This is an ad hoc signed development app, not a public release. It has no
 Developer ID signature or Apple notarization. The installer package and disk
@@ -25,14 +25,14 @@ and the system command paths.
 
 INSTALLATION — CHOOSE ONE
 
-Quit Mathlidelux and save your work before replacing an existing app.
+Quit FerMatter and save your work before replacing an existing app.
 
-DMG: Open the disk image, drag Mathlidelux.app onto the Applications shortcut,
-then eject the image and open Mathlidelux from Applications. Finder may request
+DMG: Open the disk image, drag FerMatter.app onto the Applications shortcut,
+then eject the image and open FerMatter from Applications. Finder may request
 permission to replace an existing app.
 
 PKG: Open the installer and follow its steps. It installs only
-/Applications/Mathlidelux.app, and may request administrator authorization.
+/Applications/FerMatter.app, and may request administrator authorization.
 It does not install runtimes, run installation scripts, or launch the app.
 It replaces an existing app of the same identity; newer versions are preserved.
 
@@ -57,13 +57,17 @@ build manually and replace the app. No background helper is installed.
 
 REMOVAL
 
-Quit the app and move /Applications/Mathlidelux.app to the Trash. Your projects,
+Quit the app and move /Applications/FerMatter.app to the Trash. Your projects,
 templates, settings, and package receipt are retained.
 
 LICENSE
 
-Mathlidelux is licensed under Apache-2.0. LICENSE and NOTICE are included next
+FerMatter is licensed under Apache-2.0. LICENSE and NOTICE are included next
 to the app on the disk image and inside the app's Contents/Resources folder.
 The PKG installer includes the same files and displays the license.
 
-Project source and build instructions: https://github.com/k-onoue/mathlidelux
+Project source and build instructions: https://github.com/k-onoue/FerMatter
+
+Upgrading from Mathlidelux: quit the old app before opening FerMatter.
+After installing FerMatter.app, remove only the old Mathlidelux.app bundle.
+Keep your project folders and Application Support data; FerMatter reuses them.

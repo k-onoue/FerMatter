@@ -741,7 +741,7 @@ pub fn run() {
             return;
         }
         Err(error) => {
-            eprintln!("Unable to establish the Mathlidelux resident: {error}");
+            eprintln!("Unable to establish the FerMatter resident: {error}");
             return;
         }
     };
@@ -898,7 +898,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![request])
         .build(context)
-        .expect("Unable to start Mathlidelux")
+        .expect("Unable to start FerMatter")
         .run(|app, event| match event {
             #[cfg(unix)]
             tauri::RunEvent::Ready => single_instance::primary_arguments(app),

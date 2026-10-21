@@ -1,7 +1,7 @@
-# Mathlidelux desktop
+# FerMatter desktop
 
 - Desktop application: Tauri 2, Rust, React/TypeScript, Monaco, PDF.js.
-- App name: **Mathlidelux**. Bundle ID: `local.slidemath.prototype` (preserved from the Swift app).
+- App name: **FerMatter**. Bundle ID: `local.slidemath.prototype` (preserved from the Swift app).
 - This is the maintained implementation. The retired Swift/Python source remains available in Git history.
 - Runtime: no Python, Node.js, Rust, Swift SDK, or Xcode installation required by app users.
 - Compilers remain external: Typst; or TeX/`latexmk`, `pdfcrop`, `pdf2svg`, `pdftocairo`, `pdfinfo`, and `synctex`. See [requirements](../user-docs/requirements.md).
@@ -17,7 +17,7 @@ cd desktop-app
 npm ci
 ./scripts/dev.sh
 ./scripts/build.sh
-open 'src-tauri/target/release/bundle/macos/Mathlidelux.app'
+open 'src-tauri/target/release/bundle/macos/FerMatter.app'
 ```
 
 - `./scripts/build.sh --debug`: faster local bundle under `target/debug/bundle/macos/`.

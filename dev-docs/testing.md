@@ -32,7 +32,7 @@
 ```sh
 source desktop-app/scripts/environment.sh
 cargo run --manifest-path desktop-app/src-tauri/Cargo.toml --example verify -- . desktop-app/build/typst-compat /absolute/path/to/typst
-node desktop-app/scripts/verify-automation.mjs /absolute/path/to/Mathlidelux /absolute/path/to/typst
+node desktop-app/scripts/verify-automation.mjs /absolute/path/to/FerMatter /absolute/path/to/typst
 ```
 
 - The optional verifier argument checks all Typst/CeTZ sample cards, measured font sizes, document PDF navigation and source preservation in fresh snapshots.
@@ -42,8 +42,8 @@ node desktop-app/scripts/verify-automation.mjs /absolute/path/to/Mathlidelux /ab
 
 ```sh
 npm --prefix scripts ci
+npm --prefix site ci
 npm --prefix scripts test
-node scripts/build-guides.mjs
 node scripts/build-guides.mjs --check
 node scripts/check-publication.mjs
 git diff --check
@@ -52,8 +52,8 @@ git diff --check
 - Environment setup and preview: [documentation](documentation.md#build-and-preview).
 - Check desktop/mobile widths, keyboard navigation, light/dark appearance, and JavaScript disabled.
 - Check video play/pause, caption track, poster, and the same steps as text.
-- Serve only `docs/`; also test under the `/mathlidelux/` project subpath.
-- CI checks guide freshness, local links, public fixtures, and whitespace.
+- Serve only `site/dist/`; also test under the `/FerMatter/` project subpath.
+- CI checks Astro diagnostics, static output links, safe public fixtures, download counters, and whitespace.
 
 ## Record results
 

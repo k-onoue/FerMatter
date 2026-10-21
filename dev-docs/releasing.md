@@ -6,7 +6,7 @@
 - No signed/notarized public download at this documentation baseline.
 - [Packaging](reference/packaging.md) keeps ad hoc prototypes separate from an explicit Developer ID/notarization path. Production credentials and clean-Mac final-artifact validation are still required; no public release is implied. In-app update transport is not yet implemented.
 - Repository is private as of 2026-09-28; Pages is public. Test release access without authentication before advertising downloads.
-- Keep `docs/site-config.js` → `releaseAvailable: false` until all public-release checks pass.
+- Keep `site/src/data/site.json` → `releaseAvailable: false` until all public-release checks pass.
 
 ## Versioning
 
@@ -35,7 +35,7 @@
 ## Prepare through a PR
 
 1. Choose version/scope; use a task branch, optionally `release/vX.Y.Z`.
-2. Finish [issue #7](https://github.com/k-onoue/mathlidelux/issues/7)'s verified release-blocking findings; document deferrals.
+2. Finish [issue #7](https://github.com/k-onoue/FerMatter/issues/7)'s verified release-blocking findings; document deferrals.
 3. Update versions, changelog, requirements, compatibility notes, and affected guides.
 4. Run the [automated release gate and final artifact checklist](reference/release-validation.md); verify real compilers and synthetic workflows.
 5. Review/merge the preparation PR; retest the exact resulting commit before tagging.
@@ -47,7 +47,7 @@
 - Include LICENSE, NOTICE, and notices for bundled third-party components.
 - Verify installation, launch, compilers, exports, and upgrading from an older build on a clean Mac.
 - Verify manual app replacement preserves data. Before offering in-app updates, implement and test the [update contract](reference/updates.md).
-- Prepare `Mathlidelux.dmg`; do not reuse the [unnotarized prototype artifacts](reference/packaging.md).
+- Prepare `FerMatter.dmg`; do not reuse the [unnotarized prototype artifacts](reference/packaging.md).
 - Verify anonymous access to the release asset; never embed a repository credential in the app/site.
 - Reference: [Apple Developer ID distribution](https://developer.apple.com/developer-id/).
 
@@ -57,7 +57,7 @@
 - Example placeholders below must be replaced with the chosen version and tested commit:
 
 ```sh
-git tag -a vX.Y.Z TESTED_COMMIT_SHA -m "Mathlidelux X.Y.Z"
+git tag -a vX.Y.Z TESTED_COMMIT_SHA -m "FerMatter X.Y.Z"
 git show vX.Y.Z
 git push origin vX.Y.Z
 ```
@@ -66,13 +66,13 @@ git push origin vX.Y.Z
 - Create a draft GitHub Release from the tag; attach tested artifacts and curated notes; inspect before publication.
 - Publish as stable only when the release is stable; keep previews marked prerelease.
 - After anonymous download/install checks pass, use a separate reviewed site change to enable downloads and set the version.
-- Website asset name: `Mathlidelux.dmg`; the proposed [update contract](reference/updates.md) defines a versioned fallback.
+- Website asset name: `FerMatter.dmg`; the proposed [update contract](reference/updates.md) defines a versioned fallback.
 - References: [Git tags](https://git-scm.com/book/ja/v2/Git-%E3%81%AE%E5%9F%BA%E6%9C%AC-%E3%82%BF%E3%82%B0), [GitHub Releases](https://docs.github.com/ja/repositories/releasing-projects-on-github/about-releases), [release asset links](https://docs.github.com/en/repositories/releasing-projects-on-github/linking-to-releases).
 
 ## Publish the website
 
-- Source: `main:/docs`, GitHub Pages → Deploy from a branch.
-- Commit generated guides alongside Markdown; CI checks they match.
-- Serve only `docs/`; developer notes and repository contents are not copied into the site.
-- Site/build procedure: [documentation](documentation.md).
+- Source: GitHub Actions; `.github/workflows/pages.yml` builds and deploys `site/dist/`.
+- Guide Markdown and Astro sources are reviewed; generated HTML is not committed.
+- Developer notes and repository contents are not copied into the site.
+- One-time migration setting, counters, and preview: [documentation](documentation.md).
 - Reference: [Pages publishing sources](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).

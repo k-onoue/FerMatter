@@ -2,72 +2,83 @@
 
 ## Where to edit
 
-| Content | Source | Audience/output |
+| Content | Source | Output |
 | --- | --- | --- |
-| Project summary | `README.md` | Repository visitors |
-| Agent entry point | `AGENTS.md` | Short rules and task links |
-| Development instructions | `dev-docs/` | Humans and agents in the repository |
-| User guides | `user-docs/*.md`, `user-docs/pages.json` | Repository readers and generated `docs/guide/*.html` |
-| Product homepage/design | `docs/index.html`, `docs/styles.css`, `docs/site.js` | Public GitHub Pages site |
-| Tutorial video/poster/captions | `docs/assets/tutorials/` | Public website |
-| User-facing changes | `CHANGELOG.md` | Release history |
-| Past verification | `dev-docs/history/` | Dated evidence |
+| Repository summary | `README.md` | GitHub |
+| Development instructions | `dev-docs/`, `AGENTS.md` | Repository only |
+| User guides | `user-docs/*.md` | GitHub and Starlight `/guide/` |
+| Public guide allowlist | `user-docs/pages.json` | Content collection |
+| Homepage, features, downloads | `site/src/pages/` | Astro static pages |
+| Navigation, shared UI | `site/src/components/`, `site/src/styles/site.css` | Site and guide |
+| Demo descriptions and links | `site/src/data/demos.json` | Features page |
+| Reviewed screenshots/video | `site/public/assets/` | Public media |
+| Release availability and URLs | `site/src/data/site.json` | Download page |
+| Example ZIPs | `docs/downloads/` from `examples/` | App setup and website |
+| Download counters | `download-stats` Git branch | Generated `site/public/stats/downloads.json` |
 
-- One canonical explanation per topic; old entry points link to it.
-- Short bullets, tables, and commands; one action or fact per bullet.
-- Put references beside the relevant rule; link to original sources for detail.
-- Update behavior and its documentation in the same PR.
-- Do not present an open PR's feature as shipped; record proposals in the dated [PR snapshot](history/pr-snapshot-2026-09-28.md).
+- Stack: [Astro](https://docs.astro.build/) + [Starlight](https://starlight.astro.build/); static HTML on GitHub Pages.
+- Search: [Pagefind](https://pagefind.app/), generated at build time; no search backend.
+- One canonical explanation per topic; short bullets, tables, commands, and primary-source links.
+- Publish only the allowlisted guides and reviewed assets; developer docs remain on GitHub.
+- No generated HTML in Git. `site/dist/`, `.astro/`, generated ZIP copies, and statistics are ignored.
+- Architecture decision: [0002 — Static product site and searchable guide](decisions/0002-starlight-site.md).
 
 ## Build and preview
 
-- Node.js 22+ for repository tools; no Python environment. App runtime requirements are separate.
+- Node.js 22.22+; CI uses Node.js 24. App runtime requirements are separate.
 
 ```sh
 npm --prefix scripts ci
+npm --prefix site ci
 npm --prefix scripts test
-node scripts/build-guides.mjs
 node scripts/build-guides.mjs --check
 node scripts/check-publication.mjs
 node scripts/preview-site.mjs
 ```
 
-- Open [localhost:4174](http://localhost:4174); serve `docs/` only.
-- Add a Markdown page plus a `pages.json` entry; first heading must match the entry title.
-- Link to other `.md` guides normally; generation rewrites links to their HTML pages.
-- Local assets must resolve inside `docs/`; references to developer/private files fail the build.
-- Generated HTML is committed; do not edit it by hand. `--check` writes nothing and fails for stale output.
-- When changing shared CSS/JS for publication, bump its `?v=` token in the homepage and guide template together to refresh cached assets.
-- Remove obsolete generated pages explicitly when removing a manifest entry.
-- GitHub Pages remains `main:/docs`; no deployment-mode change or runtime framework required.
-- CI checks generated freshness and local links; site preview itself needs no installed dependencies.
-- Reference: [markdown-it](https://github.com/markdown-it/markdown-it), [Pages publishing sources](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
+- Open [localhost:4174/FerMatter/](http://localhost:4174/FerMatter/).
+- `build-guides.mjs --check` runs Astro diagnostics and builds the complete site; retained as the repository's check entry point.
+- Fast editing: `npm --prefix site run dev`. Production search is verified after `npm --prefix site run build`.
+- Preview serves only `site/dist/`, under the same `/FerMatter/` prefix as Pages.
+- Each guide has `title`, `description`, and `sidebar.order` frontmatter; add its filename to `pages.json` and navigation to `astro.config.mjs`.
+- Keep `.md` links readable on GitHub; the Markdown plugin validates and rewrites public guide/asset links.
+- Local links outside the guide allowlist, public assets, and sample ZIPs fail the build, including symlink escapes.
+- Old `/guide/topic.html` URLs redirect to `/guide/topic/`; `/guide/index.html` still works.
+- UI checks: desktop/mobile, light/dark, keyboard navigation, search, old links, video controls/captions, sample downloads, no JavaScript for core reading/navigation.
 
-## Product tone
+## Publish
 
-- Lead with the task: bring an equation from a paper into a slide.
-- Use the app's actual control labels; explain one operation at a time.
-- Support the speaker's choices about content and arrangement.
-- Keep requirements/release status visible; put advanced detail on its own guide page.
-- Prefer whitespace, readable text, and actual app screens; avoid decorative feature grids.
-- Motivation: [Make the talk your own](../user-docs/why.md).
+1. Review the PR; check the built site and publication scan.
+2. For the migration, select **Settings → Pages → Build and deployment → Source → GitHub Actions** before merging. The previous source was `main:/docs`.
+3. Merge into `main`; the **Publish website** workflow builds and deploys `site/dist/`.
+4. Verify [the public site](https://k-onoue.github.io/FerMatter/) without authentication.
 
-## Tutorial media
+- `Documentation` validates PRs without publishing; `Publish website` runs on main, published releases, daily schedule, and manual dispatch.
+- GitHub Pages environment approvals/rules still apply.
+- Keep `repositoryPublic: false` while source access is restricted; switch it only after verifying anonymous repository access.
+- Download availability is manual: keep `releaseAvailable: false` until anonymous release download and notarization/install checks pass. See [releasing](releasing.md).
+- Review the Pages artifact itself: repository files and secrets must not enter it.
 
-- Use synthetic `examples/` content; exclude project-history lists, personal paths, accounts, and desktop notifications.
-- Primary clip: 18-second step-through of real screens, not a continuous recording or an interactive mockup.
-- It shows Library → selected Trajectory/Copy SVG → a real pasted/resized PowerPoint graphic.
-- Existing media shows the retired Swift prototype 0.10.0, commit `7b0205a`, macOS 26. Label it as earlier workflow footage; it is not evidence of current UI or clipboard validation.
-- Capture recipe: [asset notes](../docs/assets/README.md).
-- Use H.264 MP4, a JPEG poster, and WebVTT captions; retain matching text steps.
-- Native playback controls; no autoplay or automatic loops; `preload="none"`; no motion until requested.
-- Re-capture affected screens when controls or behavior change; verify the final paste in the receiving app.
-- For new clips: one task, roughly 10–25 seconds; update the recipe/version and verify every frame for public content.
-- References: [Video performance](https://web.dev/learn/performance/video-performance), [HTML video](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/video).
+## Download counts
 
-## Samples
+- `node scripts/download-stats.mjs` reads GitHub release asset counters; no browser API calls, analytics SDK, tracking cookies, or unique-user claims.
+- CI uses its GitHub token for the API rate limit, but first checks repository visibility and rejects private repositories before reading release metadata. A private repository currently yields no new snapshot.
+- Only stable release installer names starting with FerMatter or legacy Mathlidelux count: DMG, PKG, EXE, MSI, AppImage, DEB, RPM.
+- Samples, source archives, checksums, signatures, drafts, and prereleases are excluded.
+- Asset ID identifies a counter. Deleted assets retain their last observed count; replacement uploads get a new counter. Counts never decrease.
+- Successfully observed snapshots are committed only to `download-stats`, using a normal fast-forward push. Main is never auto-committed.
+- API failure preserves the prior snapshot and visible timestamp. No prior snapshot means “not available”, not zero.
+- Full release and asset pagination must finish before writing. Deleted assets unseen by any snapshot cannot be recovered.
+- Daily schedule records totals, not real-time installs. Git history retains the dated snapshots.
+- References: [GitHub release assets API](https://docs.github.com/en/rest/releases/assets), [GitHub Pages workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
-- Edit only synthetic files in `examples/`.
-- Run `node scripts/prepare-demo.mjs`; review the four ZIPs and page copy.
-- Each ZIP has an explicit source allowlist; no private sources, generated compiler files, or symlinks.
-- Run publication checks and inspect the staged diff before pushing.
+## Demo media
+
+- Use synthetic `examples/` only; exclude private projects, user paths, desktop notifications, and account information.
+- Add reviewed screen captures under `site/public/assets/demos/`; add one entry to `demos.json`. One component renders captions and guide/sample links.
+- Current screenshots and earlier Swift video have separate provenance in [asset notes](../site/public/assets/README.md).
+- Existing 18-second clip is a step-through of real Swift prototype screens, explicitly labeled historical; it is not current UI evidence.
+- Videos: H.264 MP4, JPEG poster, WebVTT captions, native controls, `preload="none"`, no autoplay/loop. Keep equivalent text steps.
+- Re-capture affected screens after UI changes; verify every frame before committing.
+- Run `node scripts/prepare-demo.mjs` after sample edits. The four ZIPs have explicit allowlists; no symlinks or compiler output.
+- Site preparation copies those same ZIPs; the desktop app embeds the originals in `docs/downloads/`.

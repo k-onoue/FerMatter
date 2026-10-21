@@ -1,4 +1,9 @@
-# Edit the project source
+---
+title: "Edit the project source"
+description: "Edit files, manage panes, and save or recover drafts."
+sidebar:
+  order: 8
+---
 
 - **Source mode writes real project files.** For a slide-only change, use a [Library variant](edit-equation.md).
 

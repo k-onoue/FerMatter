@@ -1,7 +1,7 @@
 # 0001 — Shared Markdown and a small public guide
 
 - Date: 2026-09-28.
-- Status: adopted by this documentation change; no deployment settings changed.
+- Status: original decision; website generation/deployment superseded by [0002](0002-starlight-site.md).
 
 ## Decision
 

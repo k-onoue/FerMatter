@@ -59,7 +59,7 @@ impl Service<'_> {
         let saved = projects.iter().find(|p| p["id"] == id).ok_or_else(|| {
             ApiError::new(
                 "project_not_found",
-                "Open this project in Mathlidelux first.",
+                "Open this project in FerMatter first.",
             )
         })?;
         let directory = self.store.project_dir(id)?;

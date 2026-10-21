@@ -385,7 +385,7 @@ export function Settings({
                 Reveal in Finder
               </button>
             </div>
-            <div className="muted">Mathlidelux</div>
+            <div className="muted">FerMatter</div>
           </>
         )}
       </div>

@@ -1,0 +1,7 @@
+---
+import { repository } from '../data/links';
+import pages from '../../../user-docs/pages.json';
+const { id, hasSidebar } = Astro.locals.starlightRoute;
+const file = id === 'guide' ? 'README.md' : `${id.replace(/^guide\//, '')}.md`;
+---
+{hasSidebar && pages.includes(file) && <a href={`${repository}/edit/main/user-docs/${file}`}>Edit this page ↗</a>}

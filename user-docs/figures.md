@@ -1,4 +1,9 @@
-# Use TikZ or CeTZ drawings
+---
+title: "Use TikZ or CeTZ drawings"
+description: "Bring source drawings into your presentation."
+sidebar:
+  order: 9
+---
 
 1. Open the [TikZ sample](../docs/downloads/demo-tikz.zip) or [CeTZ sample](../docs/downloads/demo-cetz.zip).
 2. Choose **Figures** to filter drawings.

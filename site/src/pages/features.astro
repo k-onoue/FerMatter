@@ -1,0 +1,29 @@
+---
+import Product from '../layouts/Product.astro';
+import Demo from '../components/Demo.astro';
+import demos from '../data/demos.json';
+import { href, guide, repository } from '../data/links';
+---
+<Product title="Features" description="See how FerMatter moves equations and diagrams from your paper to your presentation.">
+  <header class="page-intro">
+    <p class="eyebrow">BUILT AROUND YOUR MATHEMATICS</p>
+    <h1>Less retyping.<br/><em>More explaining.</em></h1>
+    <p class="lead">A few ways to get from the page to the point.</p>
+    <nav class="feature-index" aria-label="Features on this page">{demos.map(demo => <a href={`#${demo.id}`}>{demo.id === 'source' ? 'Source & PDF' : demo.id[0].toUpperCase() + demo.id.slice(1)}</a>)}</nav>
+  </header>
+  <div class="demo-grid">{demos.map((demo, i) => <Demo id={demo.id} eager={i < 2} />)}</div>
+  <section class="workflow-film">
+    <div><p class="eyebrow">THE WORKFLOW</p><h2>From the library<br/>into PowerPoint.</h2><p>Choose an equation, copy the vector, and size it for your slide.</p><p class="media-note">18-second walkthrough of the earlier Swift prototype. Current screens are shown above.</p><a href={guide('paper-to-slides')}>Follow the text guide →</a></div>
+    <video controls playsinline preload="none" poster={href('assets/tutorials/paper-to-slides.jpg')} width="1280" height="800" aria-label="Earlier prototype: copying an equation into PowerPoint">
+      <source src={href('assets/tutorials/paper-to-slides.mp4')} type="video/mp4"/>
+      <track kind="captions" src={href('assets/tutorials/paper-to-slides.vtt')} srclang="en" label="English" default />
+      <a href={guide('paper-to-slides')}>Read the walkthrough</a>
+    </video>
+  </section>
+  <section class="details-grid">
+    <div><h2>Come back to an equation.</h2><p>SVG exports carry editable source and project context. Return supported artwork to FerMatter and continue editing.</p><a href={guide('instant')}>Restore an export →</a></div>
+    <div><h2>Set it up your way.</h2><p>Light and dark themes, custom shortcuts, compiler paths, and export defaults live in settings you can manage as files.</p><a href={guide('preferences')}>Customize your workspace →</a></div>
+    <div><h2>Let your tools work together.</h2><p>A local CLI and MCP interface let agents inspect projects, render mathematics, and export artwork without driving the UI.</p><a href={`${repository}/blob/main/dev-docs/reference/automation.md`}>Automation reference ↗</a></div>
+  </section>
+  <section class="closing"><h2>Start with something small.</h2><p>Four synthetic projects are ready to explore.</p><a class="button primary" href={href('download/#samples')}>Get the samples →</a></section>
+</Product>

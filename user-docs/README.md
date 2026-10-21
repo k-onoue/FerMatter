@@ -1,4 +1,9 @@
-# Use Mathlidelux
+---
+title: "Use FerMatter"
+description: "Short guides for bringing equations from your paper into your slides."
+sidebar:
+  order: 1
+---
 
 - Start with [paper to slides](paper-to-slides.md): choose an equation, copy it, and paste it into your presentation.
 - Development prototype for Apple Silicon Mac; [requirements](requirements.md).
@@ -27,7 +32,7 @@
 - [Use TikZ or CeTZ drawings](figures.md).
 - [Change shortcuts and appearance](preferences.md).
 - [Understand extraction limits](limits.md).
-- [Why Mathlidelux](why.md).
+- [Why FerMatter](why.md).
 
 ## Try a sample
 

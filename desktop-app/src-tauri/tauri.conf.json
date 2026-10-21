@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Mathlidelux",
+  "productName": "FerMatter",
   "version": "0.10.0",
   "identifier": "local.slidemath.prototype",
   "build": {
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Mathlidelux",
+        "title": "FerMatter",
         "width": 1360,
         "height": 880,
         "minWidth": 850,
@@ -59,12 +59,12 @@
           "svg"
         ],
         "name": "SVG image",
-        "description": "Editable Mathlidelux SVG",
+        "description": "Editable FerMatter SVG",
         "mimeType": "image/svg+xml",
         "role": "Editor",
         "rank": "Alternate"
       }
     ]
   },
-  "mainBinaryName": "Mathlidelux"
+  "mainBinaryName": "FerMatter"
 }

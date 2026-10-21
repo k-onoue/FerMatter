@@ -293,7 +293,7 @@ export function ProjectsPage({
     >
       <div className="brand">
         <img src={icon} />
-        <strong>Mathlidelux</strong>
+        <strong>FerMatter</strong>
         <span className="spacer" />
         <button
           title="Appearance"

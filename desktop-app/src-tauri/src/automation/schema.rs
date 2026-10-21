@@ -141,7 +141,7 @@ pub struct Variant {
 #[derive(Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Open {
-    /// Absolute path to an exported Mathlidelux SVG containing its editable recipe.
+    /// Absolute path to an exported FerMatter SVG containing its editable recipe.
     pub path: PathBuf,
 }
 pub fn validate_color(color: &str) -> Result<(), ApiError> {
@@ -177,6 +177,6 @@ pub fn tools() -> Vec<Tool> {
     tool::<Render>("render_equation","Render LaTeX/Typst (including TikZ/CeTZ) standalone or using a project's saved definitions. Export an image, PNG preview, physical size, and manifest to a new output folder. Does not edit the manuscript or Instant draft.",false,false),
     tool::<Export>("export_equations","Render and export selected saved Library equations in order to a new folder. Returns per-item results, preview paths, and physical sizes. Does not edit sources.",false,false),
     tool::<Variant>("create_variant","Render and add a presentation variant to the Library, preserving the original equation and manuscript. Requires the latest Library revision and a unique requestId. Retry the same requestId/arguments after uncertain completion.",false,true),
-    tool::<Open>("open_in_app","Open an exported Mathlidelux SVG for human review through the app's normal import flow. Opens the matching project editor or Instant; preserves existing drafts. Returns queued, not proof of review.",false,false),
+    tool::<Open>("open_in_app","Open an exported FerMatter SVG for human review through the app's normal import flow. Opens the matching project editor or Instant; preserves existing drafts. Returns queued, not proof of review.",false,false),
 ]
 }
