@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { ROOT, inside, isMain, run } from './lib/paths.mjs';
 
-const controls = new Set(['.git', '.github', 'README.md', 'LICENSE']);
+const controls = new Set(['.git', '.github', '.gitattributes', 'README.md', 'LICENSE']);
 export function prepareWebsite(source, destination, commit) {
   if (!/^[a-f0-9]{40}$/.test(commit)) throw new Error('Expected a full source commit ID.');
   source = path.resolve(source);

@@ -27,10 +27,11 @@ function fixture(t) {
 
 test('publishing replaces static output while preserving target repository controls', t => {
   const { source, destination, write } = fixture(t);
-  for (const name of ['.git/config', '.github/workflows/pages.yml', 'README.md']) write(destination, name, 'Keep');
+  const controls = ['.git/config', '.github/workflows/pages.yml', '.gitattributes', 'README.md', 'LICENSE'];
+  for (const name of controls) write(destination, name, 'Keep');
   write(destination, 'obsolete/index.html', 'Old page');
   prepareWebsite(source, destination, 'a'.repeat(40));
-  for (const name of ['.git/config', '.github/workflows/pages.yml', 'README.md']) assert.equal(readFileSync(path.join(destination, name), 'utf8'), 'Keep');
+  for (const name of controls) assert.equal(readFileSync(path.join(destination, name), 'utf8'), 'Keep');
   assert.equal(existsSync(path.join(destination, 'obsolete')), false);
   assert.equal(readFileSync(path.join(destination, 'guide/automation/index.html'), 'utf8'), '<h1>MCP</h1>');
   assert.deepEqual(JSON.parse(readFileSync(path.join(destination, 'deployment.json'), 'utf8')), { commit: 'a'.repeat(40) });

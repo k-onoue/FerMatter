@@ -63,8 +63,8 @@ node scripts/preview-site.mjs
 
 - App sources, issues, releases, settings and Git history stay in `k-onoue/FerMatter`. Site and guide sources also stay here; the public repository contains generated output and its deployment workflow.
 - `WEBSITE_DEPLOY_KEY` is a repository secret here. Its public key is a write-enabled deploy key on the website repository only; it grants no access to app sources. GitHub's SSH host key is pinned in `scripts/website-known-hosts`.
-- `scripts/publish-website.mjs` preserves the public repository's `.github/`, `README.md` and `LICENSE`, removes retired generated assets, rejects symlinks, and uses a normal fast-forward push. Change public repository controls through a reviewed PR.
-- Bootstrap the public repository with `scripts/website-pages.yml` at `.github/workflows/pages.yml`, `README.md`, `LICENSE` and the reviewed static build. Enable **Settings → Pages → GitHub Actions**. Its deployment environment admits `main`.
+- `scripts/publish-website.mjs` preserves the public repository's `.github/`, `.gitattributes`, `README.md` and `LICENSE`, removes retired generated assets, rejects symlinks, and uses a normal fast-forward push. Change public repository controls through a reviewed PR.
+- Bootstrap the public repository with `scripts/website-pages.yml` at `.github/workflows/pages.yml`, `scripts/website-gitattributes` at `.gitattributes`, `README.md`, `LICENSE` and the reviewed static build. Enable **Settings → Pages → GitHub Actions**. Its deployment environment admits `main`.
 - Root-hosted links use an empty `base` in `site/src/data/site.json`; the Astro configuration normalizes this to `/`. Local preview is at `http://127.0.0.1:4174/`.
 
 - `Documentation` validates PRs without publishing; `Publish website` runs on main, published releases, daily schedule, and manual dispatch.
