@@ -12,6 +12,7 @@
     "build": "astro build",
     "postbuild": "node scripts/legacy-redirects.mjs",
     "preview": "astro preview --host 127.0.0.1 --port 4174",
+    "precheck": "node scripts/prepare.mjs",
     "check": "astro check"
   },
   "dependencies": {

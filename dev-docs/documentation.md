@@ -83,6 +83,7 @@ node scripts/preview-site.mjs
 - Asset ID identifies a counter. Deleted assets retain their last observed count; replacement uploads get a new counter. Counts never decrease.
 - Successfully observed snapshots are committed only to `download-stats`, using a normal fast-forward push. Main is never auto-committed.
 - API failure preserves the prior snapshot and visible timestamp. No prior snapshot means “not available”, not zero.
+- Site preparation imports the validated snapshot as generated build data. Publication checks compare the rendered total, release rows and timestamp with the published JSON.
 - Full release and asset pagination must finish before writing. Deleted assets unseen by any snapshot cannot be recovered.
 - Daily schedule records totals, not real-time installs. Git history retains the dated snapshots.
 - References: [GitHub release assets API](https://docs.github.com/en/rest/releases/assets), [GitHub Pages workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).

@@ -3,9 +3,12 @@ import Product from '../layouts/Product.astro';
 import InstallCommand from '../components/InstallCommand.astro';
 import config from '../data/site.json';
 import { href, guide, repository, releases, download } from '../data/links';
-import { readSnapshot } from '../../../scripts/download-stats.mjs';
-import { fileURLToPath } from 'node:url';
-const stats = readSnapshot(fileURLToPath(new URL('../../public/stats/downloads.json', import.meta.url)));
+import snapshot from '../data/downloads.generated.json';
+const stats = snapshot as {
+  repository: string;
+  updatedAt: string;
+  assets: { version: string; downloads: number }[];
+} | null;
 if (stats && stats.repository !== config.releaseRepository) throw new Error('Wrong statistics repository');
 const totals = new Map<string, number>();
 for (const asset of stats?.assets ?? []) totals.set(asset.version, (totals.get(asset.version) ?? 0) + asset.downloads);
@@ -29,7 +32,7 @@ const minimal = `${app} basictex\n${converters}\nsudo /Library/TeX/texbin/tlmgr 
       <p>{config.releaseAvailable ? 'Download the disk image and drag FerMatter into Applications.' : 'A signed, notarized public installer is not available yet.'}</p>
       {config.releaseAvailable && !config.releaseNotarized && <p><strong>Not notarized.</strong> If macOS blocks first launch, try opening the app once, then use <strong>System Settings → Privacy &amp; Security → Open Anyway</strong>. <a href="https://support.apple.com/102445">Apple’s instructions ↗</a></p>}
       <div class="actions">
-        {config.releaseAvailable && <><a class="button primary" href={download}>Download DMG ↓</a><a href={`${download}.sha256`}>SHA-256</a></>}
+        {config.releaseAvailable && <a class="button primary" href={download}>Download DMG ↓</a>}
         {config.repositoryPublic && <a class="button" href={`${repository}/blob/main/dev-docs/development.md`}>Build from source ↗</a>}
         <a class="button" href={releases}>GitHub Releases ↗</a>
       </div>

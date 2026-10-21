@@ -6,6 +6,7 @@ import path from 'node:path';
 import { parse } from 'parse5';
 import { unzipSync } from 'fflate';
 import { DEMOS, demoSource } from './prepare-demo.mjs';
+import { readSnapshot } from './download-stats.mjs';
 import { ROOT, inside, localLink, isMain, run } from './lib/paths.mjs';
 
 function links(html) {
@@ -27,6 +28,32 @@ function htmlFiles(folder) {
     const file = path.join(folder, entry.name);
     return entry.isDirectory() ? htmlFiles(file) : entry.isFile() && file.endsWith('.html') ? [file] : [];
   });
+}
+
+function checkDownloadStatistics(site) {
+  const snapshot = readSnapshot(path.join(site, 'stats/downloads.json'));
+  const page = path.join(site, 'download/index.html');
+  if (!existsSync(page)) return snapshot ? ['Download statistics have no download page.'] : [];
+  const descendants = node => [node, ...(node.childNodes ?? []).flatMap(descendants)];
+  const attribute = (node, name) => node.attrs?.find(attr => attr.name === name)?.value;
+  const text = node => descendants(node).filter(child => child.nodeName === '#text').map(child => child.value).join('').trim();
+  const section = descendants(parse(readFileSync(page, 'utf8'))).find(node => attribute(node, 'id') === 'statistics');
+  if (!section) return ['Download page is missing its statistics section.'];
+  const nodes = descendants(section);
+  const total = nodes.find(node => attribute(node, 'class')?.split(/\s+/).includes('stats-total'));
+  const unavailable = text(section).includes('No public installer statistics yet.');
+  if (!snapshot) return !total && unavailable ? [] : ['Download page must show unavailable statistics when no snapshot exists.'];
+  const errors = [];
+  const totals = new Map();
+  for (const asset of snapshot.assets) totals.set(asset.version, (totals.get(asset.version) ?? 0) + asset.downloads);
+  const expected = [...totals].map(([version, count]) => [version, count.toLocaleString('en-US')]).sort();
+  const rows = nodes.filter(node => node.tagName === 'tbody').flatMap(body => descendants(body).filter(node => node.tagName === 'tr')).map(row => (row.childNodes ?? []).filter(node => ['th', 'td'].includes(node.tagName)).map(text)).sort();
+  const sum = [...totals.values()].reduce((a, b) => a + b, 0).toLocaleString('en-US');
+  if (!total || text(total) !== sum || unavailable) errors.push('Download page total does not match the statistics snapshot.');
+  if (JSON.stringify(rows) !== JSON.stringify(expected)) errors.push('Download page release counts do not match the statistics snapshot.');
+  const time = nodes.find(node => node.tagName === 'time');
+  if (!time || attribute(time, 'datetime') !== snapshot.updatedAt || text(time) !== `${new Date(snapshot.updatedAt).toISOString().slice(0, 10)} UTC`) errors.push('Download page timestamp does not match the statistics snapshot.');
+  return errors;
 }
 
 export function checkPublication(root = ROOT) {
@@ -54,6 +81,8 @@ export function checkPublication(root = ROOT) {
     if (/(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,})/.test(content)) errors.push(`Credential-like content found: ${name}`);
   }
   const site = realpathSync(path.join(root, 'site/dist'));
+  try { errors.push(...checkDownloadStatistics(site)); }
+  catch (error) { errors.push(`Download statistics: ${error.message}`); }
   const base = JSON.parse(readFileSync(path.join(root, 'site/src/data/site.json'), 'utf8')).base;
   for (const html of htmlFiles(site)) {
     const parsed = links(readFileSync(html, 'utf8'));
