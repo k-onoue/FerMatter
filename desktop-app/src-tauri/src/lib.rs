@@ -26,8 +26,6 @@ mod source_commands;
 mod storage;
 mod svg_payload;
 mod toolchain;
-#[cfg(target_os = "macos")]
-mod usage_icon;
 pub mod verification;
 #[cfg(target_os = "macos")]
 mod wallpaper;
@@ -411,10 +409,6 @@ fn dispatch(
                     .settings
                     .save(string(&v, "file"), &v["value"], string(&v, "revision"))?;
             drop(_guard);
-            #[cfg(target_os = "macos")]
-            if string(&v, "file") == "preferences.json" {
-                usage_icon::refresh(app);
-            }
             Ok(json!(revision))
         }
         "reload_settings" => {
@@ -424,10 +418,6 @@ fn dispatch(
                 resident::apply_keys(app, &snapshot["value"])?;
             }
             drop(_guard);
-            #[cfg(target_os = "macos")]
-            if string(&v, "file") == "preferences.json" {
-                usage_icon::refresh(app);
-            }
             Ok(snapshot)
         }
         "export_settings" => {
@@ -915,8 +905,10 @@ pub fn run() {
             #[cfg(unix)]
             tauri::RunEvent::Ready => {
                 #[cfg(target_os = "macos")]
-                if !std::env::args().any(|a| a == "--automation-background") {
-                    usage_icon::opened(app);
+                if let Err(error) =
+                    native::set_application_icon(include_bytes!("../icons/icon.png"))
+                {
+                    log::warn!("Dock icon unchanged: {error}");
                 }
                 single_instance::primary_arguments(app);
             }
@@ -929,7 +921,6 @@ pub fn run() {
             ),
             #[cfg(target_os = "macos")]
             tauri::RunEvent::Reopen { .. } => {
-                usage_icon::opened(app);
                 resident::show_projects(app);
             }
             tauri::RunEvent::ExitRequested { api, .. } if !lifecycle::exiting(app) => {

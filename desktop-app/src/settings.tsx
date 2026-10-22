@@ -175,23 +175,6 @@ export function Settings({
               </select>
             </label>
             <label className="setting-row">
-              <span>Dock icon</span>
-              <select
-                value={settings.dockIcon ?? "automatic"}
-                onChange={(e) =>
-                  update({
-                    dockIcon: e.target.value as Preferences["dockIcon"],
-                  })
-                }
-              >
-                <option value="automatic">Automatic (last 7 days)</option>
-                <option value="detailed">Detailed Fermat</option>
-                <option value="standard">Standard</option>
-                <option value="smile">Smiling</option>
-                <option value="frown">Downturned mouth</option>
-              </select>
-            </label>
-            <label className="setting-row">
               <span>Color Theme</span>
               <select
                 value={

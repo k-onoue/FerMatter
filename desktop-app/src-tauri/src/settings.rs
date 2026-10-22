@@ -200,6 +200,7 @@ pub fn validate(name: &str, v: &Value) -> Result<()> {
         "theme.json" => theme(v),
         "keybindings.json" => keybindings(v),
         "preferences.json" => {
+            // Preserve valid legacy selections on import/export, without applying them.
             if let Some(icon) = v.get("dockIcon") {
                 if !matches!(
                     icon.as_str(),
@@ -442,12 +443,26 @@ pub fn validate_templates(value: &Value) -> Result<()> {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn dock_icon_settings_are_optional_and_validate_manual_choices() {
+    fn legacy_dock_icon_settings_remain_valid_for_round_trips() {
+        let home = tempfile::tempdir().unwrap();
+        let settings = super::SettingsFiles::new(home.path());
         let mut preferences = super::default_document("preferences.json");
         assert!(super::validate("preferences.json", &preferences).is_ok());
         for choice in ["automatic", "detailed", "standard", "smile", "frown"] {
             preferences["dockIcon"] = serde_json::json!(choice);
             assert!(super::validate("preferences.json", &preferences).is_ok());
+            let snapshot = settings.snapshot("preferences.json", false).unwrap();
+            settings
+                .save(
+                    "preferences.json",
+                    &preferences,
+                    super::string(&snapshot, "revision"),
+                )
+                .unwrap();
+            assert_eq!(
+                settings.load("preferences.json").unwrap()["dockIcon"],
+                choice
+            );
         }
         for invalid in [
             serde_json::json!(null),
