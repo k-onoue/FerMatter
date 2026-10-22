@@ -86,6 +86,7 @@ export interface Theme {
 }
 export interface Preferences {
   appearance: "light" | "dark" | "system";
+  /** Legacy field retained on settings round trips; artwork is now fixed. */
   dockIcon?: "automatic" | "detailed" | "standard" | "smile" | "frown";
   autoSave: boolean;
   opacity: number;

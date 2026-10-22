@@ -22,7 +22,7 @@
 | `Projects/<project-id>/Exports/` | Images at selected export sizes |
 | `Projects/<project-id>/Documents/` | Compiled PDFs and navigation snapshots |
 | `Settings/` | Preferences, shortcuts and theme JSON; last-valid recovery copies |
-| `IconUsage.json` | Schema-versioned local opening timestamps for the running Dock icon; a rolling seven-day history capped at 128 entries |
+| `IconUsage.json` | Legacy Dock opening history; preserved without further reads or writes after artwork unification |
 | `SourceDrafts/` | Recoverable source buffers |
 | `MigratedSwiftDrafts/` | Original Swift draft backups and import markers |
 | `templates.json` | User templates |

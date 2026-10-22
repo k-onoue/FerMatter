@@ -8,6 +8,10 @@
 
 ## [Unreleased]
 
+## [0.11.0-preview.2] — 2026-10-22
+
+- Unify all app and website artwork on the detailed Fermat portrait; retire Dock face switching while preserving legacy settings/history, and provide a GitHub Organization JPEG.
+
 - Hide the Instant window's visible title while preserving its draggable top area and macOS window controls.
 - Add public preview DMG and Homebrew downloads, copyable Typst/full TeX/BasicTeX setup commands, and TeX download/installed-size comparisons to the website.
 - Fix website download counts appearing unavailable despite a published snapshot; remove the checksum link from the download page.

@@ -76,18 +76,9 @@ sidebar:
 
 ## Dock icon
 
-- **Settings → Appearance → Dock icon** chooses Automatic or a fixed face: Detailed Fermat, Standard, Smiling, or Downturned mouth. Changes apply immediately and persist across launches.
-- Automatic follows the number of openings in the last seven days, including the current opening. Manual choices stay fixed until Automatic is selected again.
-
-| Openings | Face |
-| --- | --- |
-| 14 or more | Detailed Fermat portrait |
-| 7–13 | Standard |
-| 3–6 | Smiling |
-| 0–2 | Downturned mouth |
-
-- Launching FerMatter or reopening it from the Dock updates the count. Duplicate native events within two seconds count once; background automation does not count.
-- History stays on this Mac in `IconUsage.json`. Finder and the app at rest use the standard blue icon; the active Dock artwork is recalculated when opened.
+- The app, Dock, menu bar and website use the same detailed Fermat portrait.
+- The Dock face no longer changes with opening frequency; the previous face selector has been removed.
+- Existing `dockIcon` preferences and `IconUsage.json` history are preserved for compatibility, but no longer affect the artwork. New openings are not recorded.
 
 ## Updates
 

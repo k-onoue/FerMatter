@@ -44,11 +44,8 @@ render(whiteMark, path.join(resources, 'AppIcon.icon/Assets/AppIcon.png'), 1024)
 const traySource = path.join(work, 'tray-source.png');
 render(path.join(resources, 'fermat.svg'), traySource, 256);
 execFileSync('magick', [traySource, '-trim', '+repage', '-filter', 'Lanczos', '-resize', '42x42', '-gravity', 'center', '-background', 'none', '-extent', '44x44', '-depth', '8', '-define', 'png:color-type=6', path.join(icons, 'tray.png')]);
-for (const [rank, name] of [[1, 'fermat-active'], [3, 'fermat-smile'], [4, 'fermat-frown']]) {
-  const source = path.join(work, `usage-${rank}.svg`);
-  writeFileSync(source, appIcon(readFileSync(path.join(resources, `${name}.svg`), 'utf8')));
-  render(source, path.join(icons, `usage-${rank}.png`), 1024);
-}
+// GitHub crops organization avatars itself; fill the entire JPEG with blue.
+execFileSync('magick', [path.join(icons, 'icon.png'), '-background', blue, '-alpha', 'remove', '-alpha', 'off', '-colorspace', 'sRGB', '-strip', '-quality', '95', path.join(resources, 'fermatter-organization.jpg')]);
 
 for (const size of [16, 32, 128, 256, 512]) {
   for (const density of [1, 2]) {

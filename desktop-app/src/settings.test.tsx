@@ -50,12 +50,8 @@ it("sorts theme choices without mutating shared themes and forwards appearance s
   expect(themes.map((theme) => theme.id)).toEqual(["zebra", "amber"]);
   fireEvent.change(select, { target: { value: "amber" } });
   expect(onTheme).toHaveBeenCalledWith(themes[1]);
-  fireEvent.change(screen.getByRole("combobox", { name: "Dock icon" }), {
-    target: { value: "smile" },
+  fireEvent.change(screen.getByRole("combobox", { name: "Appearance" }), {
+    target: { value: "light" },
   });
-  expect(onSettings).toHaveBeenCalledWith({ dockIcon: "smile" });
-  fireEvent.change(screen.getByRole("combobox", { name: "Dock icon" }), {
-    target: { value: "automatic" },
-  });
-  expect(onSettings).toHaveBeenLastCalledWith({ dockIcon: "automatic" });
+  expect(onSettings).toHaveBeenCalledWith({ appearance: "light" });
 });

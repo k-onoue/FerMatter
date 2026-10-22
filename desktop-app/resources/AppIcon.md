@@ -1,9 +1,9 @@
 # FerMatter artwork
 
-- Artwork supplied and selected by the repository owner on 2026-10-21: a simplified, clean-shaven Fermat head with rounded hair, dot eyes and no neck, collar or shoulders.
-- Vector master: [`fermat.svg`](fermat.svg), traced directly from the supplied design using Potrace 1.16. Background, facial lines and hair gaps are transparent; no embedded bitmap, texture or blue outlines.
+- The owner selected the earlier detailed Fermat portrait for all branding on 2026-10-22. It has detailed eyes and hair, with no neck, collar or shoulders; originally created with ImageGen and vectorized with Potrace 1.16.
+- Vector master: [`fermat.svg`](fermat.svg), the detailed portrait previously named `fermat-active.svg`. Background, facial lines and hair gaps are transparent; no embedded bitmap, texture or blue outlines.
 - `currentColor` allows any foreground color. App and site use a CSS alpha mask with `background-color: currentColor`, so an explicit theme change updates the mark even when it differs from the OS theme.
-- Four Dock states, most to least frequent: the earlier clean-shaven detailed portrait (`fermat-active.svg`, built-in ImageGen); the standard mark (`fermat.svg`); the supplied smile (`fermat-smile.svg`); and the supplied downturned mouth (`fermat-frown.svg`). Each was vectorized with Potrace.
+- One portrait is used throughout the app, Dock, menu bar, website, guide and README. Usage-based and manual face switching have been retired.
 
 | Asset | Use |
 | --- | --- |
@@ -12,7 +12,7 @@
 | `AppIcon.icon/Assets/AppIcon.png` | Transparent off-white artwork for Icon Composer's blue fill |
 | `../src-tauri/icons/icon.png`, `icon.icns` | Tauri bundle, Dock, Finder and app switcher |
 | `../src-tauri/icons/tray.png` | Black alpha silhouette; macOS template mode supplies menu-bar contrast |
-| `../src-tauri/icons/usage-1.png`, `usage-3.png`, `usage-4.png` | Running Dock variants; rank 2 uses `icon.png` |
+| `fermatter-organization.jpg` | 1024×1024 sRGB JPEG on full-bleed blue for the GitHub Organization avatar |
 | `../../site/public/assets/fermat.svg` | Site header mask, shared by product pages and guide |
 | `../../site/public/assets/fermat-light.svg`, `fermat-dark.svg` | Dark-on-light and light-on-dark standalone SVGs; README and Starlight logo |
 | `../../site/public/assets/favicon.svg` | Transparent browser icon following `prefers-color-scheme` |
@@ -32,4 +32,4 @@ git diff --check
 - The 44-pixel menu-bar template trims the SVG margins and fits the face within 42 pixels. `native::configure_menu_bar_icon` presents it at 20 points, centered as an image-only AppKit button instead of using the tray backend's 18-point, image-beside-title default.
 - Review the mark at small sizes on light, dark and colored backgrounds; check the blue app tile separately.
 - Historical screenshots/tutorial footage retain the interface actually captured; their provenance remains in [public asset notes](../../site/public/assets/README.md).
-- Dock thresholds and behavior: [preferences](../../user-docs/preferences.md#dock-icon). `usage_icon.rs` records local openings; `NSApplication.applicationIconImage` changes only the running Dock display, preserving the signed bundle.
+- The Dock always uses the bundled portrait. Legacy icon preferences and usage-history files remain untouched; see [preferences](../../user-docs/preferences.md#dock-icon).
