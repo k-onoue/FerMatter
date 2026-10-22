@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { tmpdir } from 'node:os';
 
 // Asset-maintenance command, not a prerequisite for normal app/site builds.
 // Requires librsvg, ImageMagick, and macOS iconutil.
@@ -9,9 +10,6 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const resources = path.join(root, 'desktop-app/resources');
 const icons = path.join(root, 'desktop-app/src-tauri/icons');
 const assets = path.join(root, 'site/public/assets');
-const work = path.join(root, 'desktop-app/build/icon-work');
-const iconset = path.join(work, 'FerMatter.iconset');
-mkdirSync(iconset, { recursive: true });
 
 const mark = readFileSync(path.join(resources, 'fermat.svg'), 'utf8');
 const blue = '#4a7699';
@@ -35,23 +33,30 @@ function render(source, destination, size) {
 }
 render(path.join(resources, 'AppIcon.svg'), path.join(icons, 'icon.png'), 1024);
 copyFileSync(path.join(icons, 'icon.png'), path.join(assets, 'icon.png'));
-const whiteMark = path.join(work, 'fermat-white.svg');
-writeFileSync(whiteMark, colored(white));
-render(whiteMark, path.join(resources, 'AppIcon.icon/Assets/AppIcon.png'), 1024);
-// macOS displays this image at 20 pt (native::configure_menu_bar_icon).
-// Remove the master mark's generous margins so the face fills 42 of its
-// 44 pixels, leaving an antialiasing inset.
-const traySource = path.join(work, 'tray-source.png');
-render(path.join(resources, 'fermat.svg'), traySource, 256);
-execFileSync('magick', [traySource, '-trim', '+repage', '-filter', 'Lanczos', '-resize', '42x42', '-gravity', 'center', '-background', 'none', '-extent', '44x44', '-depth', '8', '-define', 'png:color-type=6', path.join(icons, 'tray.png')]);
-// GitHub crops organization avatars itself; fill the entire JPEG with blue.
-execFileSync('magick', [path.join(icons, 'icon.png'), '-background', blue, '-alpha', 'remove', '-alpha', 'off', '-colorspace', 'sRGB', '-strip', '-quality', '95', path.join(resources, 'fermatter-organization.jpg')]);
+const work = mkdtempSync(path.join(tmpdir(), 'fermatter-icons-'));
+try {
+  const iconset = path.join(work, 'FerMatter.iconset');
+  mkdirSync(iconset);
+  const whiteMark = path.join(work, 'fermat-white.svg');
+  writeFileSync(whiteMark, colored(white));
+  render(whiteMark, path.join(resources, 'AppIcon.icon/Assets/AppIcon.png'), 1024);
+  // macOS displays this image at 20 pt (native::configure_menu_bar_icon).
+  // Remove the master mark's generous margins so the face fills 42 of its
+  // 44 pixels, leaving an antialiasing inset.
+  const traySource = path.join(work, 'tray-source.png');
+  render(path.join(resources, 'fermat.svg'), traySource, 256);
+  execFileSync('magick', [traySource, '-trim', '+repage', '-filter', 'Lanczos', '-resize', '42x42', '-gravity', 'center', '-background', 'none', '-extent', '44x44', '-depth', '8', '-define', 'png:color-type=6', path.join(icons, 'tray.png')]);
+  // GitHub crops organization avatars itself; fill the entire JPEG with blue.
+  execFileSync('magick', [path.join(icons, 'icon.png'), '-background', blue, '-alpha', 'remove', '-alpha', 'off', '-colorspace', 'sRGB', '-strip', '-quality', '95', path.join(resources, 'fermatter-organization.jpg')]);
 
-for (const size of [16, 32, 128, 256, 512]) {
-  for (const density of [1, 2]) {
-    const name = `icon_${size}x${size}${density === 2 ? '@2x' : ''}.png`;
-    execFileSync('magick', [path.join(icons, 'icon.png'), '-filter', 'Lanczos', '-resize', `${size * density}x${size * density}`, '-depth', '8', '-define', 'png:color-type=6', path.join(iconset, name)]);
+  for (const size of [16, 32, 128, 256, 512]) {
+    for (const density of [1, 2]) {
+      const name = `icon_${size}x${size}${density === 2 ? '@2x' : ''}.png`;
+      execFileSync('magick', [path.join(icons, 'icon.png'), '-filter', 'Lanczos', '-resize', `${size * density}x${size * density}`, '-depth', '8', '-define', 'png:color-type=6', path.join(iconset, name)]);
+    }
   }
+  execFileSync('iconutil', ['--convert', 'icns', '--output', path.join(icons, 'icon.icns'), iconset]);
+  console.log('Updated app, menu-bar, website, guide, and README artwork from fermat.svg.');
+} finally {
+  rmSync(work, { recursive: true, force: true });
 }
-execFileSync('iconutil', ['--convert', 'icns', '--output', path.join(icons, 'icon.icns'), iconset]);
-console.log('Updated app, menu-bar, website, guide, and README artwork from fermat.svg.');
