@@ -16,6 +16,12 @@ open desktop-app/src-tauri/target/release/bundle/macos/FerMatter.app
 - Scripts install locked npm dependencies when missing; an optional project-local Rust toolchain is supported. See [desktop setup](../desktop-app/README.md#build-and-run).
 - App icon provenance: [AppIcon.md](../desktop-app/resources/AppIcon.md).
 
+## Local generated files
+
+- Canonical artwork lives in `desktop-app/resources/`; regenerate derivatives with `node scripts/build-icons.mjs`. Its intermediate images use an automatically removed temporary directory, including when rendering fails.
+- Old captures, QA apps, local app backups and superseded installers under `desktop-app/build/` can be moved to Trash after checking they are unused. Preserve the current release, `rustup/`, `audit-tools/`, compiler tools and `signing-identity.txt`.
+- Check nested Git checkouts for unpublished work before removing them. Keep real projects, drafts and settings outside cleanup scope.
+
 ## Branch and PR
 
 1. Account for uncommitted work; start a task branch from current `main`.
