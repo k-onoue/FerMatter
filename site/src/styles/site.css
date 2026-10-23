@@ -82,7 +82,6 @@ html:has(.product-page) .sl-container { max-width: 74rem; }
 .fm-footer nav { display: flex; gap: 1.2rem; flex-wrap: wrap; align-items: center; }
 .fm-footer nav a { color: var(--fm-muted); text-decoration: none; font-size: .875rem; }
 .fm-footer nav a:hover { color: var(--fm-ink); text-decoration: underline; }
-.fm-footer .fm-credit { color: var(--fm-muted); font-size: .875rem; }
 .download-layout { max-width: 52rem; }
 .download-section { padding-block: 2rem; border-top: 1px solid var(--fm-rule); }
 .download-section h2 { margin-bottom: .8rem; }
