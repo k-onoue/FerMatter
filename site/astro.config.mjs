@@ -5,6 +5,12 @@ import config from "./src/data/site.json" with { type: "json" };
 import pages from "../user-docs/pages.json" with { type: "json" };
 import { remarkGuideLinks } from "../scripts/lib/guide-links.mjs";
 
+const socialImage = new URL(
+  `${config.base.replace(/\/$/, "")}/assets/icon.png`,
+  config.url,
+).href;
+const socialImageAlt = "FerMatter app icon featuring Pierre de Fermat";
+
 export default defineConfig({
   site: config.url,
   base: config.base || "/",
@@ -25,6 +31,28 @@ export default defineConfig({
         dark: "./public/assets/fermat-dark.svg",
       },
       favicon: "/assets/favicon.svg",
+      head: [
+        { tag: "meta", attrs: { property: "og:image", content: socialImage } },
+        {
+          tag: "meta",
+          attrs: { property: "og:image:type", content: "image/png" },
+        },
+        { tag: "meta", attrs: { property: "og:image:width", content: "1024" } },
+        {
+          tag: "meta",
+          attrs: { property: "og:image:height", content: "1024" },
+        },
+        {
+          tag: "meta",
+          attrs: { property: "og:image:alt", content: socialImageAlt },
+        },
+        { tag: "meta", attrs: { name: "twitter:card", content: "summary" } },
+        { tag: "meta", attrs: { name: "twitter:image", content: socialImage } },
+        {
+          tag: "meta",
+          attrs: { name: "twitter:image:alt", content: socialImageAlt },
+        },
+      ],
       customCss: ["./src/styles/site.css"],
       components: {
         Header: "./src/components/Header.astro",
