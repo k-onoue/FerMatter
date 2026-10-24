@@ -212,11 +212,6 @@ html:has(.product-page) .main-pane > main > .content-panel > .sl-container {
   max-width: 42rem;
   padding: 3rem 0 4rem;
 }
-.product-page .home-story {
-  max-width: 40rem;
-  margin-top: 1.25rem;
-  font-size: 0.9375rem;
-}
 .home-drag {
   padding-bottom: 3rem;
 }
