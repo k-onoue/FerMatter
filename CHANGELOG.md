@@ -8,6 +8,7 @@
 
 ## [Unreleased]
 
+- Separate Homebrew installation from the download buttons with its own section.
 - Add the Fermat conference-slides story to the README and homepage introduction.
 - Fix the README download badge to count DMG downloads across all published releases.
 - Direct feature requests and bug reports to Issues; document that external pull requests are not accepted.
