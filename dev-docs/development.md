@@ -32,7 +32,7 @@ npm run format:check
 ## Local generated files
 
 - Canonical artwork lives in `desktop-app/resources/`; regenerate derivatives with `node scripts/build-icons.mjs`. Its intermediate images use an automatically removed temporary directory, including when rendering fails.
-- Old captures, QA apps, local app backups and superseded installers under `desktop-app/build/` can be moved to Trash after checking they are unused. Preserve the current release, `rustup/`, `audit-tools/`, compiler tools and `signing-identity.txt`.
+- Old captures, QA apps, local app backups and superseded installers under `desktop-app/build/` can be moved to Trash after checking they are unused. Preserve the current release, `rustup/`, `audit-tools/`, `dmg-tools/`, compiler tools and `signing-identity.txt`.
 - Check nested Git checkouts for unpublished work before removing them. Keep real projects, drafts and settings outside cleanup scope.
 
 ## Branch and PR
