@@ -2,7 +2,7 @@
 import Product from "../layouts/Product.astro";
 import InstallCommand from "../components/InstallCommand.astro";
 import config from "../data/site.json";
-import { guide, repository, releases, download } from "../data/links";
+import { guide, download } from "../data/links";
 const app = `brew install --cask ${config.homebrewCask}`;
 const converters = "brew install pdf2svg poppler ghostscript";
 const full = `brew install --cask mactex-no-gui\n${converters}`;
@@ -30,17 +30,6 @@ const minimal = `brew install --cask basictex\n${converters}\nsudo /Library/TeX/
             Download DMG ↓
           </a>
         )}
-        {config.repositoryPublic && (
-          <a
-            class="button"
-            href={`${repository}/blob/main/dev-docs/development.md`}
-          >
-            Build from source ↗
-          </a>
-        )}
-        <a class="button" href={releases}>
-          GitHub Releases ↗
-        </a>
       </div>
     </section>
     {config.releaseAvailable && (
