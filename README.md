@@ -1,7 +1,5 @@
 # FerMatter
 
-It is well known that Fermat never wrote down his proof because his paper had been accepted at a top conference—and he dreaded making the slides. With FerMatter—a formatter for Fermat—he’d gladly fill in the missing proof.
-
 [![DMG downloads](https://img.shields.io/github/downloads/FerMatter/fermatter.github.io/FerMatter.dmg?label=downloads&displayAssetName=false)](https://github.com/FerMatter/fermatter.github.io/releases)
 
 <picture>
