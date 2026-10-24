@@ -19,7 +19,7 @@ sidebar:
 
 ![PDF pane displaying the compiled synthetic paper](../site/public/assets/guide/pdf.webp)
 
-**PDF** (`⌥⌘P`) links cards to the paper. Hover over a mapped equation to reveal its drag handle.
+**PDF** (`⌥⌘P`): hover over a mapped equation and drag its grab handle. Library cards, Source previews and Instant previews can also be dragged.
 
 ## Instant
 

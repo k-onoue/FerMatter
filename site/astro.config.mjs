@@ -32,7 +32,6 @@ export default defineConfig({
         ThemeSelect: "./src/components/ThemeToggle.astro",
         PageTitle: "./src/components/PageTitle.astro",
         Footer: "./src/components/Footer.astro",
-        EditLink: "./src/components/EditLink.astro",
       },
       social: [
         {
@@ -61,9 +60,6 @@ export default defineConfig({
         },
       ],
       credits: false,
-      editLink: {
-        baseUrl: `https://github.com/${config.repository}/edit/main/`,
-      },
     }),
   ],
 });

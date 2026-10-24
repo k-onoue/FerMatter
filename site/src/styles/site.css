@@ -32,13 +32,14 @@ html {
   scroll-padding-top: 7rem;
   scrollbar-gutter: stable;
 }
-.main-pane > .content-panel > .sl-container {
+.main-pane > main > .content-panel > .sl-container {
   max-width: var(--fm-content-width);
+  container: page-content / inline-size;
 }
-.main-pane > .content-panel:first-child {
+.main-pane > main > .content-panel:first-child {
   padding-block: 3rem 1.5rem;
 }
-.main-pane > .content-panel + .content-panel {
+.main-pane > main > .content-panel + .content-panel {
   border-top: 0;
 }
 .main-pane h1 {
@@ -167,10 +168,10 @@ html:has(.product-page) .content-panel:first-child {
   padding: 0;
   border: 0;
 }
-html:has(.product-page) .main-pane > .content-panel {
+html:has(.product-page) .main-pane > main > .content-panel {
   padding-block-start: 0;
 }
-html:has(.product-page) .main-pane > .content-panel > .sl-container {
+html:has(.product-page) .main-pane > main > .content-panel > .sl-container {
   margin-inline: auto;
 }
 .product-page {
@@ -257,11 +258,6 @@ html:has(.product-page) .main-pane > .content-panel > .sl-container {
   margin-top: 0.6rem;
   font-size: 0.9375rem;
 }
-.details-grid a {
-  display: inline-block;
-  margin-top: 0.75rem;
-  font-size: 0.875rem;
-}
 .page-intro {
   padding: 3rem 0 2.5rem;
 }
@@ -302,7 +298,8 @@ html:has(.product-page) .main-pane > .content-panel > .sl-container {
   object-fit: contain;
   border-radius: 4px;
 }
-.demo h2 a {
+.demo h2 a,
+.details-grid h2 a {
   color: var(--fm-ink);
   text-decoration: none;
 }
@@ -310,13 +307,6 @@ html:has(.product-page) .main-pane > .content-panel > .sl-container {
   margin-top: 0.5rem;
   font-size: 0.9375rem;
   max-width: 34rem;
-}
-.demo-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.4rem;
-  margin-top: 0.8rem;
-  font-size: 0.875rem;
 }
 .details-grid {
   display: grid;
@@ -354,6 +344,32 @@ html:has(.product-page) .main-pane > .content-panel > .sl-container {
   padding-top: 1.5rem;
   border-top: 1px solid var(--fm-rule);
 }
+.fm-guide-links {
+  margin-block: 1.5rem;
+}
+.fm-guide-links ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fm-guide-links li {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+.fm-guide-links a {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4em;
+  max-width: 100%;
+}
+.fm-guide-links-primary a::after {
+  content: "→";
+  flex-shrink: 0;
+}
 .fm-guide-pagination {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -368,6 +384,13 @@ html:has(.product-page) .main-pane > .content-panel > .sl-container {
   line-height: 1.5;
   text-decoration: none;
 }
+.fm-guide-pagination a > span:first-child,
+.fm-guide-pagination a > span:last-child {
+  min-width: 0;
+}
+.fm-guide-pagination [aria-hidden="true"] {
+  flex-shrink: 0;
+}
 .fm-guide-pagination a:hover {
   text-decoration: underline;
   text-underline-offset: 0.25em;
@@ -376,19 +399,6 @@ html:has(.product-page) .main-pane > .content-panel > .sl-container {
   grid-column: 2;
   justify-self: end;
   text-align: end;
-}
-.fm-guide-meta {
-  margin-top: 1.5rem;
-}
-.fm-edit-link {
-  color: var(--fm-muted);
-  font-size: 0.8125rem;
-  text-decoration: none;
-}
-.fm-edit-link:hover {
-  color: var(--fm-ink);
-  text-decoration: underline;
-  text-underline-offset: 0.25em;
 }
 .download-layout {
   width: 100%;
@@ -505,11 +515,42 @@ html:has(.product-page) .main-pane > .content-panel > .sl-container {
   height: auto;
   margin: 0;
 }
+@container page-content (max-width: 40rem) {
+  .fm-guide-links ul {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  .fm-guide-links a,
+  .fm-guide-pagination a {
+    min-height: 2.75rem;
+    align-items: center;
+  }
+  .fm-guide-pagination {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+  .fm-guide-next {
+    grid-column: auto;
+    justify-self: start;
+    text-align: start;
+  }
+  .fm-footer nav {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  .fm-footer nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+}
 @media (min-width: 50rem) and (max-width: 71.999rem) {
   html:has(.product-page) .main-frame {
     padding-inline-start: var(--sl-sidebar-width);
   }
-  html:has(.product-page) .main-pane > .content-panel > .sl-container {
+  html:has(.product-page) .main-pane > main > .content-panel > .sl-container {
     margin-inline: 0;
   }
 }
