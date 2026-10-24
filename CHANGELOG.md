@@ -10,7 +10,7 @@
 
 ## [0.11.0-preview.3] — 2026-10-25
 
-- Show a solid black drag-to-Applications arrow and fixed app/folder positions when opening the DMG.
+- Show a white drag-to-Applications arrow with a black outline and fixed app/folder positions when opening the DMG.
 - Note the Windows version in development below the macOS availability text.
 - Include the Fermat app icon in shared-link previews for product pages and guides.
 - Simplify the README around installation and usage; move repository layout and maintainer guidance to development docs.

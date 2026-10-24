@@ -34,8 +34,11 @@ for scale in [1, 2] {
         }
     }
     context.closePath()
-    context.setFillColor(CGColor(gray: 0, alpha: 1))
-    context.fillPath()
+    context.setFillColor(CGColor(gray: 1, alpha: 1))
+    context.setStrokeColor(CGColor(gray: 0, alpha: 1))
+    context.setLineWidth(2.5)
+    context.setLineJoin(.round)
+    context.drawPath(using: .fillStroke)
     let suffix = scale == 1 ? ".png" : "@2x.png"
     let url = URL(fileURLWithPath: prefix + suffix)
     guard let image = context.makeImage(),
