@@ -2,7 +2,8 @@
 
 - Shared by people and agents; Markdown in this repository is the source of truth.
 - Start with the task below; reading every page is not required.
-- User instructions live in [user-docs](../user-docs/README.md); public output lives in `docs/`.
+- User instructions live in [user-docs](../user-docs/README.md); public output lives in `site/dist/`.
+- Agent entry point: [AGENTS.md](../AGENTS.md).
 
 | Task | Document |
 | --- | --- |
@@ -13,6 +14,19 @@
 | Review a PR or LLM finding | [Reviewing](reviewing.md) |
 | Version, tag, package, release | [Releasing](releasing.md) |
 | Edit guides, website, media | [Documentation](documentation.md) |
+| Preview the website | [Build and preview](documentation.md#build-and-preview) |
+
+## Repository layout
+
+| Path (from the repository root) | Purpose |
+| --- | --- |
+| `desktop-app/` | [Desktop app](../desktop-app/README.md): Rust/Tauri, React/TypeScript, tests, resources and packaging |
+| `dev-docs/` | Shared development instructions and references |
+| `user-docs/` | Markdown sources for the public guide |
+| `site/` | Astro/Starlight website and approved demo media |
+| `docs/downloads/` | Sample ZIPs shared by the app and website |
+| `examples/` | Synthetic sample projects |
+| `scripts/` | Site checks, download statistics, sample packaging |
 
 ## Reference
 
