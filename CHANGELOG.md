@@ -8,6 +8,7 @@
 
 ## [Unreleased]
 
+- Fix the README download badge to count DMG downloads across all published releases.
 - Direct feature requests and bug reports to Issues; document that external pull requests are not accepted.
 - Show direct dragging from the paper PDF on the homepage and guide, with Source view beside the PDF.
 - Remove the homepage preview label and keep the macOS / Apple Silicon platform line.
