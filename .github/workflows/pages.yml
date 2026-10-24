@@ -6,7 +6,7 @@ on:
   release:
     types: [published]
   schedule:
-    - cron: '23 3 * * *'
+    - cron: "23 3 * * *"
   workflow_dispatch:
 
 permissions:
@@ -29,7 +29,7 @@ jobs:
           ref: main
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '24'
+          node-version: "24"
           cache: npm
           cache-dependency-path: |
             site/package-lock.json

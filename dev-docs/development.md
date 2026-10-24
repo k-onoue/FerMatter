@@ -16,6 +16,19 @@ open desktop-app/src-tauri/target/release/bundle/macos/FerMatter.app
 - Scripts install locked npm dependencies when missing; an optional project-local Rust toolchain is supported. See [desktop setup](../desktop-app/README.md#build-and-run).
 - App icon provenance: [AppIcon.md](../desktop-app/resources/AppIcon.md).
 
+## Formatting
+
+```sh
+npm ci
+npm run format
+npm run format:check
+```
+
+- [Prettier](https://prettier.io/docs/configuration) formats JS/TS, HTML, CSS, Astro, JSON and workflow YAML; the app and repository use the same version.
+- [rustfmt](https://github.com/rust-lang/rustfmt) formats the Rust crate, including examples and tests. Install the `rustfmt` component with the stable Rust toolchain.
+- Shared settings: `.prettierrc.json`, `.prettierignore`, `rustfmt.toml` and `.editorconfig`. Generated files and private projects are excluded.
+- The **Formatting** workflow checks both tools on PRs and `main`.
+
 ## Local generated files
 
 - Canonical artwork lives in `desktop-app/resources/`; regenerate derivatives with `node scripts/build-icons.mjs`. Its intermediate images use an automatically removed temporary directory, including when rendering fails.

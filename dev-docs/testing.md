@@ -41,6 +41,8 @@ node desktop-app/scripts/verify-automation.mjs /absolute/path/to/FerMatter /abso
 ## Documentation/site checks
 
 ```sh
+npm ci
+npm run format:check
 npm --prefix scripts ci
 npm --prefix site ci
 npm --prefix scripts test

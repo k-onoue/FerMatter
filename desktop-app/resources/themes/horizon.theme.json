@@ -33,10 +33,7 @@
         {
           "repository": "https://github.com/jolaleye/horizon-theme-vscode",
           "revision": "5ae91b6d49bf291e0a34c0a1cb277d9738aadd90",
-          "files": [
-            "themes/horizon-bright.json",
-            "themes/horizon.json"
-          ],
+          "files": ["themes/horizon-bright.json", "themes/horizon.json"],
           "license": "MIT",
           "licenseFile": "Licenses/jolaleye-horizon-theme-vscode.txt"
         }

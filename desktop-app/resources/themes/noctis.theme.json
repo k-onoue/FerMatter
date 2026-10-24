@@ -33,10 +33,7 @@
         {
           "repository": "https://github.com/liviuschera/noctis",
           "revision": "4a82370b2c064e36726c23e94f27ed3782bd6ecd",
-          "files": [
-            "themes/lux.json",
-            "themes/noctis.json"
-          ],
+          "files": ["themes/lux.json", "themes/noctis.json"],
           "license": "MIT",
           "licenseFile": "Licenses/liviuschera-noctis.txt"
         }

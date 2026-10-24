@@ -33,10 +33,7 @@
         {
           "repository": "https://github.com/miguelsolorio/min-theme",
           "revision": "dd796c3f294daecfb7f10ed277ffdc30517d59cf",
-          "files": [
-            "themes/min-light.json",
-            "themes/min-dark.json"
-          ],
+          "files": ["themes/min-light.json", "themes/min-dark.json"],
           "license": "MIT",
           "licenseFile": "Licenses/miguelsolorio-min-theme.txt"
         }

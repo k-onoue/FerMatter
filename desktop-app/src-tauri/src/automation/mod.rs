@@ -57,10 +57,7 @@ impl Service<'_> {
     fn project(&self, id: &str) -> std::result::Result<Value, ApiError> {
         let projects = self.store.recent()?;
         let saved = projects.iter().find(|p| p["id"] == id).ok_or_else(|| {
-            ApiError::new(
-                "project_not_found",
-                "Open this project in FerMatter first.",
-            )
+            ApiError::new("project_not_found", "Open this project in FerMatter first.")
         })?;
         let directory = self.store.project_dir(id)?;
         if !crate::project_data::present(&directory.join("project.json"))

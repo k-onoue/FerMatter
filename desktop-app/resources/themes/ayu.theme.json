@@ -33,10 +33,7 @@
         {
           "repository": "https://github.com/ayu-theme/ayu-colors",
           "revision": "38fc9f521ed30c130a7acd8261de2239e8b1989e",
-          "files": [
-            "themes/light.yaml",
-            "themes/dark.yaml"
-          ],
+          "files": ["themes/light.yaml", "themes/dark.yaml"],
           "license": "MIT",
           "licenseFile": "Licenses/ayu-theme-ayu-colors.txt"
         }

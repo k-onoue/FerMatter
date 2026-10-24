@@ -234,9 +234,7 @@
         "endLine": 2,
         "sourceOffset": 96,
         "sourceEnd": 104,
-        "outlinePath": [
-          "heading-e1fdcab5992631b1f41cc0ae"
-        ]
+        "outlinePath": ["heading-e1fdcab5992631b1f41cc0ae"]
       },
       {
         "id": "source-cdd447752aa045ced1c2538e",
@@ -247,9 +245,7 @@
         "endLine": 10,
         "sourceOffset": 106,
         "sourceEnd": 274,
-        "outlinePath": [
-          "heading-e1fdcab5992631b1f41cc0ae"
-        ]
+        "outlinePath": ["heading-e1fdcab5992631b1f41cc0ae"]
       },
       {
         "id": "source-a8f64b04b83f265f408f9f6a",
@@ -260,9 +256,7 @@
         "endLine": 15,
         "sourceOffset": 337,
         "sourceEnd": 453,
-        "outlinePath": [
-          "heading-e1fdcab5992631b1f41cc0ae"
-        ]
+        "outlinePath": ["heading-e1fdcab5992631b1f41cc0ae"]
       },
       {
         "id": "source-65a6503148dd3046a6e678e9",
@@ -273,9 +267,7 @@
         "endLine": 16,
         "sourceOffset": 525,
         "sourceEnd": 535,
-        "outlinePath": [
-          "heading-e1fdcab5992631b1f41cc0ae"
-        ]
+        "outlinePath": ["heading-e1fdcab5992631b1f41cc0ae"]
       },
       {
         "id": "source-4e5713b05279611c0728e937",
@@ -286,9 +278,7 @@
         "endLine": 23,
         "sourceOffset": 537,
         "sourceEnd": 723,
-        "outlinePath": [
-          "heading-e1fdcab5992631b1f41cc0ae"
-        ]
+        "outlinePath": ["heading-e1fdcab5992631b1f41cc0ae"]
       },
       {
         "id": "source-837bf4b68aca61359cc4c8f2",
@@ -299,9 +289,7 @@
         "endLine": 28,
         "sourceOffset": 796,
         "sourceEnd": 919,
-        "outlinePath": [
-          "heading-e1fdcab5992631b1f41cc0ae"
-        ]
+        "outlinePath": ["heading-e1fdcab5992631b1f41cc0ae"]
       },
       {
         "id": "source-f03444714e0fc07f9da3ae7c",
@@ -312,9 +300,7 @@
         "endLine": 33,
         "sourceOffset": 998,
         "sourceEnd": 1104,
-        "outlinePath": [
-          "heading-e1fdcab5992631b1f41cc0ae"
-        ]
+        "outlinePath": ["heading-e1fdcab5992631b1f41cc0ae"]
       },
       {
         "id": "source-42558ec33567a17a793b6d7b",
@@ -325,9 +311,7 @@
         "endLine": 10,
         "sourceOffset": 179,
         "sourceEnd": 305,
-        "outlinePath": [
-          "heading-d3f835c2feb427113bd5fefb"
-        ]
+        "outlinePath": ["heading-d3f835c2feb427113bd5fefb"]
       },
       {
         "id": "source-c679a2eb99fa7b86610fe934",
@@ -338,9 +322,7 @@
         "endLine": 11,
         "sourceOffset": 330,
         "sourceEnd": 333,
-        "outlinePath": [
-          "heading-d3f835c2feb427113bd5fefb"
-        ]
+        "outlinePath": ["heading-d3f835c2feb427113bd5fefb"]
       },
       {
         "id": "source-03fcd99871102320ee05cece",
@@ -351,9 +333,7 @@
         "endLine": 15,
         "sourceOffset": 363,
         "sourceEnd": 483,
-        "outlinePath": [
-          "heading-d3f835c2feb427113bd5fefb"
-        ]
+        "outlinePath": ["heading-d3f835c2feb427113bd5fefb"]
       },
       {
         "id": "source-195850562bea08670f5b0f68",
@@ -364,9 +344,7 @@
         "endLine": 21,
         "sourceOffset": 560,
         "sourceEnd": 704,
-        "outlinePath": [
-          "heading-d3f835c2feb427113bd5fefb"
-        ]
+        "outlinePath": ["heading-d3f835c2feb427113bd5fefb"]
       }
     ],
     "outline": [
@@ -376,9 +354,7 @@
         "level": 2,
         "file": "sections/model.tex",
         "line": 1,
-        "path": [
-          "heading-bb1216a121feb208a7d97dda"
-        ]
+        "path": ["heading-bb1216a121feb208a7d97dda"]
       },
       {
         "id": "heading-1409e9e6ad3f2cc37a771380",
@@ -408,9 +384,7 @@
         "level": 2,
         "file": "sections/fitting.tex",
         "line": 1,
-        "path": [
-          "heading-76a6708e34d7c09be024f443"
-        ]
+        "path": ["heading-76a6708e34d7c09be024f443"]
       },
       {
         "id": "heading-58336a163044b6c3ec7257f8",
@@ -440,9 +414,7 @@
         "level": 2,
         "file": "sections/geometry.tex",
         "line": 1,
-        "path": [
-          "heading-e1fdcab5992631b1f41cc0ae"
-        ]
+        "path": ["heading-e1fdcab5992631b1f41cc0ae"]
       },
       {
         "id": "heading-d3f835c2feb427113bd5fefb",
@@ -450,9 +422,7 @@
         "level": 2,
         "file": "sections/summary.tex",
         "line": 1,
-        "path": [
-          "heading-d3f835c2feb427113bd5fefb"
-        ]
+        "path": ["heading-d3f835c2feb427113bd5fefb"]
       }
     ],
     "files": [
@@ -474,9 +444,7 @@
         "endLine": 20,
         "sourceOffset": 404,
         "sourceEnd": 652,
-        "outlinePath": [
-          "heading-f10b41f3622396a8d218d77c"
-        ]
+        "outlinePath": ["heading-f10b41f3622396a8d218d77c"]
       },
       {
         "id": "source-7dd6f17282bb36dc07a055f0",
@@ -487,9 +455,7 @@
         "endLine": 22,
         "sourceOffset": 666,
         "sourceEnd": 674,
-        "outlinePath": [
-          "heading-f10b41f3622396a8d218d77c"
-        ]
+        "outlinePath": ["heading-f10b41f3622396a8d218d77c"]
       },
       {
         "id": "source-d7b4e56cbb62f12018921f32",
@@ -500,9 +466,7 @@
         "endLine": 32,
         "sourceOffset": 727,
         "sourceEnd": 1076,
-        "outlinePath": [
-          "heading-9a51cb68269b4ab2062b1549"
-        ]
+        "outlinePath": ["heading-9a51cb68269b4ab2062b1549"]
       }
     ],
     "outline": [
@@ -512,9 +476,7 @@
         "level": 2,
         "file": "main.tex",
         "line": 13,
-        "path": [
-          "heading-f10b41f3622396a8d218d77c"
-        ]
+        "path": ["heading-f10b41f3622396a8d218d77c"]
       },
       {
         "id": "heading-9a51cb68269b4ab2062b1549",
@@ -522,14 +484,10 @@
         "level": 2,
         "file": "main.tex",
         "line": 23,
-        "path": [
-          "heading-9a51cb68269b4ab2062b1549"
-        ]
+        "path": ["heading-9a51cb68269b4ab2062b1549"]
       }
     ],
-    "files": [
-      "main.tex"
-    ]
+    "files": ["main.tex"]
   },
   "demo-typst": {
     "cards": [
@@ -542,9 +500,7 @@
         "endLine": 12,
         "sourceOffset": 391,
         "sourceEnd": 405,
-        "outlinePath": [
-          "heading-fd999363cf7dd3e79016864f"
-        ],
+        "outlinePath": ["heading-fd999363cf7dd3e79016864f"],
         "typstContext": [
           {
             "file": "main.typ",
@@ -561,9 +517,7 @@
         "endLine": 12,
         "sourceOffset": 424,
         "sourceEnd": 432,
-        "outlinePath": [
-          "heading-fd999363cf7dd3e79016864f"
-        ],
+        "outlinePath": ["heading-fd999363cf7dd3e79016864f"],
         "typstContext": [
           {
             "file": "main.typ",
@@ -580,9 +534,7 @@
         "endLine": 14,
         "sourceOffset": 435,
         "sourceEnd": 463,
-        "outlinePath": [
-          "heading-fd999363cf7dd3e79016864f"
-        ],
+        "outlinePath": ["heading-fd999363cf7dd3e79016864f"],
         "typstContext": [
           {
             "file": "main.typ",
@@ -599,9 +551,7 @@
         "endLine": 16,
         "sourceOffset": 481,
         "sourceEnd": 499,
-        "outlinePath": [
-          "heading-fd999363cf7dd3e79016864f"
-        ],
+        "outlinePath": ["heading-fd999363cf7dd3e79016864f"],
         "typstContext": [
           {
             "file": "main.typ",
@@ -981,9 +931,7 @@
         "level": 1,
         "file": "main.typ",
         "line": 7,
-        "path": [
-          "heading-fd999363cf7dd3e79016864f"
-        ]
+        "path": ["heading-fd999363cf7dd3e79016864f"]
       },
       {
         "id": "heading-7c102c665abb9bf06f820866",
@@ -1019,11 +967,7 @@
         ]
       }
     ],
-    "files": [
-      "main.typ",
-      "sections/fitting.typ",
-      "sections/model.typ"
-    ]
+    "files": ["main.typ", "sections/fitting.typ", "sections/model.typ"]
   },
   "demo-cetz": {
     "cards": [
@@ -1036,9 +980,7 @@
         "endLine": 18,
         "sourceOffset": 244,
         "sourceEnd": 455,
-        "outlinePath": [
-          "heading-ba1d63dc43f0a20963178579"
-        ],
+        "outlinePath": ["heading-ba1d63dc43f0a20963178579"],
         "typstContext": [
           {
             "file": "main.typ",
@@ -1055,9 +997,7 @@
         "endLine": 20,
         "sourceOffset": 480,
         "sourceEnd": 493,
-        "outlinePath": [
-          "heading-ba1d63dc43f0a20963178579"
-        ],
+        "outlinePath": ["heading-ba1d63dc43f0a20963178579"],
         "typstContext": [
           {
             "file": "main.typ",
@@ -1074,9 +1014,7 @@
         "endLine": 34,
         "sourceOffset": 520,
         "sourceEnd": 997,
-        "outlinePath": [
-          "heading-f24cc540967bc872db2f9583"
-        ],
+        "outlinePath": ["heading-f24cc540967bc872db2f9583"],
         "typstContext": [
           {
             "file": "main.typ",
@@ -1092,9 +1030,7 @@
         "level": 1,
         "file": "main.typ",
         "line": 9,
-        "path": [
-          "heading-ba1d63dc43f0a20963178579"
-        ]
+        "path": ["heading-ba1d63dc43f0a20963178579"]
       },
       {
         "id": "heading-f24cc540967bc872db2f9583",
@@ -1102,13 +1038,9 @@
         "level": 1,
         "file": "main.typ",
         "line": 22,
-        "path": [
-          "heading-f24cc540967bc872db2f9583"
-        ]
+        "path": ["heading-f24cc540967bc872db2f9583"]
       }
     ],
-    "files": [
-      "main.typ"
-    ]
+    "files": ["main.typ"]
   }
 }

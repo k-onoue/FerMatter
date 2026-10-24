@@ -35,8 +35,12 @@ for (const [path, meta] of Object.entries(lock.packages)) {
 }
 // These monorepo packages omit their repository-root license from npm/crates.
 // Keep the release-matched originals locally so offline builds ship the texts.
-notices += "\n## unified-latex packages (repository license)\n\n" +
-  readFileSync(join(root, "resources/formatters/unified-latex-LICENSE"), "utf8");
+notices +=
+  "\n## unified-latex packages (repository license)\n\n" +
+  readFileSync(
+    join(root, "resources/formatters/unified-latex-LICENSE"),
+    "utf8",
+  );
 writeFileSync(join(root, "public/vendor/JAVASCRIPT-LICENSES.txt"), notices);
 // Cargo resolves platform-specific runtime/build dependencies; retain their source notices.
 const { execFileSync } = await import("node:child_process");
@@ -82,6 +86,7 @@ for (const pkg of metadata.packages.filter(
   }
 }
 for (const name of ["typstyle", "typst"])
-  rustNotices += `\n## ${name} crates (repository license)\n\n` +
+  rustNotices +=
+    `\n## ${name} crates (repository license)\n\n` +
     readFileSync(join(root, `resources/formatters/${name}-LICENSE`), "utf8");
 writeFileSync(join(root, "public/vendor/RUST-LICENSES.txt"), rustNotices);

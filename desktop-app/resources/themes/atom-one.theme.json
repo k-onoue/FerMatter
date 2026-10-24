@@ -33,18 +33,14 @@
         {
           "repository": "https://github.com/akamud/vscode-theme-onelight",
           "revision": "5866e900db932d580e978a58db42f65cde07998b",
-          "files": [
-            "themes/OneLight.json"
-          ],
+          "files": ["themes/OneLight.json"],
           "license": "MIT",
           "licenseFile": "Licenses/akamud-vscode-theme-onelight.txt"
         },
         {
           "repository": "https://github.com/akamud/vscode-theme-onedark",
           "revision": "a8be970644982221f9b61fb1c4b3da74b4beab79",
-          "files": [
-            "themes/OneDark.json"
-          ],
+          "files": ["themes/OneDark.json"],
           "license": "MIT",
           "licenseFile": "Licenses/akamud-vscode-theme-onedark.txt"
         }
