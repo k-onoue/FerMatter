@@ -13,18 +13,12 @@ if (stats && stats.repository !== config.releaseRepository) throw new Error('Wro
 const totals = new Map<string, number>();
 for (const asset of stats?.assets ?? []) totals.set(asset.version, (totals.get(asset.version) ?? 0) + asset.downloads);
 const total = [...totals.values()].reduce((sum, n) => sum + n, 0);
-const samples = [
-  { name: 'LaTeX', id: 'paper', detail: 'A simple trajectory' },
-  { name: 'Typst', id: 'typst', detail: 'Motion and least squares' },
-  { name: 'TikZ', id: 'tikz', detail: 'A triangle and a workflow' },
-  { name: 'CeTZ', id: 'cetz', detail: 'Vector sketches in Typst' },
-];
 const app = `brew install --cask ${config.homebrewCask}`;
 const converters = 'brew install typst pdf2svg poppler ghostscript';
 const full = `${app} mactex-no-gui\n${converters}`;
 const minimal = `${app} basictex\n${converters}\nsudo /Library/TeX/texbin/tlmgr update --self\nsudo /Library/TeX/texbin/tlmgr install latexmk preview pdfcrop pgf mathtools`;
 ---
-<Product title="Download" description="FerMatter for macOS: release status, requirements, example projects, and download statistics.">
+<Product title="Download" description="FerMatter for macOS: release status, requirements, and download statistics.">
   <header class="page-intro"><h1>Download</h1><p class="lead">Apple Silicon Mac · macOS 14 or later</p></header>
   <div class="download-layout">
     <section class="download-section" id="mac">
@@ -58,11 +52,10 @@ const minimal = `${app} basictex\n${converters}\nsudo /Library/TeX/texbin/tlmgr 
       <p>MacTeX and BasicTeX conflict in Homebrew; install one. Installation may request your administrator password. Restart FerMatter after installing the tools.</p>
     </section>}
     <section class="download-section" id="requirements"><h2>Before you start</h2><ul><li>Apple Silicon Mac; macOS 14 or later. Verified on macOS 26.</li><li>Typst CLI for Typst projects; TeX Live or MacTeX plus conversion tools for LaTeX.</li><li>Compiler paths can be selected in first-launch setup or Settings.</li><li>Windows and Linux builds are not available yet.</li></ul><a href={guide('requirements')}>Full requirements and tool installation →</a></section>
-    <section class="download-section" id="samples"><h2>Sample projects</h2><p>Open a sample ZIP directly in FerMatter.</p><div class="sample-list">{samples.map(sample => <a href={href(`downloads/demo-${sample.id}.zip`)} download><span>{sample.name}<br/><small>{sample.detail}</small></span><span aria-hidden="true">↓</span></a>)}</div></section>
     <section class="download-section" id="statistics">
       <h2>Downloads</h2>
       {stats ? <><div class="stats-total">{total.toLocaleString('en-US')}</div><p>Installer downloads recorded by GitHub Releases.</p><p class="stats-date">Last updated <time datetime={stats.updatedAt}>{new Date(stats.updatedAt).toISOString().slice(0,10)} UTC</time></p>{totals.size > 0 && <table><thead><tr><th scope="col">Release</th><th scope="col">Downloads</th></tr></thead><tbody>{[...totals].reverse().map(([version,count]) => <tr><th scope="row">{version}</th><td>{count.toLocaleString('en-US')}</td></tr>)}</tbody></table>}<p><a href={href('stats/downloads.json')}>Download the data (JSON)</a></p></> : <p>No public installer statistics yet.</p>}
-      <details><summary>What is counted?</summary><p>GitHub's download counters for published installer assets, including previews. Repeat downloads count again. Source archives, sample projects, checksums and drafts are excluded. Counts are not the number of users or installations.</p><p>Snapshots refresh daily. Previously observed counts are retained if an asset is removed; downloads before our first observation of a deleted asset cannot be recovered. If collection fails, the last successful snapshot and its date stay visible.</p><p>No visitor analytics, tracking cookies, or browser calls to GitHub are used.</p></details>
+      <details><summary>What is counted?</summary><p>GitHub's download counters for published installer assets, including previews. Repeat downloads count again. Source archives, checksums and drafts are excluded. Counts are not the number of users or installations.</p><p>Snapshots refresh daily. Previously observed counts are retained if an asset is removed; downloads before our first observation of a deleted asset cannot be recovered. If collection fails, the last successful snapshot and its date stay visible.</p><p>No visitor analytics, tracking cookies, or browser calls to GitHub are used.</p></details>
     </section>
   </div>
 </Product>

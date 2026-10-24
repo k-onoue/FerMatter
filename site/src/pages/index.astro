@@ -2,24 +2,18 @@
 import Product from '../layouts/Product.astro';
 import { href, guide } from '../data/links';
 import config from '../data/site.json';
+const title = 'The Ultimate Drag-and-Drop Equations Workspace.';
+const description = 'Easily paste equations from your LaTeX paper source into PowerPoint (.pptx) as SVG.';
 ---
-<Product title="Equations for your slides" description="Browse, edit, and export LaTeX and Typst equations and diagrams.">
+<Product title={title} description={description}>
   <section class="home-intro">
-    <h1>Equations for your slides.</h1>
-    <p class="lead">Open a LaTeX or Typst project. Edit equations and diagrams, then copy them into your presentation.</p>
-    <div class="actions"><a class="button primary" href={config.releaseAvailable ? href('download/#mac') : guide()}>{config.releaseAvailable ? 'Download for macOS ↓' : 'Get started'}</a><a href={guide()}>Guide <span aria-hidden="true">→</span></a></div>
+    <h1>{title}</h1>
+    <p class="lead">{description}</p>
+    <div class="actions"><a class="button primary" href={config.releaseAvailable ? href('download/#mac') : guide()}>{config.releaseAvailable ? 'Download for macOS ↓' : 'Get started'}</a></div>
     <p class="availability">macOS · {config.releaseAvailable ? (config.releaseNotarized ? 'Apple Silicon' : 'Unnotarized preview') : 'Development preview'}</p>
   </section>
-  <section class="three-steps" aria-label="Capabilities">
-    <div><h2>LaTeX &amp; Typst</h2><p>Open an existing project or type in Instant.</p><a href={guide('instant')}>Instant →</a></div>
-    <div><h2>SVG, PDF, PNG, JPEG</h2><p>Copy, drag, or export equations and figures.</p><a href={guide('export')}>Export formats →</a></div>
-    <div><h2>Originals preserved</h2><p>Library edits are saved as separate variants.</p><a href={guide('edit-equation')}>Editing →</a></div>
+  <section class="home-capabilities" aria-label="Capabilities">
+    <h2><a href={guide('paper-to-slides')}>Support LaTeX &amp; Typst</a></h2>
+    <h2><a href={guide('export')}>SVG first</a></h2>
   </section>
-  <nav class="sample-links" aria-label="Download sample projects">
-    <span>Sample projects</span>
-    <a href={href('downloads/demo-paper.zip')} download>LaTeX ↓</a>
-    <a href={href('downloads/demo-typst.zip')} download>Typst ↓</a>
-    <a href={href('downloads/demo-tikz.zip')} download>TikZ ↓</a>
-    <a href={href('downloads/demo-cetz.zip')} download>CeTZ ↓</a>
-  </nav>
 </Product>

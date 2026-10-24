@@ -5,7 +5,7 @@ sidebar:
   order: 9
 ---
 
-1. Open the [TikZ sample](../docs/downloads/demo-tikz.zip) or [CeTZ sample](../docs/downloads/demo-cetz.zip).
+1. Open a TikZ or CeTZ project from **Projects**.
 2. Choose **Figures** to filter drawings.
 3. Select a drawing; copy/export it, or double-click to edit a presentation variant.
 4. Use an item **Export Font Size** override to scale the whole drawing.
