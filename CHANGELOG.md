@@ -8,6 +8,7 @@
 
 ## [Unreleased]
 
+- Simplify the README around installation and usage; move repository layout and maintainer guidance to development docs.
 - Offer only DMG and Homebrew on the download page, with Homebrew in its own section.
 - Add the Fermat conference-slides story to the README and homepage introduction.
 - Fix the README download badge to count DMG downloads across all published releases.
