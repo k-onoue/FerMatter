@@ -124,7 +124,13 @@ fn office_zip(bytes: &[u8]) -> Result<Vec<String>> {
     let mut output = Vec::new();
     for index in 0..archive.len() {
         let file = archive.by_index(index).map_err(err)?;
-        if !file.name().map_err(err)?.to_ascii_lowercase().ends_with(".svg") || file.is_dir() {
+        if !file
+            .name()
+            .map_err(err)?
+            .to_ascii_lowercase()
+            .ends_with(".svg")
+            || file.is_dir()
+        {
             continue;
         }
         if file.size() > SVG_LIMIT {

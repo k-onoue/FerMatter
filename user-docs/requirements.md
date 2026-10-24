@@ -1,39 +1,28 @@
 ---
 title: "Requirements"
-description: "Supported Macs and external tools for LaTeX and Typst."
+description: "Rendering tools and compiler settings."
 sidebar:
   order: 11
 ---
 
-- Public preview, not notarized. [Download and copy installation commands](https://fermatter.github.io/download/#install) for FerMatter, Typst and either full MacTeX or BasicTeX with TikZ.
-- If macOS blocks first launch, use **System Settings → Privacy & Security → Open Anyway**. [Apple's instructions](https://support.apple.com/102445).
-- Apple Silicon Mac. The app targets macOS 14+ and has been verified on macOS 26.
-- No Python, Node.js, Rust toolchain, Swift SDK, or Xcode installation is needed to run the packaged app.
-- Install the external compiler tools for your project format.
-- Building from source requires Rust, Node.js 22+ and Xcode command-line tools.
-- Open projects you trust: TeX and `latexmkrc` can execute code; this prototype is not an OS sandbox.
+**Apple Silicon · macOS 14+ · LaTeX or Typst**
 
-## Typst projects
+[Copy installation commands →](https://fermatter.github.io/download/#install)
 
-- Typst CLI 0.14+.
-- Project fonts/packages; uncached packages need internet access initially.
-- No TeX installation or SVG conversion tools required.
-- Reference: [Typst installation](https://github.com/typst/typst#installation).
+| Project | Tools |
+| --- | --- |
+| Typst / CeTZ | Typst CLI 0.14+ |
+| LaTeX / TikZ | TeX engine, `latexmk`, `preview.sty`, `pdfcrop`, `pdf2svg`, Poppler |
+| DVI-based LaTeX | Also `dvips` and Ghostscript |
 
-## LaTeX projects
-
-- TeX Live/MacTeX: selected TeX engine, `latexmk`, `preview.sty`, `pdfcrop`.
-- SyncTeX for PDF/source navigation.
-- `pdf2svg`, Poppler (`pdfinfo`, `pdftocairo`).
-- DVI projects: `dvips`, Ghostscript (`ps2pdf`).
-- Additional packages/fonts used by your manuscript.
-- References: [MacTeX](https://www.tug.org/mactex/), [pdf2svg](https://github.com/dawbarton/pdf2svg), [Poppler](https://poppler.freedesktop.org/).
+Project packages/fonts remain required. LaTeX PDF navigation uses SyncTeX.
 
 ## Tool discovery
 
-- First-launch setup and **Settings → Tools** let you choose compiler/converter executables; blank paths use automatic detection.
-- Compiler/tool search includes `/Library/TeX/texbin`, `/opt/homebrew/bin`, `/usr/local/bin`, and system paths.
-- Custom executable folders are searched first for companion tools. Exact overrides take precedence for commands invoked by name, including engines launched by `latexmk`; a project's explicit absolute commands in `latexmkrc` remain authoritative.
-- Paths are saved in `tools.json`; no shell configuration changes are needed. [Tool settings](preferences.md#compiler-tools).
-- In **Project Settings**, choose the main file and compiler when automatic selection is insufficient.
-- [Extraction limits and troubleshooting](limits.md).
+![Settings → Tools: compiler executable paths, automatic detection, Check paths and Apply](../site/public/assets/guide/tools.webp)
+
+**Settings → Tools** detects installed tools. Set an executable path and **Apply** to override; clear it to restore detection. **Project Settings** chooses the main file/compiler.
+
+## Extraction limits
+
+FerMatter extracts literal equations and drawings. Generated macros/loops and document-wide Typst state may need manual adjustment. A PDF alone cannot be imported as an equation project.

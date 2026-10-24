@@ -31,15 +31,10 @@
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "app"
-    ],
+    "targets": ["app"],
     "category": "Productivity",
     "shortDescription": "Equations and figures for your slides",
-    "icon": [
-      "icons/icon.icns",
-      "icons/icon.png"
-    ],
+    "icon": ["icons/icon.icns", "icons/icon.png"],
     "macOS": {
       "minimumSystemVersion": "14.0",
       "signingIdentity": "-",
@@ -55,9 +50,7 @@
     },
     "fileAssociations": [
       {
-        "ext": [
-          "svg"
-        ],
+        "ext": ["svg"],
         "name": "SVG image",
         "description": "Editable FerMatter SVG",
         "mimeType": "image/svg+xml",

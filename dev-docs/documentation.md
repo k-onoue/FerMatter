@@ -41,7 +41,7 @@ node scripts/preview-site.mjs
 - `build-guides.mjs --check` runs Astro diagnostics and builds the complete site; retained as the repository's check entry point.
 - Fast editing: `npm --prefix site run dev`. Production search is verified after `npm --prefix site run build`.
 - Preview serves only `site/dist/`, at `/`, matching the organization site.
-- Each guide has `title`, `description`, and `sidebar.order` frontmatter; add its filename to `pages.json` and navigation to `astro.config.mjs`.
+- Each guide has `title` and `description` frontmatter. `pages.json` defines the published pages and their sidebar/previous/next order; route helpers reject other guides. Retired Markdown may remain in the repository without a public route.
 - Keep `.md` links readable on GitHub; the Markdown plugin validates and rewrites public guide/asset links.
 - Local links outside the guide allowlist, public assets, and sample ZIPs fail the build, including symlink escapes.
 - Old `/guide/topic.html` URLs redirect to `/guide/topic/`; `/guide/index.html` still works.
@@ -51,6 +51,7 @@ node scripts/preview-site.mjs
 
 - Product design reference: [Ollama](https://ollama.com/), reviewed 2026-10-21. Use plain monochrome surfaces, left-aligned content, restrained type sizes, generous whitespace and a compact navigation bar.
 - Keep product copy functional: feature names, supported formats, requirements and release status. Avoid repeated slogans and decorative section labels.
+- Product pages and guides share the reading-column width and position in `site/src/styles/site.css`. Guide pagination uses small text links between published guides; external issue links stay in the sidebar.
 - Website appearance initially follows the OS. The sun/moon button toggles light/dark and remembers the choice in `starlight-theme`; clearing that preference restores automatic detection.
 - Use the transparent Fermat mark for headers; reserve its blue tile for the application icon. See [artwork sources and regeneration](../desktop-app/resources/AppIcon.md).
 

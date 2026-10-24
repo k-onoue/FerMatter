@@ -33,10 +33,7 @@
         {
           "repository": "https://github.com/antfu/vscode-theme-vitesse",
           "revision": "2862595c3d5d05fabfd5aeb50bcbb79ea2f8d85f",
-          "files": [
-            "themes/vitesse-light.json",
-            "themes/vitesse-dark.json"
-          ],
+          "files": ["themes/vitesse-light.json", "themes/vitesse-dark.json"],
           "license": "MIT",
           "licenseFile": "Licenses/antfu-vscode-theme-vitesse.txt"
         }

@@ -42,3 +42,20 @@
 - Captured through the native window API in an isolated demo app/data directory; no personal projects, accounts, absolute paths, or desktop contents are visible.
 - Original reviewed PNGs are retained; Astro emits responsive WebP derivatives for the site.
 - Demo title, alt text, guide, and sample links: `site/src/data/demos.json`.
+
+## Appearance gallery
+
+- Captured 2026-10-24 from FerMatter 0.11.0 (build 13), native Rust/Tauri app on macOS.
+- `appearance/`: all sixteen bundled themes, including Default, in both Light and Dark; one cropped Appearance settings screenshot.
+- Same synthetic `examples/demo-paper/` Library in every theme capture; no personal projects, full filesystem paths, accounts or desktop content are shown.
+- Native window screenshots captured through computer use; resized and encoded as WebP without changing the UI. Raw PNG captures stay outside Git.
+- Theme and appearance restored to Atom One / Light / 100% opacity after capture. Theme sources and licenses: [bundled themes](../../../desktop-app/resources/themes/README.md).
+- Gallery and image descriptions: [Appearance guide](../../../user-docs/appearance.md).
+
+## Visual guides
+
+- `guide/library.webp`, `output-controls.webp`, `shortcuts.webp`, `tools.webp`: native FerMatter 0.11.0 (13) screenshots captured 2026-10-24 with synthetic `examples/demo-paper/`; output and settings images are cropped to the relevant controls.
+- `guide/source.webp`, `instant.webp`, `figures.webp`, `pdf.webp`: cropped WebP derivatives of the reviewed 2026-10-20 desktop screenshots above. Source/PDF, Instant and Figures retain that capture's version provenance. Crops omit the capture indicator and obsolete Instant title/toolbar.
+- Raw current captures stay outside Git. No private project lists, account details or full personal paths are included.
+- `guide/workflow.svg`, `mcp.svg`: explanatory diagrams, not app screenshots; accessible descriptions are embedded in each SVG.
+- Guides link only to the seven pages in `user-docs/pages.json`; other Markdown files are retained as repository references, without public routes.

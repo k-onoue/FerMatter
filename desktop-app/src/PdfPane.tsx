@@ -232,22 +232,30 @@ export function PdfPane({
     let accumulated = 0;
     let lastTime = 0;
     const wheel = (e: WheelEvent) => {
-      if (e.ctrlKey || e.metaKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      if (e.ctrlKey || e.metaKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))
+        return;
       const atTop = el.scrollTop <= 0;
-      const atBottom = Math.ceil(el.scrollTop + el.clientHeight) >= el.scrollHeight;
+      const atBottom =
+        Math.ceil(el.scrollTop + el.clientHeight) >= el.scrollHeight;
       if ((e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBottom)) {
         e.preventDefault();
-        const delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
-        if (e.timeStamp - lastTime > 200 || delta * accumulated < 0) accumulated = 0;
+        const delta =
+          e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+        if (e.timeStamp - lastTime > 200 || delta * accumulated < 0)
+          accumulated = 0;
         lastTime = e.timeStamp;
         accumulated += delta;
         if (Math.abs(accumulated) > 100) {
           if (accumulated > 0 && page < (pdf?.numPages || 1)) {
-            setPage(p => p + 1);
-            requestAnimationFrame(() => requestAnimationFrame(() => el.scrollTop = 0));
+            setPage((p) => p + 1);
+            requestAnimationFrame(() =>
+              requestAnimationFrame(() => (el.scrollTop = 0)),
+            );
           } else if (accumulated < 0 && page > 1) {
-            setPage(p => p - 1);
-            requestAnimationFrame(() => requestAnimationFrame(() => el.scrollTop = el.scrollHeight));
+            setPage((p) => p - 1);
+            requestAnimationFrame(() =>
+              requestAnimationFrame(() => (el.scrollTop = el.scrollHeight)),
+            );
           }
           accumulated = 0;
         }
@@ -388,7 +396,8 @@ export function PdfPane({
             />
           )}
           {artwork.hover && document && (
-            <PdfArtworkDrag defaultFontSize={defaultFontSize}
+            <PdfArtworkDrag
+              defaultFontSize={defaultFontSize}
               key={`${document.pdfPath}:${artwork.hover.targetID}`}
               anchor={artwork.hover}
               document={document}

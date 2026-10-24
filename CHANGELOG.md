@@ -8,7 +8,10 @@
 
 ## [Unreleased]
 
-- Simplify the website homepage with linked LaTeX/Typst and SVG headings; remove separate sample-project downloads from product pages and guides, using the demos bundled with the app.
+- Simplify the homepage and download page; keep copyable FerMatter, LaTeX and Typst installation commands and TeX size comparisons. Move the download-count badge to the repository README.
+- Publish seven concise visual guides, with all sixteen light/dark theme comparisons, and retire the extra public guide routes.
+- Align the reading column across product pages and guides; replace large navigation cards with compact links between guides.
+- Remove separate sample-project downloads from product pages and guides, using the demos bundled with the app.
 
 ## [0.11.0-preview.2] — 2026-10-22
 

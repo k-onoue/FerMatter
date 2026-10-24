@@ -1,0 +1,7 @@
+# Generated lockfiles and assets retain their owning tool's format.
+**/package-lock.json
+desktop-app/public/vendor/
+desktop-app/src-tauri/gen/
+site/public/stats/
+site/public/downloads/
+site/src/data/downloads.generated.json

@@ -1,0 +1,20 @@
+{
+  "name": "fermatter-development",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "format": "npm run format:web && npm run format:rust",
+    "format:check": "npm run format:web:check && npm run format:rust:check",
+    "format:web": "prettier --write --ignore-path .gitignore --ignore-path .prettierignore \"{desktop-app,site,scripts}/**/*.{astro,js,jsx,mjs,cjs,ts,tsx,html,css,json}\" \".github/**/*.yml\" \"*.json\" \".prettierrc.json\"",
+    "format:web:check": "prettier --check --ignore-path .gitignore --ignore-path .prettierignore \"{desktop-app,site,scripts}/**/*.{astro,js,jsx,mjs,cjs,ts,tsx,html,css,json}\" \".github/**/*.yml\" \"*.json\" \".prettierrc.json\"",
+    "format:rust": "./desktop-app/scripts/format.sh",
+    "format:rust:check": "./desktop-app/scripts/format.sh --check"
+  },
+  "devDependencies": {
+    "prettier": "3.9.9",
+    "prettier-plugin-astro": "1.1.2"
+  }
+}
