@@ -54,6 +54,7 @@ node scripts/preview-site.mjs
 - Product pages and guides share the reading-column width and position in `site/src/styles/site.css`. Guide pagination uses small text links between published guides; external issue links stay in the sidebar.
 - Website appearance initially follows the OS. The sun/moon button toggles light/dark and remembers the choice in `starlight-theme`; clearing that preference restores automatic detection.
 - Use the transparent Fermat mark for headers; reserve its blue tile for the application icon. See [artwork sources and regeneration](../desktop-app/resources/AppIcon.md).
+- Link-preview image metadata lives in `site/astro.config.mjs`: use an absolute public URL for `site/public/assets/icon.png`, with its PNG type, dimensions and alt text. X cards use the square `summary` layout.
 
 ## Publish
 

@@ -4,7 +4,7 @@
 - Fermat artwork selected by the repository owner on 2026-10-21; sources and regeneration: [artwork notes](../../../desktop-app/resources/AppIcon.md).
 - `fermat.svg`: transparent, recolorable head used as the product/guide header mask. Facial details and hair gaps remain transparent on every background.
 - `fermat-light.svg`, `fermat-dark.svg`: dark and off-white versions for standalone images and the README.
-- `favicon.svg`: transparent mark with an OS light/dark color query. `icon.png`: blue app tile for existing image links.
+- `favicon.svg`: transparent mark with an OS light/dark color query. `icon.png`: 1024×1024 blue app tile used for Open Graph / X link previews and existing image links.
 - Never capture private manuscripts, project-history lists, accounts, or desktop notifications.
 
 ## Paper-to-slides tutorial
