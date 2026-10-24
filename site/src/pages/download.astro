@@ -42,10 +42,13 @@ const minimal = `brew install --cask basictex\n${converters}\nsudo /Library/TeX/
           GitHub Releases ↗
         </a>
       </div>
-      {config.releaseAvailable && (
-        <InstallCommand label="FerMatter" command={app} />
-      )}
     </section>
+    {config.releaseAvailable && (
+      <section class="download-section" id="homebrew">
+        <h2>Homebrew</h2>
+        <InstallCommand label="FerMatter" command={app} />
+      </section>
+    )}
     <p class="download-note">
       FerMatter requires a math rendering engine: LaTeX or Typst.
     </p>
