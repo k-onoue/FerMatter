@@ -1,16 +1,9 @@
 [
   "README.md",
   "paper-to-slides.md",
-  "edit-equation.md",
-  "export.md",
-  "new-project.md",
-  "instant.md",
-  "navigate-paper.md",
-  "source-editor.md",
-  "figures.md",
-  "preferences.md",
-  "automation.md",
   "requirements.md",
-  "limits.md",
-  "why.md"
+  "export.md",
+  "shortcuts.md",
+  "appearance.md",
+  "automation.md"
 ]

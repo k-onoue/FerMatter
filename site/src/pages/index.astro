@@ -1,19 +1,31 @@
 ---
-import Product from '../layouts/Product.astro';
-import { href, guide } from '../data/links';
-import config from '../data/site.json';
-const title = 'The Ultimate Drag-and-Drop Equations Workspace.';
-const description = 'Easily paste equations from your LaTeX paper source into PowerPoint (.pptx) as SVG.';
+import Product from "../layouts/Product.astro";
+import { href, guide } from "../data/links";
+import config from "../data/site.json";
+const title = "The Ultimate Drag-and-Drop Equations Workspace.";
+const description =
+  "Easily paste equations from your LaTeX paper source into PowerPoint (.pptx) as SVG.";
 ---
+
 <Product title={title} description={description}>
   <section class="home-intro">
     <h1>{title}</h1>
     <p class="lead">{description}</p>
-    <div class="actions"><a class="button primary" href={config.releaseAvailable ? href('download/#mac') : guide()}>{config.releaseAvailable ? 'Download for macOS ↓' : 'Get started'}</a></div>
-    <p class="availability">macOS · {config.releaseAvailable ? (config.releaseNotarized ? 'Apple Silicon' : 'Unnotarized preview') : 'Development preview'}</p>
-  </section>
-  <section class="home-capabilities" aria-label="Capabilities">
-    <h2><a href={guide('paper-to-slides')}>Support LaTeX &amp; Typst</a></h2>
-    <h2><a href={guide('export')}>SVG first</a></h2>
+    <div class="actions">
+      <a
+        class="button primary"
+        href={config.releaseAvailable ? href("download/#mac") : guide()}
+      >
+        {config.releaseAvailable ? "Download for macOS ↓" : "Get started"}
+      </a>
+    </div>
+    <p class="availability">
+      macOS ·{" "}
+      {config.releaseAvailable
+        ? config.releaseNotarized
+          ? "Apple Silicon"
+          : "Unnotarized preview"
+        : "Development preview"}
+    </p>
   </section>
 </Product>

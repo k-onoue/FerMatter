@@ -1,21 +1,40 @@
 ---
-interface Props { command: string; label: string; }
+interface Props {
+  command: string;
+  label: string;
+}
 const { command, label } = Astro.props;
 ---
+
 <div class="fm-command">
-  <div class="fm-command-tools"><span role="status"></span><button type="button" data-copy-command={command} aria-label={`Copy ${label} installation commands`} hidden>Copy</button></div>
-  <pre tabindex="0" aria-label={`${label} installation commands`}><code>{command}</code></pre>
+  <div class="fm-command-tools">
+    <span role="status"></span>
+    <button
+      type="button"
+      data-copy-command={command}
+      aria-label={`Copy ${label} installation commands`}
+      hidden
+    >
+      Copy
+    </button>
+  </div>
+  <pre
+    tabindex="0"
+    aria-label={`${label} installation commands`}
+  ><code>{command}</code></pre>
 </div>
 <script>
-  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy-command]')) {
+  for (const button of document.querySelectorAll<HTMLButtonElement>(
+    "[data-copy-command]",
+  )) {
     button.hidden = false;
-    button.addEventListener('click', async () => {
+    button.addEventListener("click", async () => {
       const status = button.previousElementSibling!;
       try {
         await navigator.clipboard.writeText(button.dataset.copyCommand!);
-        status.textContent = 'Copied';
+        status.textContent = "Copied";
       } catch {
-        status.textContent = 'Select the commands and copy them manually.';
+        status.textContent = "Select the commands and copy them manually.";
       }
     });
   }

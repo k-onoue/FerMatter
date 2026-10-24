@@ -24,5 +24,7 @@
     "@astrojs/check": "0.9.9",
     "typescript": "5.9.3"
   },
-  "overrides": { "postcss-selector-parser": "7.1.6" }
+  "overrides": {
+    "postcss-selector-parser": "7.1.6"
+  }
 }

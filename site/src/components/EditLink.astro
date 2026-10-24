@@ -1,7 +1,12 @@
 ---
-import { repository } from '../data/links';
-import pages from '../../../user-docs/pages.json';
+import { repository } from "../data/links";
+import pages from "../../../user-docs/pages.json";
 const { id, hasSidebar } = Astro.locals.starlightRoute;
-const file = id === 'guide' ? 'README.md' : `${id.replace(/^guide\//, '')}.md`;
+const file = id === "guide" ? "README.md" : `${id.replace(/^guide\//, "")}.md`;
 ---
-{hasSidebar && pages.includes(file) && <a href={`${repository}/edit/main/user-docs/${file}`}>Edit this page ↗</a>}
+
+{hasSidebar && pages.includes(file) && (
+  <a class="fm-edit-link" href={`${repository}/edit/main/user-docs/${file}`}>
+    Edit this page <span aria-hidden="true">↗</span>
+  </a>
+)}

@@ -1,9 +1,68 @@
 ---
-import Footer from '@astrojs/starlight/components/Footer.astro';
-import { href, guide, repository } from '../data/links';
+import { getCollection } from "astro:content";
+import EditLink from "./EditLink.astro";
+import { href, guide, repository } from "../data/links";
+import pages from "../../../user-docs/pages.json";
+const { hasSidebar, id } = Astro.locals.starlightRoute;
+const showFooter =
+  Astro.url.pathname !== href("download/") &&
+  Astro.url.pathname !== href("download");
+const docs = hasSidebar ? await getCollection("docs") : [];
+const guides = pages.map((file) => {
+  const slug = file === "README.md" ? "" : file.replace(/\.md$/, "");
+  const pageId = slug ? `guide/${slug}` : "guide";
+  return {
+    id: pageId,
+    href: guide(slug),
+    title: docs.find((page) => page.id === pageId)?.data.title,
+  };
+});
+const current = guides.findIndex((page) => page.id === id);
+const previous = current > 0 ? guides[current - 1] : undefined;
+const next = current >= 0 ? guides[current + 1] : undefined;
 ---
-{Astro.locals.starlightRoute.hasSidebar && <Footer />}
-<footer class="fm-footer not-content" data-pagefind-ignore>
-  <a class="fm-brand" href={href()}>FerMatter</a>
-  <nav aria-label="Footer"><a href={href('features/')}>Features</a><a href={guide()}>Guide</a><a href={href('download/')}>Download</a><a href={repository}>GitHub ↗</a><a href={`${repository}/blob/main/CONTRIBUTING.md`}>Contribute ↗</a></nav>
-</footer>
+
+{hasSidebar && (
+  <footer class="fm-guide-footer" data-pagefind-ignore>
+    <nav class="fm-guide-pagination" aria-label="Guide pages">
+      {previous && (
+        <a
+          href={previous.href}
+          rel="prev"
+          aria-label={`Previous guide: ${previous.title}`}
+        >
+          <span aria-hidden="true">←</span>
+          <span>{previous.title}</span>
+        </a>
+      )}
+      {next && (
+        <a
+          class="fm-guide-next"
+          href={next.href}
+          rel="next"
+          aria-label={`Next guide: ${next.title}`}
+        >
+          <span>{next.title}</span>
+          <span aria-hidden="true">→</span>
+        </a>
+      )}
+    </nav>
+    <div class="fm-guide-meta">
+      <EditLink />
+    </div>
+  </footer>
+)}
+{showFooter && !hasSidebar && (
+  <footer class="fm-footer not-content" data-pagefind-ignore>
+    <a class="fm-brand" href={href()}>
+      FerMatter
+    </a>
+    <nav aria-label="Footer">
+      <a href={href("features/")}>Features</a>
+      <a href={guide()}>Guide</a>
+      <a href={href("download/")}>Download</a>
+      <a href={repository}>GitHub ↗</a>
+      <a href={`${repository}/blob/main/CONTRIBUTING.md`}>Contribute ↗</a>
+    </nav>
+  </footer>
+)}

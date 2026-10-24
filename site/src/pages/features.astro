@@ -1,18 +1,46 @@
 ---
-import Product from '../layouts/Product.astro';
-import Demo from '../components/Demo.astro';
-import demos from '../data/demos.json';
-import { guide } from '../data/links';
+import Product from "../layouts/Product.astro";
+import Demo from "../components/Demo.astro";
+import demos from "../data/demos.json";
+import { guide } from "../data/links";
 ---
-<Product title="Features" description="See how FerMatter moves equations and diagrams from your paper to your presentation.">
+
+<Product
+  title="Features"
+  description="See how FerMatter moves equations and diagrams from your paper to your presentation."
+>
   <header class="page-intro">
     <h1>Features</h1>
-    <nav class="feature-index" aria-label="Features on this page">{demos.map(demo => <a href={`#${demo.id}`}>{demo.id === 'source' ? 'Source & PDF' : demo.id[0].toUpperCase() + demo.id.slice(1)}</a>)}</nav>
+    <nav class="feature-index" aria-label="Features on this page">
+      {demos.map((demo) => (
+        <a href={`#${demo.id}`}>
+          {demo.id === "source"
+            ? "Source & PDF"
+            : demo.id[0].toUpperCase() + demo.id.slice(1)}
+        </a>
+      ))}
+    </nav>
   </header>
-  <div class="demo-grid">{demos.map((demo, i) => <Demo id={demo.id} eager={i < 2} />)}</div>
+  <div class="demo-grid">
+    {demos.map((demo, i) => (
+      <Demo id={demo.id} eager={i < 2} />
+    ))}
+  </div>
   <section class="details-grid">
-    <div><h2>Editable SVG</h2><p>Reopen supported SVG exports to edit their source.</p><a href={guide('instant')}>SVG restoration →</a></div>
-    <div><h2>Settings</h2><p>Configure themes, shortcuts, compiler paths, and export defaults.</p><a href={guide('preferences')}>Preferences →</a></div>
-    <div><h2>CLI &amp; MCP</h2><p>Search projects, render equations, and export from local tools.</p><a href={guide('automation')}>Automation →</a></div>
+    <div>
+      <h2>Editable SVG</h2>
+      <p>Reopen supported SVG exports to edit their source.</p>
+      <a href={guide("export", "re-edit-svg")}>SVG restoration →</a>
+    </div>
+    <div>
+      <h2>Settings</h2>
+      <p>Configure themes, shortcuts, compiler paths, and export defaults.</p>
+      <a href={guide("appearance")}>Appearance →</a>
+    </div>
+    <div>
+      <h2>MCP</h2>
+      <p>Search projects, render equations, and export from a local agent.</p>
+      <a href={guide("automation")}>MCP →</a>
+    </div>
   </section>
 </Product>

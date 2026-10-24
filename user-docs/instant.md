@@ -1,100 +1,50 @@
 ---
 title: "Make an equation instantly"
-description: "Write, preview, and drag an equation without creating a project."
+description: "Use a standalone template or a project's definitions in Instant."
 sidebar:
   order: 6
 ---
 
-1. Choose **Instant** beside Projects for standalone work, or the lightning button inside a project to use that project's definitions. `⇧⌘K` follows the current workspace.
-2. Type an equation. The preview updates automatically.
-3. Choose the output size in **pt**, a color, and **SVG**, **PDF**, **PNG**, or **JPEG**.
-4. Drag the preview into your slide, choose **Copy** (`⇧⌘C`), or export (`⇧⌘S`).
+1. Open **Instant** beside Projects, or use a project's lightning button (`⇧⌘K` follows the current workspace).
+2. Enter source, choose size/color/format, then drag the preview or **Copy** (`⇧⌘C`). Export uses `⇧⌘S`.
 
-- Instant opens beside the main window. **Open Instant** on the setup screen lets you start without choosing a project folder; the app creates its private `Instant` storage automatically.
-- **Display** and **Inline** accept math without outer delimiters. Multiline input stays one equation.
-- Use **Code** for complete environments, TikZ, CeTZ, or Typst markup.
-- Existing [compiler requirements](requirements.md) still apply.
-- Images have a transparent background; JPEG uses white. The checkerboard is only the preview background.
-- Output color is independent of the app theme. The opacity slider changes the window background, not text or exported artwork.
-- Click the color swatch for **Default** colors, a draggable **Color Picker**, **History**, and **HEX** input. Arrow keys also work in the picker. Changes update the preview and exported artwork.
-- On macOS, the eyedropper beside **Color Picker** samples a color anywhere on screen. Click to apply it, or press `Esc` to cancel. The same picker is available in Library's variant editor.
-- **History** keeps the last 16 chosen colors across Instant and Library editors and app restarts. Dragging adds the final color, not every intermediate shade.
+- **Display** and **Inline** take math without outer delimiters. **Code** accepts complete environments, TikZ, CeTZ or Typst markup.
+- **Open Instant** on the setup screen works without choosing a project folder. [Compiler requirements](requirements.md) still apply.
+- The color picker saves the last 16 colors shared with Library. Export colors are independent of the app theme.
 
 ## Editing and templates
 
-- The editor includes syntax completion, undo/redo, line numbers, and the usual editing shortcuts.
-- **Format** (`⇧⌥F`) formats the current equation or code; `⌘Z` undoes it. The [formatters](source-editor.md#editing-shortcuts) are bundled with the app.
-- `⌘Enter` or the refresh button renders again.
-- Copy and drag become available when the preview matches the current input and settings. Errors retain the last preview for reference, but prevent exporting it as the new result.
+- **Format** (`⇧⌥F`) formats the input; `⌘Enter` renders again.
+- Copy and drag wait for a preview matching the current input and settings. Errors keep the previous preview visible but prevent exporting it as the new result.
 
 ## From Projects
 
-- Use for independent equations with reusable templates. **File → New Instant** also opens this window from anywhere.
-- Choose a LaTeX, Typst, TikZ, or CeTZ template. **Instant settings** edits the template and compiler; keep one `{{content}}` placeholder.
-- Template definitions are available to syntax completion and compilation.
-- **Save defaults** writes the current template, input mode, size, color, and output format to `Settings/instant.json`.
-- **New equation** starts from these saved defaults; the current equation stays in the Instant library.
-- The folder button reveals `instant.json` in Finder. Edit it with a text editor and choose **Reload defaults** to validate and apply it. JSON stores template source as a string; the in-app template editor avoids manual escaping.
-- Reload keeps the current equation when the language matches. A language change preserves the old draft in the library before starting empty.
-- Invalid settings leave the current defaults active. Valid backups and external-edit conflict checks use the same mechanism as other [settings files](preferences.md).
-- Initial defaults copy existing custom project templates and a valid earlier Instant draft once. Later edits are independent of shared project templates.
-- For templates requiring companion files, open Instant from within the project.
+- Select a LaTeX, Typst, TikZ or CeTZ template. **Instant settings** edits its source and compiler; keep one `{{content}}` placeholder.
+- **Save defaults** stores the template, input mode, size, color and format. **New equation** starts from these defaults.
+- The folder button reveals `instant.json`; **Reload defaults** applies external edits. A language change keeps the old draft in the library before starting empty.
 
 ## Within a project
 
-- One separate window, draft, and library per project. Standalone and project windows can coexist; the title identifies the project.
-- LaTeX uses the project's main preamble, included definition/package files, compiler, and `latexmkrc`.
-- Typst uses the selected context file's top-level definitions/imports, including definitions after its last equation. Choose another `.typ` file for definitions in that module; imported modules keep their normal scope.
-- Syntax completion reads the project's `.tex`, `.sty`, `.cls`, and `.typ` files.
-- Source files remain unchanged. Instant reads saved project files; save Source edits first when using manual save.
-- Returning to the window or choosing refresh reloads the project context. If the project entry file's language changed, choose **New equation** for a fresh compatible draft; the previous draft stays in the library.
-- Add packages or shared definitions in the project's Source editor. The local settings panel shows the entry file/compiler and reveals the project folder.
+- Each project has its own Instant window, draft and library.
+- LaTeX uses the saved main preamble, included definitions, compiler and `latexmkrc`. Typst uses the selected context file's top-level definitions/imports.
+- Save Source edits first. Returning to Instant or refreshing reloads the project context without changing source files.
+- Templates needing companion files should use project Instant.
 
 ## Come back later
 
-- Drafts save automatically, including unfinished input and template edits. No copy, export, or folder selection is required.
-- Closing and reopening Instant restores the draft.
-- **Library** is visible when Instant opens. Search and select an equation to restore its source, template, color, size, and format. The library toolbar button hides or shows the list.
-- Editing text, color, or size updates the selected item. **New equation** (`⌘N`) creates another item; **Duplicate equation** keeps the original while you make another version.
-- Empty new equations do not fill the list. Clearing the current editor keeps its last nonempty entry in the library.
-- Existing history entries are retained when upgrading. Standalone and project Instant libraries remain separate.
-- Changing between LaTeX and Typst starts an empty input and keeps the previous nonempty draft in the library; it does not translate source.
-- Ordinary `⌘C` copies selected editor text; `⇧⌘C` copies the rendered image.
-- The New Instant, copy, export, new equation, and pin shortcuts follow [custom keybindings](preferences.md).
-
-| Under `~/Library/Application Support/Slide Math/Rust Preview/` | Contents |
-| --- | --- |
-| `Settings/instant.json` | Reusable global defaults; copy this file to back them up |
-| `Instant/session.json` | Standalone working draft and reusable library |
-| `Projects/<id>/Instant/session.json` | That project's working draft and reusable library |
-
-- Session files are app-managed. Keep them for backup/recovery; use the UI to edit drafts and library items.
-- Each scope has its own `Instant/Cache/` and `Instant/Exports/`; these contain generated artwork.
+- Drafts and library entries save automatically. Select an entry to restore its source, template and output settings.
+- Editing updates the selected entry. **New equation** (`⌘N`) adds another; **Duplicate equation** keeps the original.
+- Standalone and project libraries stay separate. Switching languages preserves the previous nonempty draft rather than translating it.
 
 ## Edit an exported SVG
 
-- Export or copy **SVG** from Library, Source/PDF previews, or Instant to include editable source and output settings.
-- Choose **Open SVG** or **Edit from Clipboard** in Instant or the FerMatter menu-bar menu. Dropping an SVG into the app also restores it.
-- In Finder, use **Open With → FerMatter**, or drop the SVG onto the Dock icon.
-- Drag artwork from PowerPoint or drop an SVG file into FerMatter to reopen its source.
-- A matching project tab or Instant is reused. If neither is open, dropping into the main window opens a project tab; other entry points open Instant. Missing or ambiguous projects open the standalone Instant.
-- A project tab opens the imported source in **Edit Variant**. Its original source files stay unchanged; an existing Library draft is preserved as a variant. Instant keeps the previous draft in its library.
-- Restored source renders automatically when its editor opens. Compiler errors remain editable; original project source files stay unchanged.
-- SVG source includes the equation and template/preamble. Review it before sharing; the complete manuscript and app storage paths are not embedded.
-- Project-specific Typst definitions, imported files, packages and fonts may still require the original project. Standalone fallback cannot recreate missing dependencies.
-- Other applications may strip SVG metadata when pasting or copying it. Keep the original SVG or use the Instant library if the copied artwork has no editable source. SVGs exported by older versions have no restoration metadata.
+- SVG exports from Library, Source/PDF previews and Instant include editable source metadata.
+- Use **Open SVG**, **Edit from Clipboard**, or drop the SVG into FerMatter to restore it.
+- Matching projects reopen in **Edit Variant** or Instant; missing or ambiguous projects use standalone Instant. Existing drafts are preserved.
+- SVG embeds equation/template source, not the whole manuscript. Project imports, packages and fonts may still be needed.
+- Other apps may strip metadata; keep the original SVG. PDF, PNG and JPEG do not support source restoration.
 
 ## Open Instant while another app is active
 
-- Keep FerMatter running and use its menu-bar menu.
-- **Instant from Anywhere**: `⌃⌥⌘N`. **Edit SVG from Clipboard**: `⌃⌥⌘V`.
-- Change or disable either shortcut in **Settings → Shortcuts** or `keybindings.json`. If another app owns a shortcut, choose a different binding.
-- Closing the main window keeps the app available. **Quit FerMatter** (`⌘Q`) ends the app after saving recoverable work.
-- Reopening FerMatter through Spotlight or another app copy reuses the running app and its menu-bar icon.
-- Login autostart is not enabled automatically.
-
-## Current scope
-
-- One global window and one local window per project, separate from the project workspace.
-- Editable restoration metadata is included in SVG only. PDF, PNG and JPEG remain ordinary image exports.
-- LaTeXiT library import, LinkBack, and macOS Services are not included. Native background entry points are currently tested on macOS only.
+- With FerMatter running: **Instant from Anywhere** (`⌃⌥⌘N`) or **Edit SVG from Clipboard** (`⌃⌥⌘V`). Both are configurable in [Shortcuts](shortcuts.md).
+- Closing the main window keeps the menu-bar app running. `⌘Q` quits it.

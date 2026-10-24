@@ -1,8 +1,25 @@
 ---
-import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
-interface Props { title: string; description: string; }
-const {title, description} = Astro.props;
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+interface Props {
+  title: string;
+  description: string;
+}
+const { title, description } = Astro.props;
 ---
-<StarlightPage frontmatter={{title, description, template: 'splash', editUrl: false, lastUpdated: false, prev: false, next: false}} hasSidebar={false}>
-  <div id="_top" class="product-page not-content"><slot /></div>
+
+<StarlightPage
+  frontmatter={{
+    title,
+    description,
+    template: "splash",
+    editUrl: false,
+    lastUpdated: false,
+    prev: false,
+    next: false,
+  }}
+  hasSidebar={false}
+>
+  <div id="_top" class="product-page not-content">
+    <slot />
+  </div>
 </StarlightPage>

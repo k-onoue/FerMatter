@@ -1,5 +1,7 @@
 # FerMatter
 
+[![DMG downloads](https://img.shields.io/github/downloads/FerMatter/fermatter.github.io/total/FerMatter.dmg?label=downloads)](https://github.com/FerMatter/fermatter.github.io/releases)
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="site/public/assets/fermat-dark.svg">
   <img src="site/public/assets/fermat-light.svg" width="96" height="96" alt="FerMatter — Pierre de Fermat">

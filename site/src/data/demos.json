@@ -5,7 +5,8 @@
     "description": "Browse equations, edit variants, and copy a selection into your presentation.",
     "image": "library.png",
     "alt": "FerMatter Library showing equations from the synthetic trajectory paper.",
-    "guide": "paper-to-slides"
+    "guide": "paper-to-slides",
+    "section": "library"
   },
   {
     "id": "instant",
@@ -13,7 +14,8 @@
     "description": "Type an equation and preview it. Project Instant reuses the project's commands and packages.",
     "image": "instant.png",
     "alt": "Instant editor with editable mathematics and its rendered preview.",
-    "guide": "instant"
+    "guide": "paper-to-slides",
+    "section": "instant"
   },
   {
     "id": "source",
@@ -21,7 +23,8 @@
     "description": "Edit project files with completion, formatting, split panes, and PDF navigation.",
     "image": "source.png",
     "alt": "Source editor beside the compiled synthetic paper PDF.",
-    "guide": "source-editor"
+    "guide": "paper-to-slides",
+    "section": "source"
   },
   {
     "id": "figures",
@@ -29,6 +32,7 @@
     "description": "Browse and export vector diagrams from LaTeX and Typst projects.",
     "image": "figures.png",
     "alt": "Synthetic CeTZ triangle and workflow diagrams in the Library.",
-    "guide": "figures"
+    "guide": "paper-to-slides",
+    "section": "figures"
   }
 ]

@@ -1,14 +1,10 @@
 ---
-title: "Make the talk your own"
-description: "More time for deciding what to explain and practising the talk."
+title: "Source and presentation variants"
+description: "How FerMatter separates manuscript edits from slide variants."
 sidebar:
   order: 13
 ---
 
-- Preparing a talk includes deciding what to explain, in what order, and where it belongs on the slide.
-- FerMatter helps with the repeated work of finding, retyping, and exporting equations.
-- Reuse the mathematics in your LaTeX or Typst paper; adjust it for your audience.
-- Choose the content and arrange it in the presentation tool you already use.
-- The aim is to leave more time for thinking through the talk and practising it.
-
-[Try the workflow](paper-to-slides.md).
+- [Library variants](edit-equation.md) reuse a paper's definitions while keeping the manuscript unchanged.
+- [Source mode](source-editor.md) edits the actual project files.
+- [SVG exports](instant.md#edit-an-exported-svg) carry equation source so they can reopen in FerMatter.
