@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Emphasize dragging equations from Library cards, Source previews, Instant and the paper PDF.
+- Stack guide/footer links in narrow reading columns and link feature headings directly to their guides; remove repeated Guide links and page-edit links.
 - Simplify the homepage and download page; keep copyable FerMatter, LaTeX and Typst installation commands and TeX size comparisons. Move the download-count badge to the repository README.
 - Publish seven concise visual guides, with all sixteen light/dark theme comparisons, and retire the extra public guide routes.
 - Align the reading column across product pages and guides; replace large navigation cards with compact links between guides.
