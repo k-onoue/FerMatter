@@ -13,7 +13,6 @@ sidebar:
 ## Before you start
 
 - Install the [tools for your project format](requirements.md).
-- Try the [LaTeX sample](../docs/downloads/demo-paper.zip) or [Typst sample](../docs/downloads/demo-typst.zip).
 - Opening/rendering a project leaves its manuscript source unchanged.
 - **Open Project** opens folders in place; ZIPs are extracted into the default project folder.
 - Drop folders or ZIPs from Finder onto **Projects** to import them into **Settings → Projects → Default project folder**. Originals stay unchanged; existing destination folders are never overwritten.

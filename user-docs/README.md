@@ -34,9 +34,3 @@ sidebar:
 - [Search, render and export through MCP or CLI](automation.md).
 - [Understand extraction limits](limits.md).
 - [Why FerMatter](why.md).
-
-## Try a sample
-
-- Open one of the demos added during setup. Compiling requires the [tools for its format](requirements.md).
-- Additional copies: download [LaTeX](../docs/downloads/demo-paper.zip), [Typst](../docs/downloads/demo-typst.zip), [TikZ](../docs/downloads/demo-tikz.zip), or [CeTZ](../docs/downloads/demo-cetz.zip), then choose **Open file or ZIP**.
-- All samples use synthetic material.

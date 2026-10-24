@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Simplify the website homepage with linked LaTeX/Typst and SVG headings; remove separate sample-project downloads from product pages and guides, using the demos bundled with the app.
+
 ## [0.11.0-preview.2] — 2026-10-22
 
 - Unify all app and website artwork on the detailed Fermat portrait; retire Dock face switching while preserving legacy settings/history, and provide a GitHub Organization JPEG.
