@@ -8,6 +8,9 @@
 
 ## [Unreleased]
 
+- Direct feature requests and bug reports to Issues; document that external pull requests are not accepted.
+- Show direct dragging from the paper PDF on the homepage and guide, with Source view beside the PDF.
+- Remove the homepage preview label and keep the macOS / Apple Silicon platform line.
 - Emphasize dragging equations from Library cards, Source previews, Instant and the paper PDF.
 - Stack guide/footer links in narrow reading columns and link feature headings directly to their guides; remove repeated Guide links and page-edit links.
 - Simplify the homepage and download page; keep copyable FerMatter, LaTeX and Typst installation commands and TeX size comparisons. Move the download-count badge to the repository README.

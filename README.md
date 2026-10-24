@@ -19,7 +19,7 @@
 | Task | Read |
 | --- | --- |
 | Use the app | [Short user guides](user-docs/README.md) · [public website](https://fermatter.github.io/) |
-| Build or contribute | [Development docs](dev-docs/README.md) · [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Development and feedback | [Development docs](dev-docs/README.md) · [Feedback policy](CONTRIBUTING.md) |
 | Work with an agent | [MCP and CLI guide](user-docs/automation.md) · [Development API reference](dev-docs/reference/automation.md) · [AGENTS.md](AGENTS.md) |
 | Prepare a release | [Release checklist](dev-docs/releasing.md) · [CHANGELOG.md](CHANGELOG.md) |
 | Edit the website or docs | [Documentation workflow](dev-docs/documentation.md) |

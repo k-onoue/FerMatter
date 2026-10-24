@@ -6,7 +6,7 @@
 
 | Task | Document |
 | --- | --- |
-| Build, branch, contribute | [Development](development.md) |
+| Build and maintain | [Development](development.md) |
 | Work on the desktop app | [Desktop implementation](../desktop-app/README.md) |
 | Find the responsible module | [Architecture](architecture.md) |
 | Choose validation | [Testing](testing.md) |
