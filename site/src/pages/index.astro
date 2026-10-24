@@ -2,6 +2,8 @@
 import Product from "../layouts/Product.astro";
 import { href, guide } from "../data/links";
 import config from "../data/site.json";
+import { Image } from "astro:assets";
+import dragFromPdf from "../../public/assets/demos/drag-from-pdf.webp";
 const title = "The Ultimate Drag-and-Drop Equations Workspace.";
 const description =
   "Easily paste equations from your LaTeX paper source into PowerPoint (.pptx) as SVG.";
@@ -19,13 +21,26 @@ const description =
         {config.releaseAvailable ? "Download for macOS ↓" : "Get started"}
       </a>
     </div>
-    <p class="availability">
-      macOS ·{" "}
-      {config.releaseAvailable
-        ? config.releaseNotarized
-          ? "Apple Silicon"
-          : "Unnotarized preview"
-        : "Development preview"}
-    </p>
+    <p class="availability">macOS · Apple Silicon</p>
   </section>
+  <figure class="home-drag">
+    <a href={guide("paper-to-slides", "pdf")}>
+      <Image
+        src={dragFromPdf}
+        alt="Source code on the left and the paper PDF on the right, with an equation being dragged from the highlighted PDF formula."
+        widths={[640, 1280, 1800]}
+        sizes="(max-width: 800px) 100vw, 768px"
+        loading="lazy"
+        quality={90}
+      />
+    </a>
+    <figcaption>
+      <h2>
+        <a href={guide("paper-to-slides", "pdf")}>
+          Drag straight from the paper PDF.
+        </a>
+      </h2>
+      <p>Also from Library cards, Source previews, and Instant.</p>
+    </figcaption>
+  </figure>
 </Product>

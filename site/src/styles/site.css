@@ -212,6 +212,30 @@ html:has(.product-page) .main-pane > main > .content-panel > .sl-container {
   max-width: 42rem;
   padding: 3rem 0 4rem;
 }
+.home-drag {
+  padding-bottom: 3rem;
+}
+.home-drag > a,
+.home-drag img {
+  display: block;
+  width: 100%;
+}
+.home-drag img {
+  height: auto;
+  border: 1px solid var(--fm-rule);
+  border-radius: 0.75rem;
+  background: var(--fm-panel);
+}
+.home-drag figcaption {
+  margin-top: 1rem;
+}
+.home-drag h2 a {
+  text-decoration: none;
+}
+.home-drag p {
+  margin-top: 0.4rem;
+  font-size: 0.9375rem;
+}
 .product-page:has(.home-intro) {
   min-height: calc(100svh - 16rem);
 }

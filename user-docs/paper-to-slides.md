@@ -17,7 +17,7 @@ sidebar:
 
 ## PDF
 
-![PDF pane displaying the compiled synthetic paper](../site/public/assets/guide/pdf.webp)
+![Source code beside the paper PDF, with an equation dragged directly from the highlighted PDF formula](../site/public/assets/demos/drag-from-pdf.webp)
 
 **PDF** (`⌥⌘P`): hover over a mapped equation and drag its grab handle. Library cards, Source previews and Instant previews can also be dragged.
 

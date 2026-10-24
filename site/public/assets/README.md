@@ -59,3 +59,10 @@
 - Raw current captures stay outside Git. No private project lists, account details or full personal paths are included.
 - `guide/workflow.svg`, `mcp.svg`: explanatory diagrams, not app screenshots; accessible descriptions are embedded in each SVG.
 - Guides link only to the seven pages in `user-docs/pages.json`; other Markdown files are retained as repository references, without public routes.
+
+## Dragging from the paper PDF
+
+- `demos/drag-from-pdf.webp`: the second owner-supplied screenshot from 2026-10-24, showing the synthetic `examples/demo-paper/` project opened as `demo-paper (1)`.
+- Actual Source view on the left, paper PDF on the right and native equation drag artwork. No app UI or drag state was fabricated or composited.
+- Cropped to FerMatter's window, with transparent rounded corners. The desktop, other apps, accounts and personal content are excluded.
+- Compressed WebP master with metadata removed; Astro creates responsive versions for the homepage. The paper-to-slides guide reuses the same image. Original desktop captures stay outside Git.
