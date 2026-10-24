@@ -214,8 +214,17 @@ XML
 product_args=(--distribution "$scratch/Distribution.xml" --package-path "$scratch" --resources "$scratch/resources")
 if [[ "$public" = 1 ]]; then product_args+=(--sign "$installer_identity" --timestamp); fi
 /usr/bin/productbuild "${product_args[@]}" "$scratch/$artifact.pkg"
-/usr/bin/hdiutil create -volname "FerMatter ${version} ${label}" -srcfolder "$scratch/dmg" \
-    -fs HFS+ -format UDZO "$scratch/$artifact.dmg"
+# Keep packaging dependencies isolated from both the app and the system Python.
+dmg_python="$project_dir/build/dmg-tools/bin/python3"
+if [[ ! -x "$dmg_python" ]]; then
+    python3 -m venv "$project_dir/build/dmg-tools"
+fi
+"$dmg_python" -m pip install --disable-pip-version-check --only-binary=:all: \
+    --require-hashes -r "$project_dir/packaging/dmg-requirements.txt"
+/usr/bin/xcrun swift "$project_dir/packaging/dmg-background.swift" "$scratch/arrow"
+/usr/bin/tiffutil -cat "$scratch/arrow.png" "$scratch/arrow@2x.png" -out "$scratch/arrow.tiff"
+"$dmg_python" "$project_dir/packaging/create-dmg.py" build \
+    "$scratch/dmg" "$scratch/$artifact.dmg" "FerMatter ${version} ${label}" "$scratch/arrow.tiff"
 
 if [[ "$public" = 1 ]]; then
     /usr/bin/codesign --sign "$signing_identity" --timestamp "$scratch/$artifact.dmg"
@@ -232,6 +241,7 @@ fi
 mount_pending=1
 /usr/bin/hdiutil attach "$scratch/$artifact.dmg" -readonly -nobrowse -noautoopen -mountpoint "$mount_dir"
 [[ -L "$mount_dir/Applications" && "$(readlink "$mount_dir/Applications")" = /Applications ]] || fail "DMG Applications shortcut is invalid."
+"$dmg_python" "$project_dir/packaging/create-dmg.py" verify "$mount_dir" "$scratch/arrow.tiff"
 /usr/bin/codesign --verify --deep --strict "$mount_dir/FerMatter.app"
 for file in README.txt LICENSE NOTICE; do
     cmp "$scratch/dmg/$file" "$mount_dir/$file"

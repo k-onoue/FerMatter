@@ -28,12 +28,13 @@
 - If [local certificate signing](signing.md) is configured, use `APPLE_SIGNING_IDENTITY=- ./desktop-app/scripts/package.sh` to build an ad hoc prototype. Switching the installed build's signing identity may request folder access again.
 - Version/build/minimum macOS come from the bundle; packaging does not edit the signed input.
 - Existing outputs are preserved unless `--overwrite` is supplied.
-- DMG: app, Applications shortcut, README, LICENSE, NOTICE.
+- DMG: fixed app → Applications layout with a Retina installation arrow. README, LICENSE and NOTICE stay in the image as hidden files; LICENSE and NOTICE are also bundled with the app.
+- Packaging uses Python 3.9+ with hash-pinned `dmgbuild` tools in ignored `desktop-app/build/dmg-tools/`; the app does not need or bundle Python. No Finder automation permission is required to create the layout.
 - PKG: only `/Applications/FerMatter.app`; no install scripts, services, dependencies or automatic launch.
 - Both packages require a project-folder choice when the user first opens the app. Demos and future projects use that per-user location; the installer never writes personal project data as root.
 - TeX/Typst/converters remain external. Python and development SDKs are not required to run the app.
 - User projects/support data are outside the payload and survive replacement/removal.
-- Verification checks signatures, a read-only mounted DMG, expanded PKG contents, disabled relocation, absence of installer scripts and hashes.
+- Verification checks signatures, Finder icon positions/background in the read-only mounted DMG, expanded PKG contents, disabled relocation, absence of installer scripts and hashes.
 - Inspection does not install the package or establish clean-Mac compatibility. Archives are not promised byte-for-byte reproducible.
 
 ## Public release boundary
