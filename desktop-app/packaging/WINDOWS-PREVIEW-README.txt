@@ -1,6 +1,7 @@
 FerMatter for Windows - experimental preview
 
-This unsigned preview supports Windows 10 1809 or later / Windows 11, x64.
+This unsigned preview targets Windows 11, x64. Windows 10, ARM64 and 32-bit
+packages have not been validated.
 Windows SmartScreen may identify an unsigned application. Verify the download
 and SHA-256 checksum before choosing whether to run it. Keep Windows security
 features enabled. This preview has no code-signing certificate.

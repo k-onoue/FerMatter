@@ -1535,7 +1535,11 @@ export default function App() {
               className="workspace-heading"
               aria-label={mode === "source" ? "Source tools" : "Library tools"}
             >
-              <div role="group" aria-label="Project actions">
+              <div
+                className="workspace-actions"
+                role="group"
+                aria-label="Project actions"
+              >
                 <button
                   title="Open with Instant Mode"
                   aria-label="Open with Instant Mode"

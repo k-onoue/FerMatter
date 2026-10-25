@@ -872,6 +872,26 @@ pub fn run() {
             let menu = tauri::menu::Menu::default(app.handle())?;
             for item in menu.items()? {
                 if let Some(submenu) = item.as_submenu() {
+                    #[cfg(windows)]
+                    if submenu.text()? == "Edit" {
+                        // Windows predefined Undo/Redo reserve Ctrl+Z/Y and
+                        // reinject those keys instead of using Monaco's history.
+                        // Let the focused WebView editor handle its own undo stack.
+                        for child in submenu.items()? {
+                            if let Some(predefined) = child.as_predefined_menuitem() {
+                                if matches!(predefined.text()?.as_str(), "Undo" | "Redo") {
+                                    submenu.remove(&child)?;
+                                }
+                            }
+                        }
+                        if let Some(first) = submenu.items()?.first() {
+                            if let Some(predefined) = first.as_predefined_menuitem() {
+                                if predefined.text()?.is_empty() {
+                                    submenu.remove(first)?;
+                                }
+                            }
+                        }
+                    }
                     if submenu.text()? == "File" {
                         submenu.insert(
                             &tauri::menu::MenuItem::with_id(

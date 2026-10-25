@@ -51,14 +51,32 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          choco install -y miktex strawberryperl ghostscript poppler --no-progress
-          if ($LASTEXITCODE -ne 0) { throw 'Rendering tool installation failed.' }
-          $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')
-          $env:PATH -split ';' | Where-Object { $_ } | Add-Content $env:GITHUB_PATH
-          initexmf '--set-config-value=[MPM]AutoInstall=1'
-          if ($LASTEXITCODE -ne 0) { throw 'MiKTeX configuration failed.' }
-          miktex packages install latexmk pdfcrop preview pgf mathtools bm cm-super
-          if ($LASTEXITCODE -ne 0) { throw 'MiKTeX package installation failed.' }
+          choco install -y ghostscript --version=10.8.0 --no-progress
+          if ($LASTEXITCODE -ne 0) { throw 'Ghostscript installation failed.' }
+          choco install -y poppler --version=26.9.0 --no-progress
+          if ($LASTEXITCODE -ne 0) { throw 'Poppler installation failed.' }
+          # Preserve setup-node's selected Node version while importing new tool paths.
+          $existingPaths = $env:PATH -split ';'
+          $registeredPaths = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')
+          $newPaths = @($registeredPaths -split ';' | Where-Object { $_ -and $_ -notin $existingPaths })
+          $env:PATH = ($existingPaths + $newPaths) -join ';'
+          $newPaths | Add-Content $env:GITHUB_PATH
+          $texArchive = Join-Path $env:RUNNER_TEMP 'TinyTeX-1-windows-v2026.10.exe'
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/rstudio/tinytex-releases/releases/download/v2026.10/TinyTeX-1-windows-v2026.10.exe' -OutFile $texArchive
+          if ((Get-FileHash -LiteralPath $texArchive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '36c329c644683d981a668419d13c8804696e2816ae4d287ad755788fee231a31') { throw 'TinyTeX checksum mismatch.' }
+          $texStage = Join-Path $env:RUNNER_TEMP 'fermatter-tex'
+          & 7z.exe x $texArchive "-o$texStage" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'TinyTeX extraction failed.' }
+          $texBin = Join-Path $texStage 'TinyTeX\bin\windows'
+          $env:PATH = "$texBin;$env:PATH"
+          $texBin | Add-Content $env:GITHUB_PATH
+          # tlmgr accepts packages already in the base bundle; bm.sty belongs to tools.
+          & "$texBin\tlmgr.bat" option repository https://mirror.ctan.org/systems/texlive/tlnet
+          if ($LASTEXITCODE -ne 0) { throw 'TeX Live repository configuration failed.' }
+          & "$texBin\tlmgr.bat" update --self
+          if ($LASTEXITCODE -ne 0) { throw 'TeX Live manager update failed.' }
+          & "$texBin\tlmgr.bat" install latexmk pdfcrop preview pgf mathtools tools cm-super synctex standalone amsmath amsfonts geometry xcolor grfext
+          if ($LASTEXITCODE -ne 0) { throw 'TeX Live package installation failed.' }
           $archive = Join-Path $env:RUNNER_TEMP 'typst.zip'
           Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-pc-windows-msvc.zip' -OutFile $archive
           if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '19ce3551153c2fe7ee9fa2f95208310c8f4d3209fedb699e0333faf8913f6736') { throw 'Typst checksum mismatch.' }
