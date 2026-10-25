@@ -363,6 +363,9 @@ html:has(.product-page) .main-pane > main > .content-panel > .sl-container {
   color: var(--fm-ink);
   text-decoration: underline;
 }
+.fm-footer nav .fm-footer-github {
+  display: none;
+}
 .fm-guide-footer {
   margin-top: 3rem;
   padding-top: 1.5rem;
@@ -599,6 +602,9 @@ html:has(.product-page) .main-pane > main > .content-panel > .sl-container {
   }
   .fm-github {
     display: none;
+  }
+  .fm-footer nav .fm-footer-github {
+    display: inline-flex;
   }
   .details-grid {
     gap: 1.5rem;

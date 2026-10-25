@@ -8,7 +8,7 @@
 
 ## [Unreleased]
 
-- Show the homepage footer on every page, including downloads and guides, while retaining guide pagination above it.
+- Share a compact footer across all pages, with guide pagination above it and GitHub shown there only when absent from the header.
 
 - Publish a Declaration with commitments to open source, no automatic data collection, and free access without paywalled features or usage limits tied to payment.
 
