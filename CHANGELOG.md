@@ -10,6 +10,7 @@
 
 - Remove the macOS titlebar spacer on Windows and Linux; keep their native windows and menus opaque and synchronized with the selected appearance.
 - Open project setup and the bundled demos from global Instant without discarding editor drafts.
+- Keep project-action undo from touching a replacement folder on Windows, even when it inherits the original folder's creation time.
 - Include the latest Library extraction exclusions in the next Windows preview.
 
 - Share a compact footer across all pages, with guide pagination above it and GitHub shown there only when absent from the header.
