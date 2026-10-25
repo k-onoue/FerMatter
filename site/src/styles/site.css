@@ -445,6 +445,10 @@ html:has(.product-page) .main-pane > main > .content-panel > .sl-container {
   font-size: 1rem;
   margin: 1.5rem 0 0.5rem;
 }
+.download-section h4 {
+  font-size: 0.9375rem;
+  margin: 1.25rem 0 0.5rem;
+}
 .fm-command {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

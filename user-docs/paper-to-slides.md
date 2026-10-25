@@ -84,4 +84,4 @@ For opening, creating, importing or deleting projects, see [Project folders](REA
 
 <span id="if-it-does-not-render"></span>
 
-For compiler failures and extraction limits, see [Requirements](requirements.md#if-rendering-fails).
+For compiler failures and extraction limitations, see [Requirements](requirements.md#if-rendering-fails).

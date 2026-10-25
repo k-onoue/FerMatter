@@ -65,10 +65,29 @@ pub fn rename_no_replace(source: &Path, destination: &Path) -> Result<()> {
         }
         Ok(())
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "linux")]
+    {
+        use std::{ffi::CString, os::unix::ffi::OsStrExt};
+        let source = CString::new(source.as_os_str().as_bytes()).map_err(err)?;
+        let destination = CString::new(destination.as_os_str().as_bytes()).map_err(err)?;
+        if unsafe {
+            libc::renameat2(
+                libc::AT_FDCWD,
+                source.as_ptr(),
+                libc::AT_FDCWD,
+                destination.as_ptr(),
+                libc::RENAME_NOREPLACE,
+            )
+        } != 0
+        {
+            return Err(std::io::Error::last_os_error().to_string());
+        }
+        Ok(())
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     {
         let _ = (source, destination);
-        Err("Safe file moves are currently implemented for macOS.".into())
+        Err("Safe file moves are not implemented on this platform.".into())
     }
 }
 pub const EDITOR_LIMIT: u64 = 10_000_000;
