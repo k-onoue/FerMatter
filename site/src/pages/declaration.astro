@@ -1,0 +1,54 @@
+---
+import Product from "../layouts/Product.astro";
+import { repository } from "../data/links";
+---
+
+<Product
+  title="Declaration"
+  description="Our commitments: open source, no automatic data collection, and free to use now and in the future."
+>
+  <header class="page-intro">
+    <h1 id="declaration-title">Declaration</h1>
+  </header>
+  <article class="declaration" aria-labelledby="declaration-title">
+    <section aria-labelledby="open-source">
+      <h2 id="open-source">Open source</h2>
+      <p>
+        FerMatter’s <a href={repository}>source code</a> is available under the{" "}
+        <a href={`${repository}/blob/main/LICENSE`}>Apache License 2.0</a>.
+      </p>
+    </section>
+    <section aria-labelledby="no-automatic-data-collection">
+      <h2 id="no-automatic-data-collection">No automatic data collection</h2>
+      <p>
+        FerMatter runs on your computer. The app does not automatically send
+        your documents, equations, settings, or usage data to us.
+      </p>
+    </section>
+    <section aria-labelledby="free-now-and-in-the-future">
+      <h2 id="free-now-and-in-the-future">Free, now and in the future</h2>
+      <p>
+        FerMatter will remain free to use. We will never introduce
+        subscriptions, paywalled features, or usage limits tied to payment.
+      </p>
+    </section>
+    <p class="declaration-message">
+      We just look forward to seeing handmade slides and posters for your
+      research presentations!
+    </p>
+  </article>
+</Product>
+
+<style>
+  .declaration {
+    display: grid;
+    gap: 2rem;
+  }
+  .declaration h2 {
+    margin-bottom: 0.6rem;
+  }
+  .declaration .declaration-message {
+    color: var(--fm-ink);
+    font-size: 1.125rem;
+  }
+</style>
