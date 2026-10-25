@@ -10,7 +10,7 @@
   "releaseName": "0.11.0 Preview 3",
   "releaseNotarized": false,
   "homebrewCask": "fermatter/tap/fermatter",
-  "ubuntuAptAvailable": false,
+  "ubuntuAptAvailable": true,
   "version": "0.11.0",
   "assetName": "FerMatter.dmg"
 }

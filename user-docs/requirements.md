@@ -7,6 +7,8 @@ sidebar:
 
 **Apple Silicon · macOS 14+ · LaTeX or Typst**
 
+Experimental Ubuntu 24.04 amd64 packages and rendering-tool commands: [Ubuntu installation](https://fermatter.github.io/download/#ubuntu).
+
 ## Rendering tools
 
 Install the tools for your source format; they are separate from the FerMatter app.
