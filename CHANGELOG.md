@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Apply the shared keyboard shortcut validation rules to Windows, including reserved keys, saved overrides and Ctrl+Tab navigation.
+
 - Apply native titlebar spacing and appearance synchronization in Linux source builds.
 
 - Share a compact footer across all pages, with guide pagination above it and GitHub shown there only when absent from the header.

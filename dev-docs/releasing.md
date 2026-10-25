@@ -10,7 +10,7 @@
 
 ## Windows public preview
 
-- Windows 11 x64 preview uses the separate `v0.11.0-windows-preview.2` tag. App version remains `0.11.0`; the immutable installer filename includes its Windows preview revision.
+- Windows 11 x64 preview uses the separate `v0.11.0-windows-preview.3` tag. App version remains `0.11.0`; the immutable installer filename includes its Windows preview revision.
 - Run [Windows checks and packaging](reference/packaging.md#windows-preview) on the reviewed candidate; install and launch the exact final setup EXE with isolated synthetic data.
 - Publish an **unsigned prerelease** and checksum manifest to `FerMatter/fermatter.github.io`. Verify anonymous access and the downloaded bytes before enabling `windowsReleaseAvailable` in a separate reviewed site change.
 - Keep macOS `releaseTag`/`assetName` unchanged. Windows download fields are independent so a Windows release cannot break the existing DMG/Homebrew channel.

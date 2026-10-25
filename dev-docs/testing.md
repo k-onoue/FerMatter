@@ -2,14 +2,14 @@
 
 ## Choose checks by scope
 
-| Change | Required evidence |
-| --- | --- |
+| Change                          | Required evidence                                                                                                                                                        |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | App, frontend, compiler backend | macOS: `./desktop-app/scripts/check.sh`; `./desktop-app/scripts/build.sh`. Windows: `./desktop-app/scripts/check-windows.ps1`; `./desktop-app/scripts/build-windows.ps1` |
-| User docs, site, site generator | Build guides; freshness check; publication check; browser preview |
-| Developer docs only | Publication/link check; review commands and referenced behavior |
-| Synthetic samples | `node scripts/prepare-demo.mjs`; compiler checks; publication check |
-| Packaging | [Packaging verification](reference/packaging.md); distinguish inspection from installation |
-| Release | All affected checks; real compiler coverage; [release checklist](releasing.md) |
+| User docs, site, site generator | Build guides; freshness check; publication check; browser preview                                                                                                        |
+| Developer docs only             | Publication/link check; review commands and referenced behavior                                                                                                          |
+| Synthetic samples               | `node scripts/prepare-demo.mjs`; compiler checks; publication check                                                                                                      |
+| Packaging                       | [Packaging verification](reference/packaging.md); distinguish inspection from installation                                                                               |
+| Release                         | All affected checks; real compiler coverage; [release checklist](releasing.md)                                                                                           |
 
 ## App checks
 
@@ -29,7 +29,7 @@
 ```powershell
 ./desktop-app/scripts/check-windows.ps1
 ./desktop-app/scripts/build-windows.ps1
-./desktop-app/scripts/verify-windows-install.ps1 -Installer ./desktop-app/build/windows/FerMatter_0.11.0_windows_x64_preview.2_unsigned_setup.exe -CheckCompilers
+./desktop-app/scripts/verify-windows-install.ps1 -Installer ./desktop-app/build/windows/FerMatter_0.11.0_windows_x64_preview.3_unsigned_setup.exe -CheckCompilers
 ```
 
 - `check-windows.ps1` builds/tests the frontend, runs Rust tests and clippy, and verifies all four synthetic compiler projects. `-SkipCompilers` is an explicit development-only skip; it is not release evidence.
