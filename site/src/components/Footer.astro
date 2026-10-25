@@ -3,9 +3,6 @@ import { getCollection } from "astro:content";
 import { href, guide, repository } from "../data/links";
 import pages from "../../../user-docs/pages.json";
 const { hasSidebar, id } = Astro.locals.starlightRoute;
-const showFooter =
-  Astro.url.pathname !== href("download/") &&
-  Astro.url.pathname !== href("download");
 const docs = hasSidebar ? await getCollection("docs") : [];
 const guides = pages.map((file) => {
   const slug = file === "README.md" ? "" : file.replace(/\.md$/, "");
@@ -22,7 +19,7 @@ const next = current >= 0 ? guides[current + 1] : undefined;
 ---
 
 {hasSidebar && (
-  <footer class="fm-guide-footer" data-pagefind-ignore>
+  <div class="fm-guide-footer" data-pagefind-ignore>
     <nav class="fm-guide-pagination" aria-label="Guide pages">
       {previous && (
         <a
@@ -46,20 +43,18 @@ const next = current >= 0 ? guides[current + 1] : undefined;
         </a>
       )}
     </nav>
-  </footer>
+  </div>
 )}
-{showFooter && !hasSidebar && (
-  <footer class="fm-footer not-content" data-pagefind-ignore>
-    <a class="fm-brand" href={href()}>
-      FerMatter
-    </a>
-    <nav aria-label="Footer">
-      <a href={href("features/")}>Features</a>
-      <a href={guide()}>Guide</a>
-      <a href={href("download/")}>Download</a>
-      <a href={href("declaration/")}>Declaration</a>
-      <a href={repository}>GitHub ↗</a>
-      <a href={`${repository}/issues`}>Issues ↗</a>
-    </nav>
-  </footer>
-)}
+<footer class="fm-footer not-content" data-pagefind-ignore>
+  <a class="fm-brand" href={href()}>
+    FerMatter
+  </a>
+  <nav aria-label="Footer">
+    <a href={href("features/")}>Features</a>
+    <a href={guide()}>Guide</a>
+    <a href={href("download/")}>Download</a>
+    <a href={href("declaration/")}>Declaration</a>
+    <a href={repository}>GitHub ↗</a>
+    <a href={`${repository}/issues`}>Issues ↗</a>
+  </nav>
+</footer>

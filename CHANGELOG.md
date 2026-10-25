@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Show the homepage footer on every page, including downloads and guides, while retaining guide pagination above it.
+
 - Publish a Declaration with commitments to open source, no automatic data collection, and free access without paywalled features or usage limits tied to payment.
 
 ## [0.11.0-preview.4] — 2026-10-25
