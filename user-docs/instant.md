@@ -40,7 +40,7 @@ sidebar:
 
 - SVG exports from Library, Source/PDF previews and Instant include editable source metadata.
 - Use **Open SVG**, **Edit from Clipboard**, or drop the SVG into FerMatter to restore it.
-- Matching projects reopen in **Edit Variant** or Instant; missing or ambiguous projects use standalone Instant. Existing drafts are preserved.
+- Matching projects reopen in **Edit** or Instant; missing or ambiguous projects use standalone Instant. Existing drafts are preserved.
 - SVG embeds equation/template source, not the whole manuscript. Project imports, packages and fonts may still be needed.
 - Other apps may strip metadata; keep the original SVG. PDF, PNG and JPEG do not support source restoration.
 

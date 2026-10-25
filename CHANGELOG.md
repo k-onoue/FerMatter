@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Remove repeated Library/Source/PDF headings, group window controls at the upper right, and shorten Edit Variant to Edit.
+
 - Add experimental Ubuntu 24.04 amd64 packages with signed APT installation; support safe Linux project moves and a default project folder when XDG Documents is unset.
 - Group download-page compiler setup under Math rendering engine, remove its First launch section and rename Extraction limitations in the guide.
 - Require security-patched Node.js for development and update vulnerable build/test dependencies.

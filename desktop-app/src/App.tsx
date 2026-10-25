@@ -42,6 +42,7 @@ import { mergeScan, mergeRenderedCard } from "./projectUpdates";
 import { SourceWorkspace, type SourceSession } from "./SourceWorkspace";
 import { PdfPane, type PdfViewState } from "./PdfPane";
 import { WorkspaceArtifacts, WorkspaceTabs } from "./WorkspaceTabs";
+import { WindowControls } from "./WindowControls";
 import { newWorkspace, type WorkspaceState } from "./workspaces";
 import { restoredVariant } from "./restoredVariant";
 import type { InstantDraft } from "./instant";
@@ -1383,7 +1384,6 @@ export default function App() {
       sections: [...(project.sections || []), { id: uid(), name: value }],
     });
   }
-  const title = mode === "source" ? "Source" : "Library";
   const desktopBackground = useDesktopBackground();
   return (
     <div
@@ -1400,12 +1400,36 @@ export default function App() {
       )}
       <div className="titlebar" data-tauri-drag-region />
       {ready && !setupRequired && (
-        <WorkspaceTabs
-          workspaces={workspaces}
-          active={project?.id || null}
-          onSelect={(id) => void selectWorkspace(id).catch(report)}
-          onClose={(id) => void closeWorkspace(id).catch(report)}
-        />
+        <div className="workspace-bar">
+          <WorkspaceTabs
+            workspaces={workspaces}
+            active={project?.id || null}
+            onSelect={(id) => void selectWorkspace(id).catch(report)}
+            onClose={(id) => void closeWorkspace(id).catch(report)}
+          />
+          <WindowControls>
+            <button
+              title="Always on top"
+              className={pin ? "active" : ""}
+              onClick={() => void execute("pin")}
+            >
+              <Pin size={17} />
+            </button>
+            <button
+              title="Appearance"
+              onClick={() =>
+                void updateSettings({
+                  appearance: dark ? "light" : "dark",
+                })
+              }
+            >
+              <SunMoon size={17} />
+            </button>
+            <button title="Settings" onClick={() => setShowSettings(true)}>
+              <Settings2 size={17} />
+            </button>
+          </WindowControls>
+        </div>
       )}
       {workspaces
         .filter((item) => item.project.id !== project?.id)
@@ -1447,7 +1471,6 @@ export default function App() {
           onOpen={(p) => void openRecent(p)}
           onOpenDialog={(type) => void openProject(type)}
           onNew={() => setNewProject(true)}
-          onSettingsDialog={() => setShowSettings(true)}
           onInstant={() => void execute("instant")}
           onError={setError}
           onNotice={setNotice}
@@ -1507,33 +1530,17 @@ export default function App() {
             </footer>
           </aside>
           <div className="main-column">
-            <header className="workspace-heading">
-              <div>
-                <h1>{title}</h1>
-                <span className="spacer" />
+            <header
+              className="workspace-heading"
+              aria-label={mode === "source" ? "Source tools" : "Library tools"}
+            >
+              <div role="group" aria-label="Project actions">
                 <button
                   title="Open with Instant Mode"
                   aria-label="Open with Instant Mode"
                   onClick={() => void execute("instant")}
                 >
                   <Zap size={17} />
-                </button>
-                <button
-                  title="Always on top"
-                  className={pin ? "active" : ""}
-                  onClick={() => void execute("pin")}
-                >
-                  <Pin size={17} />
-                </button>
-                <button
-                  title="Appearance"
-                  onClick={() =>
-                    void updateSettings({
-                      appearance: dark ? "light" : "dark",
-                    })
-                  }
-                >
-                  <SunMoon size={17} />
                 </button>
                 <button
                   title="Toggle PDF"
@@ -1563,9 +1570,6 @@ export default function App() {
                     </button>
                   </>
                 )}
-                <button title="Settings" onClick={() => setShowSettings(true)}>
-                  <Settings2 size={17} />
-                </button>
               </div>
               {mode === "library" && (
                 <div className="library-controls">
@@ -1864,7 +1868,7 @@ export default function App() {
                     className="soft"
                     onClick={() => editCard(selectedCard)}
                   >
-                    Edit Variant
+                    Edit
                   </button>
                   {selectedCard.file && (
                     <button onClick={() => showSource(selectedCard)}>
@@ -2152,7 +2156,7 @@ export default function App() {
           onClose={() => setContext(null)}
           items={[
             {
-              label: "Edit Variant",
+              label: "Edit",
               action: () => editCard(context.card),
             },
             {

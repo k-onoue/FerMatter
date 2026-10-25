@@ -32,7 +32,7 @@ export function VariantEditor({
   const preview = savedVariant(editing, editPreview);
   const color = cardOutputColor(editing.instantColor) ?? "#000000";
   return (
-    <Modal title="Edit Variant" onClose={onClose} wide>
+    <Modal title="Edit" onClose={onClose} wide>
       <div className="variant-title">
         <input
           aria-label="Variant name"
