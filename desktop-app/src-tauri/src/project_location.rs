@@ -7,12 +7,16 @@ use std::{
 
 pub fn default_directory() -> Result<PathBuf> {
     let documents = dirs::document_dir();
-    // Minimal Linux installations may not define XDG_DOCUMENTS_DIR.
-    #[cfg(target_os = "linux")]
+    // Keep a usable default when the OS has no configured Documents folder.
+    #[cfg(any(windows, target_os = "linux"))]
     let documents = documents.or_else(|| dirs::home_dir().map(|home| home.join("Documents")));
+    #[cfg(windows)]
+    let name = "FerMatter";
+    #[cfg(not(windows))]
+    let name = "Mathlidelux";
     Ok(documents
         .ok_or("Documents folder is unavailable")?
-        .join("Mathlidelux"))
+        .join(name))
 }
 
 pub fn validate_path(path: &str) -> Result<()> {
@@ -171,6 +175,19 @@ pub fn copy_folder(source: &Path, parent: &Path, name: &str) -> Result<PathBuf> 
 
 #[cfg(test)]
 mod tests {
+    #[cfg(windows)]
+    #[test]
+    fn windows_default_uses_the_os_documents_folder_without_replacing_saved_paths() {
+        let documents = dirs::document_dir()
+            .or_else(|| dirs::home_dir().map(|home| home.join("Documents")))
+            .unwrap();
+        assert_eq!(default_directory().unwrap(), documents.join("FerMatter"));
+        let saved = documents.join("Mathlidelux");
+        assert_eq!(
+            directory(&serde_json::json!({"projectDirectory":saved}), "").unwrap(),
+            saved
+        );
+    }
     #[cfg(windows)]
     #[test]
     fn windows_project_creation_rejects_parent_paths_and_device_aliases() {

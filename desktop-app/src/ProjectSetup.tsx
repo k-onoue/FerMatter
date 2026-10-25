@@ -6,6 +6,7 @@ import type { Preferences, Project } from "./types";
 import type { SettingsSnapshot } from "./settingsPersistence";
 import { BrandMark } from "./BrandMark";
 import { CompilerToolFields, useCompilerTools } from "./CompilerTools";
+import { isWindows } from "./platform";
 
 type SetupResult = {
   settings: SettingsSnapshot<Preferences>;
@@ -19,7 +20,8 @@ export function ProjectSetup({
   initialDirectory: string;
   onComplete: (data: SetupResult) => void;
 }) {
-  const [directory, setDirectory] = useState("");
+  const [chosenDirectory, setDirectory] = useState<string>();
+  const directory = chosenDirectory ?? (isWindows() ? initialDirectory : "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [step, setStep] = useState<"folder" | "tools">("folder");
