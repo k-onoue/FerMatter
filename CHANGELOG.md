@@ -8,7 +8,7 @@
 
 ## [Unreleased]
 
-- Default new Windows workspaces to Documents/FerMatter and create that folder when initial setup finishes; preserve existing saved locations.
+- Default new Windows workspaces to the local user profile's FerMatter folder, outside OneDrive, and create it when initial setup finishes; preserve existing saved locations.
 
 - Apply native titlebar spacing and appearance synchronization in Linux source builds.
 

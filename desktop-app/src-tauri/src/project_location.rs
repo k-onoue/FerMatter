@@ -5,18 +5,24 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[cfg(windows)]
+pub fn default_directory() -> Result<PathBuf> {
+    // Documents may be redirected into OneDrive. Keep new Windows workspaces
+    // directly under the local user profile instead.
+    Ok(dirs::home_dir()
+        .ok_or("User profile folder is unavailable")?
+        .join("FerMatter"))
+}
+
+#[cfg(not(windows))]
 pub fn default_directory() -> Result<PathBuf> {
     let documents = dirs::document_dir();
-    // Keep a usable default when the OS has no configured Documents folder.
-    #[cfg(any(windows, target_os = "linux"))]
+    // Minimal Linux installations may not define XDG_DOCUMENTS_DIR.
+    #[cfg(target_os = "linux")]
     let documents = documents.or_else(|| dirs::home_dir().map(|home| home.join("Documents")));
-    #[cfg(windows)]
-    let name = "FerMatter";
-    #[cfg(not(windows))]
-    let name = "Mathlidelux";
     Ok(documents
         .ok_or("Documents folder is unavailable")?
-        .join(name))
+        .join("Mathlidelux"))
 }
 
 pub fn validate_path(path: &str) -> Result<()> {
@@ -177,12 +183,10 @@ pub fn copy_folder(source: &Path, parent: &Path, name: &str) -> Result<PathBuf> 
 mod tests {
     #[cfg(windows)]
     #[test]
-    fn windows_default_uses_the_os_documents_folder_without_replacing_saved_paths() {
-        let documents = dirs::document_dir()
-            .or_else(|| dirs::home_dir().map(|home| home.join("Documents")))
-            .unwrap();
-        assert_eq!(default_directory().unwrap(), documents.join("FerMatter"));
-        let saved = documents.join("Mathlidelux");
+    fn windows_default_uses_the_local_profile_without_replacing_saved_paths() {
+        let profile = dirs::home_dir().unwrap();
+        assert_eq!(default_directory().unwrap(), profile.join("FerMatter"));
+        let saved = profile.join("OneDrive/Documents/Mathlidelux");
         assert_eq!(
             directory(&serde_json::json!({"projectDirectory":saved}), "").unwrap(),
             saved

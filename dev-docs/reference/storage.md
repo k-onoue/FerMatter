@@ -3,7 +3,7 @@
 ## Stable identity
 
 - Display/app/executable: `FerMatter` (formerly `Mathlidelux`); bundle ID: `local.slidemath.prototype`.
-- Renaming does not migrate data. Keep saved project roots, `mathlidelux.*` schemas/keys, SVG namespace, project UUID files and `MATHLIDELUX_*` environment variables. New Windows setups default to the OS Documents folder's `FerMatter` directory; saved locations and the macOS/Linux `Documents/Mathlidelux` default remain valid.
+- Renaming does not migrate data. Keep saved project roots, `mathlidelux.*` schemas/keys, SVG namespace, project UUID files and `MATHLIDELUX_*` environment variables. New Windows setups default to `%USERPROFILE%\FerMatter`, outside OneDrive; saved locations and the macOS/Linux `Documents/Mathlidelux` default remain valid.
 - Bundled demo contents remain unchanged so first-launch migration can still recognize existing samples.
 - Keep the same resident lock identity so launching an older app copy cannot create a second resident.
 - Preserve `~/Library/Application Support/Slide Math` and existing absolute source/cache paths.
@@ -35,7 +35,7 @@
 
 - Project ID: first 24 hex characters of the canonical root-path SHA-256; draft filename uses the full hash.
 - Opened folders stay in place; opening a main file uses its containing folder.
-- New projects, Finder drops, ZIP imports and duplication use `preferences.json.projectDirectory`; missing/empty values use `Documents/FerMatter` on Windows and `Documents/Mathlidelux` on macOS/Linux. Resolve Documents through the OS; Windows/Linux fall back to `Documents` under the home folder when unavailable. New Project can override the parent folder once.
+- New projects, Finder drops, ZIP imports and duplication use `preferences.json.projectDirectory`; missing/empty values use `%USERPROFILE%\FerMatter` on Windows and `Documents/Mathlidelux` on macOS/Linux. Windows deliberately avoids the Documents known folder because OneDrive can redirect it. Linux falls back to `Documents` under the home folder when unavailable. New Project can override the parent folder once.
 - Folder drops copy originals, including hidden/Git files. Existing direct children are opened in place. Reject links/special files, destination-inside-source, oversize inputs and invalid projects before publication; stage copies and publish without replacing names.
 - `ProjectHistory.json` preserves undo/redo groups across launches. Deletion uses Finder Trash and records resulting paths; source folder identity checks and no-replace moves protect external replacements. `ProjectHistoryData/` retains metadata, variants, Source drafts and Instant sessions for restoration, including when a new project reuses a deleted project’s path.
 - Windows history now checks the directory's volume/file ID. Timestamp-only history from early Windows previews is preserved but refused by Undo/Redo; folders and recovery data remain untouched.

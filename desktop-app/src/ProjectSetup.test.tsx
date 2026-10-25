@@ -32,7 +32,7 @@ afterEach(() => {
 
 it("uses the Windows default without requiring a folder picker", async () => {
   vi.spyOn(navigator, "platform", "get").mockReturnValue("Win32");
-  const directory = "C:\\Users\\Example\\Documents\\FerMatter";
+  const directory = "C:\\Users\\Example\\FerMatter";
   const onComplete = vi.fn();
   render(<ProjectSetup initialDirectory={directory} onComplete={onComplete} />);
   expect(screen.getByText(directory)).toBeTruthy();
@@ -47,10 +47,10 @@ it("uses the Windows default without requiring a folder picker", async () => {
   expect(rpc).toHaveBeenCalledWith("complete_project_setup", { directory });
 });
 
-it("keeps a redirected Windows default on cancel and preserves a custom choice", async () => {
+it("keeps the local Windows default on cancel and preserves a custom choice", async () => {
   vi.spyOn(navigator, "platform", "get").mockReturnValue("Win32");
   const onComplete = vi.fn();
-  const directory = "C:\\Users\\Example\\OneDrive\\Documents\\FerMatter";
+  const directory = "C:\\Users\\Example\\FerMatter";
   const view = render(
     <ProjectSetup initialDirectory={directory} onComplete={onComplete} />,
   );
@@ -65,10 +65,7 @@ it("keeps a redirected Windows default on cancel and preserves a custom choice",
   fireEvent.click(screen.getByRole("button", { name: "Choose Folder…" }));
   await screen.findByText("D:\\Work");
   view.rerender(
-    <ProjectSetup
-      initialDirectory="E:\\Documents\\FerMatter"
-      onComplete={onComplete}
-    />,
+    <ProjectSetup initialDirectory="E:\\FerMatter" onComplete={onComplete} />,
   );
   expect(screen.getByText("D:\\Work")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Next" }));

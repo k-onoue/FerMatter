@@ -185,8 +185,8 @@ fn create_default_directory(store: &Storage, chosen: &Path, default: &Path) -> R
     if load(store)?.is_some_and(|setup| setup.complete) {
         return Err("Project setup is already complete. Change the folder in Settings.".into());
     }
-    // Validate before creating even the default folder inside a redirected
-    // Documents location. Application storage must never become a project root.
+    // Validate before creating the default folder. Application storage must
+    // never become a project root.
     store.check_project_parent(chosen)?;
     fs::create_dir_all(chosen).map_err(err)
 }
@@ -289,14 +289,14 @@ mod tests {
     fn windows_default_is_created_on_setup_without_moving_existing_work() {
         let temp = tempfile::tempdir().unwrap();
         let (store, settings) = store(temp.path());
-        let default = temp.path().join("Documents/FerMatter");
+        let default = temp.path().join("Profile/FerMatter");
         let manual = temp.path().join("Missing manual folder");
         create_default_directory(&store, &manual, &default).unwrap();
         assert!(!manual.exists());
         let inside = store.home.join("FerMatter");
         assert!(create_default_directory(&store, &inside, &inside).is_err());
         assert!(!inside.exists());
-        let old = temp.path().join("Documents/Mathlidelux");
+        let old = temp.path().join("OneDrive/Documents/Mathlidelux");
         fs::create_dir_all(&old).unwrap();
         fs::write(old.join("keep.typ"), "$x$").unwrap();
         create_default_directory(&store, &default, &default).unwrap();
