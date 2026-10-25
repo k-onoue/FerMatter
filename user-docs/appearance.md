@@ -1,15 +1,37 @@
 ---
 title: "Appearance"
-description: "Compare every FerMatter theme in light and dark mode."
+description: "Set app appearance, window behavior and theme files; compare light and dark themes."
+sidebar:
+  order: 6
 ---
 
 ## Settings
 
+Open **Settings → Appearance**.
+
+| Control | Changes |
+| --- | --- |
+| **Appearance** | **System**, **Light** or **Dark** mode |
+| **Color Theme** | The palette, such as Default, Atom One or Catppuccin |
+| **Background opacity** | Background transparency; text and equations stay opaque |
+
+These settings affect the app window. See [Output color](export.md#output-color) to change exported artwork.
+
 ![FerMatter Appearance settings: appearance mode, color theme, background opacity and theme file controls](../site/public/assets/appearance/settings.webp)
+
+## Keep equations beside your slides
+
+**Always on Top** (`⇧⌘P`) pins the window above other apps. Combine it with **Background opacity** to keep FerMatter beside your presentation.
+
+<span id="manage-shortcuts-and-themes-as-files"></span>
+
+## Theme files
+
+Under **Settings → Appearance → Theme file**, **Edit JSON / Reload / Import… / Export…** manages `theme.json`. Export custom colors before switching themes; **Default** restores the built-in palette. Keyboard assignments use a separate [shortcut file](shortcuts.md#shortcut-files).
 
 ## Color themes
 
-**Settings → Appearance → Color Theme**. Choose **System**, **Light** or **Dark**; export colors stay unchanged.
+Compare the sixteen palettes below, each in light and dark mode. Select a preview to view it at full size.
 
 <div class="fm-appearance-gallery">
 
@@ -110,11 +132,3 @@ description: "Compare every FerMatter theme in light and dark mode."
 | [![VS Code Modern, light appearance](../site/public/assets/appearance/vscode-modern-light.webp)](../site/public/assets/appearance/vscode-modern-light.webp) | [![VS Code Modern, dark appearance](../site/public/assets/appearance/vscode-modern-dark.webp)](../site/public/assets/appearance/vscode-modern-dark.webp) |
 
 </div>
-
-## Keep equations beside your slides
-
-**Always on Top** (`⇧⌘P`) pins the window. **Background opacity** changes the background only; text and equations stay opaque.
-
-## Manage shortcuts and themes as files
-
-**Edit JSON**, **Reload**, **Import…** and **Export…** manage `theme.json`. Export custom colors before switching themes; **Default** restores the built-in palette.

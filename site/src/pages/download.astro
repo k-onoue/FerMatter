@@ -32,6 +32,16 @@ const minimal = `brew install --cask basictex\n${converters}\nsudo /Library/TeX/
           </a>
         )}
       </div>
+      {config.releaseAvailable && (
+        <>
+          <h3>Install from DMG</h3>
+          <ol>
+            <li>Open the DMG and drag FerMatter.app into Applications.</li>
+            <li>Eject the DMG.</li>
+            <li>Open FerMatter from Applications.</li>
+          </ol>
+        </>
+      )}
     </section>
     {config.releaseAvailable && (
       <section class="download-section" id="homebrew">
@@ -39,6 +49,42 @@ const minimal = `brew install --cask basictex\n${converters}\nsudo /Library/TeX/
         <InstallCommand label="FerMatter" command={app} />
       </section>
     )}
+    <section class="download-section" id="first-launch">
+      <h2>First launch</h2>
+      {!config.releaseNotarized && (
+        <>
+          <p>
+            This preview is ad hoc signed and has not been notarized by Apple.
+            macOS may require approval before opening it.
+          </p>
+          <p>
+            If macOS blocks a copy from the official download, try opening it
+            once, then choose{" "}
+            <strong>
+              System Settings → Privacy &amp; Security → Open Anyway
+            </strong>{" "}
+            and confirm <strong>Open</strong>. See{" "}
+            <a href="https://support.apple.com/102445">Apple's instructions</a>.
+          </p>
+        </>
+      )}
+      <p>
+        Once the app opens,{" "}
+        <a href={guide("", "first-launch")}>
+          choose your project folder and try a demo
+        </a>
+        .
+      </p>
+    </section>
+    <section class="download-section" id="updates">
+      <h2>Updates</h2>
+      <p>
+        Quit FerMatter before replacing the app in Applications. For Homebrew,
+        run <code>brew upgrade --cask {config.homebrewCask}</code>. Projects,
+        settings and drafts are stored outside the app. In-app update downloads
+        are not available.
+      </p>
+    </section>
     <p class="download-note">
       FerMatter requires a math rendering engine: LaTeX or Typst.
     </p>

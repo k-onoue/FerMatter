@@ -8,6 +8,9 @@
 
 ## [Unreleased]
 
+- Organize guides by setup, editing, output and customization; clarify output controls, Instant input and MCP connection checks, and add installation and first-launch instructions to the download page.
+- Link the homepage demo to Features and reuse its PDF-drag screenshot in the README.
+
 ## [0.11.0-preview.3] — 2026-10-25
 
 - Show a white drag-to-Applications arrow with a black outline and fixed app/folder positions when opening the DMG.
