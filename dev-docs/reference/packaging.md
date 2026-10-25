@@ -23,7 +23,7 @@ Get-FileHash ./desktop-app/build/windows/*setup.exe -Algorithm SHA256
 - Preview tag: `v0.11.0-windows-preview.2`; filename: `FerMatter_0.11.0_windows_x64_preview.2_unsigned_setup.exe`. Increment the preview revision for changed published bytes; never replace an existing asset.
 - Publish reviewed binaries to a **prerelease** in `FerMatter/fermatter.github.io`, with the checksum manifest and installation/validation notes. Windows assets have independent site fields; existing macOS downloads stay pinned.
 - Before setting `windowsReleaseAvailable: true`, verify anonymous download/checksum and install/launch the exact downloaded installer. Record the tested Windows version and native/clean-machine limitations.
-- Unsigned previews may trigger SmartScreen or an unknown-publisher warning. State this clearly and link to [Microsoft's guidance](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app#step-6-handle-smartscreen-for-new-apps). Do not disable security features in the installer.
+- Record signing state and any OS first-launch prompts with release metadata and maintainer validation. Product-facing instructions follow the concise [website presentation rules](../documentation.md#publish). The installer must keep OS security features enabled.
 - Authenticode signing and broader clean-machine/upgrade validation remain requirements for a stable Windows release; macOS notarization is a separate process.
 
 ## Experimental Ubuntu

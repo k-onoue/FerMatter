@@ -8,11 +8,7 @@
 
 ## [Unreleased]
 
-- Remove the macOS titlebar spacer on Windows and Linux; keep their native windows and menus opaque and synchronized with the selected appearance.
-- Open project setup and the bundled demos from global Instant without discarding editor drafts.
-- Keep project-action undo from touching a replacement folder on Windows, even when it inherits the original folder's creation time.
-- Include the latest Library extraction exclusions in the next Windows preview.
-- Avoid rewriting unchanged settings recovery backups on read, preventing unnecessary Windows sharing errors during rendering and export.
+- Apply native titlebar spacing and appearance synchronization in Linux source builds.
 
 - Share a compact footer across all pages, with guide pagination above it and GitHub shown there only when absent from the header.
 
@@ -23,6 +19,15 @@
 - Simplify download labels and installation copy on the website.
 
 - Align version, requirements, install actions and section order across the Download platform tabs.
+
+## [0.11.0-windows-preview.2] — 2026-10-26
+
+- Remove the macOS titlebar spacer on Windows; keep native windows and menus opaque and synchronized with the selected appearance.
+- Open project setup and the bundled demos from global Instant without discarding editor drafts.
+- Keep project-action undo from touching a replacement folder on Windows, even when it inherits the original folder's creation time.
+- Include configurable Library extraction exclusions, including table filters, in the Windows build.
+- Avoid rewriting unchanged settings recovery backups on read, preventing unnecessary Windows sharing errors during rendering and export.
+- Export the card targeted by the context menu, even when another card remains selected.
 
 ## [0.11.0-windows-preview.1] — 2026-10-26
 
@@ -165,6 +170,7 @@
 - Obsolete web UI prototype; retain the native app and product site.
 
 [Unreleased]: https://github.com/k-onoue/FerMatter/commits/main/
+[0.11.0-windows-preview.2]: https://github.com/FerMatter/fermatter.github.io/releases/tag/v0.11.0-windows-preview.2
 [0.11.0-windows-preview.1]: https://github.com/FerMatter/fermatter.github.io/releases/tag/v0.11.0-windows-preview.1
 
 ### Security
