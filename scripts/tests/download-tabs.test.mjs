@@ -46,9 +46,12 @@ function page({ platform = "MacIntel", hash = "", linux = true } = {}) {
   });
   for (const [id, owner] of [
     ["install", "mac"],
+    ["mac-install", "mac"],
     ["typst", "mac"],
     ["typst-on-windows", "windows"],
     ["windows-update", "windows"],
+    ["windows-install", "windows"],
+    ["ubuntu-install", "ubuntu"],
     ["ubuntu-update", "ubuntu"],
   ]) {
     nodes.set(id, { ...element(id), owner });
@@ -137,9 +140,12 @@ test("existing section and nested hashes take precedence over OS detection", () 
     ["#windows", "windows"],
     ["#ubuntu", "ubuntu"],
     ["#install", "mac"],
+    ["#mac-install", "mac"],
     ["#typst", "mac"],
     ["#typst-on-windows", "windows"],
     ["#windows-update", "windows"],
+    ["#windows-install", "windows"],
+    ["#ubuntu-install", "ubuntu"],
     ["#ubuntu-update", "ubuntu"],
   ]) {
     const p = page({ platform: "Win32", hash });

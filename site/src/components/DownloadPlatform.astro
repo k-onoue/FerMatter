@@ -1,0 +1,26 @@
+---
+interface Props {
+  id: "mac" | "windows" | "ubuntu";
+  version: string;
+  requirements: string;
+  action?: { href: string; label: string };
+}
+const { id, version, requirements, action } = Astro.props;
+---
+
+<section class="download-platform-panel" id={id} data-download-panel>
+  <header class="download-platform-header not-content">
+    <h2>FerMatter {version}</h2>
+    <p class="download-requirements">{requirements}</p>
+    {action && (
+      <div class="actions">
+        <a class="button primary" href={action.href}>
+          {action.label}
+        </a>
+      </div>
+    )}
+  </header>
+  <div class="download-markdown product-markdown sl-markdown-content">
+    <slot />
+  </div>
+</section>

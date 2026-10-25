@@ -16,6 +16,8 @@
 
 - Simplify download labels and installation copy on the website.
 
+- Align version, requirements, install actions and section order across the Download platform tabs.
+
 ## [0.11.0-windows-preview.1] — 2026-10-26
 
 - Add a Windows 11 x64 preview installer, native Windows build/check scripts, and separate Windows downloads and rendering-tool setup instructions.
