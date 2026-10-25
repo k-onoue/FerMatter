@@ -19,6 +19,7 @@
 | --- | --- |
 | Install | [DMG or Homebrew](https://fermatter.github.io/download/) |
 | Use the app | [Guide](user-docs/README.md) · [Features](https://fermatter.github.io/features/) |
+| Project commitments | [Declaration](DECLARATION.md) |
 | Install rendering tools | [LaTeX and Typst requirements](user-docs/requirements.md) |
 | Connect an agent | [MCP guide](user-docs/automation.md) |
 | Request a feature or report a bug | [GitHub Issues](https://github.com/k-onoue/FerMatter/issues) |
