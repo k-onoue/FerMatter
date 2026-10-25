@@ -47,48 +47,13 @@ const ubuntuLatex =
         <InstallCommand label="FerMatter" command={app} />
       </section>
     )}
-    {config.ubuntuAptAvailable && (
-      <section class="download-section" id="ubuntu">
-        <h2>For Ubuntu (experimental)</h2>
-        <p>
-          Ubuntu 24.04 · amd64. Limited testing; use file export for images.
-          Native image clipboard and recoverable project deletion are
-          unavailable.
-        </p>
-        <details>
-          <summary>First-time APT setup</summary>
-          <InstallCommand label="APT repository setup" command={aptSetup} />
-        </details>
-        <InstallCommand
-          label="FerMatter for Ubuntu"
-          command="sudo apt install fermatter"
-        />
-        <p>Install LaTeX or Typst separately:</p>
-        <details>
-          <summary>LaTeX tools for Ubuntu</summary>
-          <InstallCommand label="Ubuntu LaTeX tools" command={ubuntuLatex} />
-        </details>
-        <p>
-          For Typst, follow the{" "}
-          <a href="https://github.com/typst/typst#installation">
-            official installation instructions
-          </a>
-          .
-        </p>
-      </section>
-    )}
+
     <section class="download-section" id="updates">
       <h2>Update</h2>
       <InstallCommand
         label="Homebrew update"
         command={`brew upgrade --cask ${config.homebrewCask}`}
       />
-      {config.ubuntuAptAvailable && (
-        <InstallCommand
-          label="Ubuntu update"
-          command={"sudo apt update\nsudo apt install --only-upgrade fermatter"}
-        />
-      )}
     </section>
     <section class="download-section" id="rendering-engines">
       <h2>Math rendering engine</h2>
@@ -136,5 +101,40 @@ const ubuntuLatex =
     <section class="download-section" id="requirements">
       <a href={guide("requirements")}>Requirements →</a>
     </section>
+    {config.ubuntuAptAvailable && (
+      <section class="download-section" id="ubuntu">
+        <h2>For Ubuntu (experimental)</h2>
+        <p>
+          Ubuntu 24.04 · amd64. Limited testing; use file export for images.
+          Native image clipboard and recoverable project deletion are
+          unavailable.
+        </p>
+        <details>
+          <summary>First-time APT setup</summary>
+          <InstallCommand label="APT repository setup" command={aptSetup} />
+        </details>
+        <InstallCommand
+          label="FerMatter for Ubuntu"
+          command="sudo apt install fermatter"
+        />
+        <p>Install LaTeX or Typst separately:</p>
+        <details>
+          <summary>LaTeX tools for Ubuntu</summary>
+          <InstallCommand label="Ubuntu LaTeX tools" command={ubuntuLatex} />
+        </details>
+        <p>
+          For Typst, follow the{" "}
+          <a href="https://github.com/typst/typst#installation">
+            official installation instructions
+          </a>
+          .
+        </p>
+        <h3>Update</h3>
+        <InstallCommand
+          label="Ubuntu update"
+          command={"sudo apt update\nsudo apt install --only-upgrade fermatter"}
+        />
+      </section>
+    )}
   </div>
 </Product>
