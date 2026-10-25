@@ -8,8 +8,6 @@
 
 ## [Unreleased]
 
-- Apply the shared keyboard shortcut validation rules to Windows, including reserved keys, saved overrides and Ctrl+Tab navigation.
-
 - Apply native titlebar spacing and appearance synchronization in Linux source builds.
 
 - Share a compact footer across all pages, with guide pagination above it and GitHub shown there only when absent from the header.
@@ -21,6 +19,10 @@
 - Simplify download labels and installation copy on the website.
 
 - Align version, requirements, install actions and section order across the Download platform tabs.
+
+## [0.11.0-windows-preview.3] — 2026-10-26
+
+- Validate Windows shortcuts consistently in Settings and saved files, preserving custom assignments and Ctrl+Tab navigation.
 
 ## [0.11.0-windows-preview.2] — 2026-10-26
 
@@ -172,6 +174,7 @@
 - Obsolete web UI prototype; retain the native app and product site.
 
 [Unreleased]: https://github.com/k-onoue/FerMatter/commits/main/
+[0.11.0-windows-preview.3]: https://github.com/FerMatter/fermatter.github.io/releases/tag/v0.11.0-windows-preview.3
 [0.11.0-windows-preview.2]: https://github.com/FerMatter/fermatter.github.io/releases/tag/v0.11.0-windows-preview.2
 [0.11.0-windows-preview.1]: https://github.com/FerMatter/fermatter.github.io/releases/tag/v0.11.0-windows-preview.1
 
