@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Publish a Declaration with commitments to open source, no automatic data collection, and free access without paywalled features or usage limits tied to payment.
+
 ## [0.11.0-preview.4] — 2026-10-25
 
 - Remove repeated Library, Source and PDF headings; use compact project toolbars with matching positions in Library and Source.

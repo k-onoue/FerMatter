@@ -1,9 +1,12 @@
 ---
 import PageTitle from "@astrojs/starlight/components/PageTitle.astro";
 import { href } from "../data/links";
-const product = [href(), href("features/"), href("download/")].includes(
-  Astro.url.pathname,
-);
+const product = [
+  href(),
+  href("features/"),
+  href("download/"),
+  href("declaration/"),
+].includes(Astro.url.pathname);
 ---
 
 {!product && <PageTitle />}
