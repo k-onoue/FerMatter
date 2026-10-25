@@ -8,13 +8,16 @@
 
 ## [Unreleased]
 
-- Remove repeated Library/Source/PDF headings, group window controls at the upper right, and shorten Edit Variant to Edit.
+## [0.11.0-preview.4] — 2026-10-25
 
-- Add experimental Ubuntu 24.04 amd64 packages with signed APT installation; support safe Linux project moves and a default project folder when XDG Documents is unset.
-- Group download-page compiler setup under Math rendering engine, remove its First launch section and rename Extraction limitations in the guide.
-- Require security-patched Node.js for development and update vulnerable build/test dependencies.
-
-- Organize guides by setup, editing, output and customization; clarify output controls, Instant input and MCP connection checks, and add installation and first-launch instructions to the download page.
+- Remove repeated Library, Source and PDF headings; use compact project toolbars with matching positions in Library and Source.
+- Group pin, appearance and settings controls at the right of the project-tab row; use the same separation in Instant.
+- Shorten Edit Variant to Edit while preserving presentation variants and original project files.
+- Add experimental Ubuntu 24.04 amd64 packages through signed APT, including safe project moves and a default folder when XDG Documents is unset.
+- Require security-patched Node.js for development, update vulnerable build/test dependencies, and update Tokio to 1.53.3 for its I/O safety fix.
+- Organize guides by setup, editing, output and customization; clarify output controls, Instant input and MCP connection checks.
+- Group download-page compiler setup under Math rendering engine, simplify installation/update instructions, and put Ubuntu setup and updates at the bottom.
+- Rename Extraction limitations in the guide while preserving existing links.
 - Link the homepage demo to Features and reuse its PDF-drag screenshot in the README.
 
 ## [0.11.0-preview.3] — 2026-10-25

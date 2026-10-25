@@ -13,7 +13,10 @@ dirty=clean
 commit="$(git -C "$root" rev-parse HEAD)"
 mkdir -p "$DESKTOP_ROOT/build/release-validation"
 output="$(mktemp -d "$DESKTOP_ROOT/build/release-validation/run.XXXXXX")"
-app="$DESKTOP_ROOT/src-tauri/target/release/bundle/macos/FerMatter.app"
+if [[ -n "${CARGO_TARGET_DIR:-}" && "$CARGO_TARGET_DIR" != /* ]]; then
+  export CARGO_TARGET_DIR="$PWD/$CARGO_TARGET_DIR"
+fi
+app="${CARGO_TARGET_DIR:-$DESKTOP_ROOT/src-tauri/target}/release/bundle/macos/FerMatter.app"
 touch "$output/steps.tsv"
 status=failed
 finish() { node "$DESKTOP_ROOT/scripts/release-report.mjs" write "$output" "$root" "$app" "$status" "$commit" "$dirty"; echo "Release evidence: $output/report.json"; }

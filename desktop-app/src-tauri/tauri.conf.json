@@ -38,7 +38,7 @@
     "macOS": {
       "minimumSystemVersion": "14.0",
       "signingIdentity": "-",
-      "bundleVersion": "14",
+      "bundleVersion": "15",
       "hardenedRuntime": true
     },
     "resources": {
