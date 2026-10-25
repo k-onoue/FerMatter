@@ -1,0 +1,93 @@
+name: Windows experimental
+
+on:
+  pull_request:
+    paths:
+      - "desktop-app/**"
+      - ".github/workflows/windows.yml"
+      - ".node-version"
+      - "LICENSE"
+      - "NOTICE"
+  push:
+    branches: [main]
+    paths:
+      - "desktop-app/**"
+      - ".github/workflows/windows.yml"
+      - ".node-version"
+      - "LICENSE"
+      - "NOTICE"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: "2"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: desktop-app/package-lock.json
+      - run: rustup toolchain install stable --profile minimal --component clippy
+      - run: rustup default stable
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop-app/src-tauri/target
+          key: windows-2022-rust-${{ hashFiles('desktop-app/src-tauri/Cargo.lock') }}
+      - name: Install real rendering tools
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          choco install -y miktex strawberryperl ghostscript poppler --no-progress
+          if ($LASTEXITCODE -ne 0) { throw 'Rendering tool installation failed.' }
+          $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')
+          $env:PATH -split ';' | Where-Object { $_ } | Add-Content $env:GITHUB_PATH
+          initexmf '--set-config-value=[MPM]AutoInstall=1'
+          if ($LASTEXITCODE -ne 0) { throw 'MiKTeX configuration failed.' }
+          miktex packages install latexmk pdfcrop preview pgf mathtools bm cm-super
+          if ($LASTEXITCODE -ne 0) { throw 'MiKTeX package installation failed.' }
+          $archive = Join-Path $env:RUNNER_TEMP 'typst.zip'
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-pc-windows-msvc.zip' -OutFile $archive
+          if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '19ce3551153c2fe7ee9fa2f95208310c8f4d3209fedb699e0333faf8913f6736') { throw 'Typst checksum mismatch.' }
+          Expand-Archive -LiteralPath $archive -DestinationPath (Join-Path $env:RUNNER_TEMP 'typst')
+          (Join-Path $env:RUNNER_TEMP 'typst\typst-x86_64-pc-windows-msvc') | Add-Content $env:GITHUB_PATH
+      - name: Frontend, Rust, clippy and real compiler checks
+        shell: powershell
+        run: ./desktop-app/scripts/check-windows.ps1
+      - name: Audit production dependencies
+        shell: powershell
+        run: ./desktop-app/scripts/audit-windows.ps1
+      - name: Build unsigned NSIS preview with offline WebView2
+        shell: powershell
+        run: ./desktop-app/scripts/build-windows.ps1
+      - name: Install, replace, launch and uninstall synthetic preview
+        shell: powershell
+        run: |
+          $installer = @(Get-ChildItem desktop-app/build/windows/*_setup.exe)
+          if ($installer.Count -ne 1) { throw 'Expected one packaged installer.' }
+          ./desktop-app/scripts/verify-windows-install.ps1 -Installer $installer.FullName
+      - name: Retain installer and evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-x64-${{ github.sha }}
+          path: |
+            desktop-app/build/windows/
+            desktop-app/build/windows-qa/
+            desktop-app/build/windows-audit/
+            desktop-app/build/windows-install-*/verification.json
+          if-no-files-found: ignore
+          retention-days: 30

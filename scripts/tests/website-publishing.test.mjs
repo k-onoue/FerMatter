@@ -6,7 +6,6 @@ import {
   readFileSync,
   existsSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
@@ -14,6 +13,7 @@ import { tmpdir } from "node:os";
 import { prepareWebsite } from "../publish-website.mjs";
 import { buildLegacySite } from "../build-legacy-site.mjs";
 import { previewServer } from "../preview-site.mjs";
+import { symlinkOrSkip } from "./symlink-helper.mjs";
 
 function fixture(t) {
   const root = mkdtempSync(path.join(tmpdir(), "fermatter-publish-"));
@@ -62,10 +62,14 @@ test("publishing replaces static output while preserving target repository contr
 test("invalid output is rejected before changing an existing deployment", (t) => {
   const { source, destination, write } = fixture(t);
   write(destination, "index.html", "Published");
-  symlinkSync(
-    path.join(destination, "index.html"),
-    path.join(source, "escape.html"),
-  );
+  if (
+    !symlinkOrSkip(
+      t,
+      path.join(destination, "index.html"),
+      path.join(source, "escape.html"),
+    )
+  )
+    return;
   assert.throws(
     () => prepareWebsite(source, destination, "a".repeat(40)),
     /Unsupported public asset/,
@@ -110,7 +114,14 @@ test("legacy pages redirect to matching new paths and keep download bytes unchan
 test("root preview resolves organization-site links and still blocks escaping files", async (t) => {
   const { source, root } = fixture(t);
   writeFileSync(path.join(root, "private.txt"), "Private");
-  symlinkSync(path.join(root, "private.txt"), path.join(source, "escape.txt"));
+  if (
+    !symlinkOrSkip(
+      t,
+      path.join(root, "private.txt"),
+      path.join(source, "escape.txt"),
+    )
+  )
+    return;
   const server = previewServer(source, "");
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   t.after(

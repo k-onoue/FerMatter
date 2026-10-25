@@ -573,7 +573,7 @@ impl Scan<'_> {
                     let child_path = root.join(&rel).canonicalize();
                     match child_path {
                         Ok(p) if p.starts_with(root) => {
-                            let rel = p.strip_prefix(root).unwrap().to_string_lossy().into_owned();
+                            let rel = relative_name(p.strip_prefix(root).unwrap());
                             let mut frames = ancestors.clone();
                             frames.push(json!({"file":name,"offset":s[..t.start].chars().count()}));
                             if let Err(e) = self.typst(root, &rel, frames, chain.clone()) {
@@ -703,7 +703,7 @@ impl Scan<'_> {
                             .filter(|p| p.starts_with(root) && p.is_file())
                     });
                 if let Some(p) = found {
-                    let rel = p.strip_prefix(root).unwrap().to_string_lossy().into_owned();
+                    let rel = relative_name(p.strip_prefix(root).unwrap());
                     if let Err(e) = self.tex(root, &rel, chain.clone(), 0) {
                         self.check()?;
                         self.warnings.push(e)

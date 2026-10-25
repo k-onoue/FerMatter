@@ -1,5 +1,6 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { Binding, Keybindings } from "./types";
+import { isWindows } from "./platform";
 
 const shortcut = (key: string, options: Partial<Binding> = {}): Binding => ({
   key,
@@ -50,12 +51,16 @@ export const commands: { id: string; name: string; binding: Binding }[] = [
   [
     "nextSourceTab",
     "Next Source Tab",
-    shortcut("\t", { command: false, control: true }),
+    shortcut("\t", { command: isWindows(), control: !isWindows() }),
   ],
   [
     "previousSourceTab",
     "Previous Source Tab",
-    shortcut("\t", { command: false, control: true, shift: true }),
+    shortcut("\t", {
+      command: isWindows(),
+      control: !isWindows(),
+      shift: true,
+    }),
   ],
   ["splitSource", "Split Editor Right", shortcut("\\")],
   ["splitSourceDown", "Split Editor Down", shortcut("\\", { option: true })],
@@ -79,8 +84,8 @@ export function eventBinding(e: KeyboardEvent | ReactKeyboardEvent): Binding {
   if (key === "+") key = "="; // Numeric keypad and layouts with an unshifted +.
   return {
     key,
-    command: e.metaKey,
-    control: e.ctrlKey,
+    command: isWindows() ? e.ctrlKey : e.metaKey,
+    control: isWindows() ? e.metaKey : e.ctrlKey,
     shift: e.shiftKey,
     option: e.altKey,
   };
@@ -167,10 +172,10 @@ export function validateBindings(value: Keybindings) {
         !b.control &&
         !b.option &&
         !b.shift &&
-        "qwmh,cvxazp \t".includes(b.key)) ||
+        (isWindows() ? "qwmh,cvxazp " : "qwmh,cvxazp \t").includes(b.key)) ||
       (b.command && b.shift && !b.control && !b.option && b.key === "z")
     )
-      throw new Error("Reserved for macOS or text editing.");
+      throw new Error("Reserved for the system or text editing.");
     if (seen.some((a) => bindingEqual(a, b)))
       throw new Error(`Duplicate shortcut: ${command.name}`);
     seen.push(b);
@@ -178,10 +183,10 @@ export function validateBindings(value: Keybindings) {
 }
 export function bindingKeys(b: Binding) {
   return [
-    ...(b.control ? ["⌃"] : []),
-    ...(b.option ? ["⌥"] : []),
-    ...(b.shift ? ["⇧"] : []),
-    ...(b.command ? ["⌘"] : []),
+    ...(b.control ? [isWindows() ? "Win" : "⌃"] : []),
+    ...(b.option ? [isWindows() ? "Alt" : "⌥"] : []),
+    ...(b.shift ? [isWindows() ? "Shift" : "⇧"] : []),
+    ...(b.command ? [isWindows() ? "Ctrl" : "⌘"] : []),
     b.key === "\t" ? "⇥" : b.key.toUpperCase(),
   ].filter(Boolean);
 }

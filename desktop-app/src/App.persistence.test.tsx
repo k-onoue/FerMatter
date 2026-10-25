@@ -14,6 +14,7 @@ import App from "./App";
 import { flushWindow } from "./persistence";
 import { disposeProjectModels } from "./editor";
 import { initialInstant } from "./instant";
+import { isWindows } from "./platform";
 const { rpc, events } = vi.hoisted(() => ({
   rpc: vi.fn(),
   events: new Map<string, Set<() => void>>(),
@@ -264,12 +265,20 @@ it("closing a project tab saves its draft and disposes only that project's model
   await openProject();
   edit("draft before tab close");
   failSave = true;
-  fireEvent.keyDown(document.body, { key: "w", metaKey: true });
+  fireEvent.keyDown(document.body, {
+    key: "w",
+    metaKey: !isWindows(),
+    ctrlKey: isWindows(),
+  });
   await screen.findByText(/disk full/);
   expect(screen.getAllByRole("tab")).toHaveLength(2);
   expect(disposeProjectModels).not.toHaveBeenCalled();
   failSave = false;
-  fireEvent.keyDown(document.body, { key: "w", metaKey: true });
+  fireEvent.keyDown(document.body, {
+    key: "w",
+    metaKey: !isWindows(),
+    ctrlKey: isWindows(),
+  });
   await screen.findByRole("button", { name: "Open synthetic" });
   expect((saved.at(-1)?.libraryDraft as Card).tex).toBe(
     "draft before tab close",

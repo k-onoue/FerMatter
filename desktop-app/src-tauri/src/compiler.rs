@@ -69,10 +69,72 @@ fn terminate_group(id: u32) {
     unsafe {
         libc::kill(-(id as i32), libc::SIGKILL);
     }
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        // latexmk/pdfcrop launch engines and Ghostscript. Stop the entire tree
+        // rather than leaving those children running after the driver is killed.
+        let _ = std::process::Command::new("taskkill.exe")
+            .args(["/PID", &id.to_string(), "/T", "/F"])
+            .creation_flags(0x0800_0000)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
 }
 struct ProcessRegistration {
     id: u32,
     cancellation: Cancellation,
+}
+#[cfg(windows)]
+struct WindowsJob(*mut std::ffi::c_void);
+#[cfg(windows)]
+impl WindowsJob {
+    fn attach(child: &std::process::Child) -> Result<Self> {
+        use std::os::windows::io::AsRawHandle;
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn CreateJobObjectW(
+                attributes: *const std::ffi::c_void,
+                name: *const u16,
+            ) -> *mut std::ffi::c_void;
+            fn AssignProcessToJobObject(
+                job: *mut std::ffi::c_void,
+                process: *mut std::ffi::c_void,
+            ) -> i32;
+        }
+        let job = Self(unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) });
+        if job.0.is_null() {
+            return Err(format!(
+                "Unable to create compiler process group: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        if unsafe { AssignProcessToJobObject(job.0, child.as_raw_handle()) } == 0 {
+            return Err(format!(
+                "Unable to group compiler process: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        Ok(job)
+    }
+}
+#[cfg(windows)]
+impl Drop for WindowsJob {
+    fn drop(&mut self) {
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn TerminateJobObject(job: *mut std::ffi::c_void, code: u32) -> i32;
+            fn CloseHandle(handle: *mut std::ffi::c_void) -> i32;
+        }
+        if !self.0.is_null() {
+            unsafe {
+                // Also stop a child left behind by a driver that exited first.
+                TerminateJobObject(self.0, 1);
+                CloseHandle(self.0);
+            }
+        }
+    }
 }
 impl Drop for ProcessRegistration {
     fn drop(&mut self) {
@@ -135,6 +197,15 @@ fn run_captured(
         error!("{program} failed to spawn: {e}");
         format!("{program}: {e}")
     })?;
+    #[cfg(windows)]
+    let _process_group = match WindowsJob::attach(&child) {
+        Ok(job) => job,
+        Err(error) => {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(error);
+        }
+    };
     cancel.1.lock().unwrap().insert(child.id());
     let registration = ProcessRegistration {
         id: child.id(),
@@ -153,10 +224,7 @@ fn run_captured(
             || oversized_log
             || start.elapsed() > Duration::from_secs(180)
         {
-            #[cfg(unix)]
-            unsafe {
-                libc::kill(-(child.id() as i32), libc::SIGKILL);
-            }
+            terminate_group(child.id());
             let _ = child.kill();
             let _ = child.wait();
             return Err(if cancel.check().is_err() {
@@ -236,7 +304,19 @@ pub fn args(values: &[&str]) -> Vec<String> {
     values.iter().map(|s| s.to_string()).collect()
 }
 pub fn path(p: &Path) -> String {
-    p.to_string_lossy().into_owned()
+    let value = p.to_string_lossy();
+    #[cfg(windows)]
+    {
+        // canonicalize uses extended-length paths; TeX/Perl and SyncTeX expect
+        // ordinary drive/UNC paths and forward slashes in their command lines.
+        value
+            .strip_prefix(r"\\?\UNC\")
+            .map(|tail| format!("//{tail}"))
+            .unwrap_or_else(|| value.strip_prefix(r"\\?\").unwrap_or(&value).to_owned())
+            .replace('\\', "/")
+    }
+    #[cfg(not(windows))]
+    value.into_owned()
 }
 fn tex_args(stage: &Path, engine: &str, out: &Path, main: &str, pdf: bool) -> Result<Vec<String>> {
     let rc = ["latexmkrc", ".latexmkrc"]
@@ -267,7 +347,7 @@ fn tex_args(stage: &Path, engine: &str, out: &Path, main: &str, pdf: bool) -> Re
         "-file-line-error",
         "-latexoption=-no-shell-escape",
     ]));
-    a.push(format!("-outdir={}", out.display()));
+    a.push(format!("-outdir={}", path(out)));
     a.push(main.into());
     Ok(a)
 }
@@ -399,7 +479,7 @@ fn restored_typst_context(
     }
     let root = root.canonicalize().map_err(err)?;
     let selected = safe(&root, file)?;
-    let target = selected.strip_prefix(&root).map_err(err)?.to_string_lossy();
+    let target = relative_name(selected.strip_prefix(&root).map_err(err)?);
     let text = read(&selected)?;
     let final_frame = json!({"file":target,"offset":text.chars().count()});
     struct ContextScan<'a> {
@@ -442,7 +522,7 @@ fn restored_typst_context(
                 let Ok(relative) = path.strip_prefix(self.root) else {
                     continue;
                 };
-                let relative = relative.to_string_lossy();
+                let relative = relative_name(relative);
                 if relative.is_empty() || !path.is_file() {
                     continue;
                 }
@@ -657,7 +737,10 @@ fn render_typst(
             let content = if let Some(ref child) = child {
                 format!(
                     "#include {}",
-                    json!(format!("/{}", child.strip_prefix(stage).unwrap().display()))
+                    json!(format!(
+                        "/{}",
+                        relative_name(child.strip_prefix(stage).unwrap())
+                    ))
                 )
             } else {
                 let color = card_color(card)?
@@ -787,6 +870,22 @@ fn render_tex_group(
                 c,
             )?;
             let svg = base.with_extension("svg");
+            #[cfg(windows)]
+            run(
+                "pdftocairo",
+                &args(&[
+                    "-svg",
+                    "-f",
+                    &page,
+                    "-l",
+                    &page,
+                    &path(&cropped),
+                    &path(&svg),
+                ]),
+                stage,
+                c,
+            )?;
+            #[cfg(not(windows))]
             run(
                 "pdf2svg",
                 &args(&[&path(&cropped), &path(&svg), &page]),
@@ -1097,7 +1196,7 @@ pub fn navigate(document: &Value, request: &Value, c: &Cancellation) -> Result<V
             &args(&[
                 "view",
                 "-i",
-                &format!("{line}:1:{}", file.display()),
+                &format!("{line}:1:{}", path(&file)),
                 "-o",
                 pdf,
             ]),
@@ -1129,7 +1228,7 @@ pub fn navigate(document: &Value, request: &Value, c: &Cancellation) -> Result<V
             return Err("PDF source is outside the snapshot".into());
         }
         Ok(
-            json!({"file":file.strip_prefix(root).unwrap(),"line":record.get("Line").and_then(|s|s.parse::<u64>().ok()).unwrap_or(1),"column":record.get("Column").and_then(|s|s.parse::<i64>().ok()).unwrap_or(-1)}),
+            json!({"file":relative_name(file.strip_prefix(root).unwrap()),"line":record.get("Line").and_then(|s|s.parse::<u64>().ok()).unwrap_or(1),"column":record.get("Column").and_then(|s|s.parse::<i64>().ok()).unwrap_or(-1)}),
         )
     } else {
         let number = |r: &std::collections::HashMap<String, String>, key: &str| {
@@ -1159,6 +1258,86 @@ pub fn navigate(document: &Value, request: &Value, c: &Cancellation) -> Result<V
 
 #[cfg(test)]
 mod tests {
+    #[cfg(windows)]
+    #[test]
+    fn windows_query_keeps_stdout_separate_from_diagnostics() {
+        let root = tempfile::tempdir().unwrap();
+        let cancel = super::Cancellation::default();
+        let arguments = super::args(&["/D", "/C", "echo [1,2]& echo warning 1>&2"]);
+        let output = super::run_stdout("cmd.exe", &arguments, root.path(), &cancel).unwrap();
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&output).unwrap(),
+            serde_json::json!([1, 2])
+        );
+        assert!(super::run("cmd.exe", &arguments, root.path(), &cancel)
+            .unwrap()
+            .contains("warning"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_cancellation_stops_compiler_descendants() {
+        let root = tempfile::tempdir().unwrap();
+        let cwd = root.path().to_owned();
+        let cancel = super::Cancellation::default();
+        let child_cancel = cancel.clone();
+        let worker = std::thread::spawn(move || {
+            super::run("powershell.exe", &super::args(&[
+            "-NoProfile", "-Command",
+            "$child = Start-Process -WindowStyle Hidden -FilePath $env:COMSPEC -ArgumentList '/D /C ping -n 60 127.0.0.1 > nul' -PassThru; $child.Id | Out-File -Encoding ascii child.pid; Wait-Process -Id $child.Id",
+        ]), &cwd, &child_cancel)
+        });
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+        let pid = loop {
+            if let Ok(pid) = std::fs::read_to_string(root.path().join("child.pid")) {
+                if let Ok(pid) = pid.trim().parse::<u32>() {
+                    break pid;
+                }
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "Compiler child did not start"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(25));
+        };
+        cancel.cancel();
+        assert_eq!(worker.join().unwrap().unwrap_err(), "Cancelled");
+        let processes = super::run(
+            "tasklist.exe",
+            &super::args(&["/FI", &format!("PID eq {pid}"), "/FO", "CSV", "/NH"]),
+            root.path(),
+            &super::Cancellation::default(),
+        )
+        .unwrap();
+        assert!(
+            !processes.contains(&format!("\"{pid}\"")),
+            "Compiler descendant remains alive: {processes}"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_compiler_paths_keep_drives_and_unc_without_verbatim_prefixes() {
+        assert_eq!(
+            super::path(std::path::Path::new(r"\\?\C:\project folder\main.tex")),
+            "C:/project folder/main.tex"
+        );
+        assert_eq!(
+            super::path(std::path::Path::new(r"\\?\UNC\server\share\main.tex")),
+            "//server/share/main.tex"
+        );
+        let root = tempfile::tempdir().unwrap();
+        let options = super::tex_args(
+            root.path(),
+            "pdflatex",
+            std::path::Path::new(r"\\?\C:\project folder\Output"),
+            "main.tex",
+            true,
+        )
+        .unwrap();
+        assert!(options.contains(&"-outdir=C:/project folder/Output".into()));
+    }
+    #[cfg(unix)]
     #[test]
     fn query_stdout_remains_json_when_stderr_contains_warnings() {
         let root = tempfile::tempdir().unwrap();
@@ -1183,6 +1362,7 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     #[test]
     fn query_failure_keeps_stderr_and_invalid_stdout_is_not_silently_trimmed() {
         let root = tempfile::tempdir().unwrap();
@@ -1208,6 +1388,7 @@ mod tests {
         assert!(serde_json::from_str::<serde_json::Value>(&output).is_err());
     }
 
+    #[cfg(unix)]
     #[test]
     fn query_output_limit_counts_both_streams() {
         let root = tempfile::tempdir().unwrap();
@@ -1345,6 +1526,7 @@ mod tests {
     }
 
     use super::*;
+    #[cfg(unix)]
     #[test]
     fn cancellation_kills_process_group() {
         for stdout_only in [false, true] {

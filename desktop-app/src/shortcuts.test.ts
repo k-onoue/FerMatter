@@ -5,6 +5,7 @@ import {
   validateBindings,
 } from "./shortcuts";
 import type { Binding, Keybindings } from "./types";
+import { isWindows } from "./platform";
 
 const keys = (bindings: Record<string, Binding> = {}): Keybindings => ({
   schemaVersion: 1,
@@ -19,8 +20,8 @@ const binding = (key: string, options: Partial<Binding> = {}): Binding => ({
   shift: false,
   ...options,
 });
-const event = (key: string, options: Partial<KeyboardEvent> = {}) =>
-  ({
+const event = (key: string, options: Partial<KeyboardEvent> = {}) => {
+  const logical = {
     key,
     metaKey: true,
     ctrlKey: false,
@@ -28,7 +29,13 @@ const event = (key: string, options: Partial<KeyboardEvent> = {}) =>
     shiftKey: false,
     isComposing: false,
     ...options,
-  }) as KeyboardEvent;
+  };
+  return {
+    ...logical,
+    metaKey: isWindows() ? logical.ctrlKey : logical.metaKey,
+    ctrlKey: isWindows() ? logical.metaKey : logical.ctrlKey,
+  } as KeyboardEvent;
+};
 
 it("zooms the window with equals, shifted plus, keypad plus, minus and zero", () => {
   expect(commandForEvent(event("="), keys())).toBe("zoomWindowIn");

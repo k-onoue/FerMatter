@@ -484,6 +484,11 @@ fn touch(home: &Path, paths: &HashSet<PathBuf>) {
             use std::os::unix::fs::OpenOptionsExt;
             options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
         }
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::OpenOptionsExt;
+            options.access_mode(0x100).custom_flags(0x0220_0000);
+        }
         if let Ok(file) = options.open(&path) {
             let _ = file.set_modified(SystemTime::now());
         }
@@ -642,7 +647,15 @@ mod tests {
     fn age(path: &Path) {
         for entry in walkdir::WalkDir::new(path).contents_first(true) {
             let entry = entry.unwrap();
-            fs::File::open(entry.path())
+            let mut options = fs::OpenOptions::new();
+            options.read(true);
+            #[cfg(windows)]
+            {
+                use std::os::windows::fs::OpenOptionsExt;
+                options.access_mode(0x100).custom_flags(0x0200_0000);
+            }
+            options
+                .open(entry.path())
                 .unwrap()
                 .set_modified(SystemTime::now() - MAX_AGE - GRACE)
                 .unwrap();

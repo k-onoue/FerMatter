@@ -7,7 +7,6 @@ import {
   mkdirSync,
   readFileSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,6 +16,7 @@ import { guideLink } from "../lib/guide-links.mjs";
 import { checkPublication } from "../check-publication.mjs";
 import { DEMOS, prepareDemos } from "../prepare-demo.mjs";
 import { previewServer } from "../preview-site.mjs";
+import { symlinkOrSkip } from "./symlink-helper.mjs";
 
 function fixture(t) {
   const root = mkdtempSync(path.join(tmpdir(), "mathlidelux-docs-"));
@@ -76,10 +76,14 @@ test("only allowlisted guide links and public assets can be published", (t) => {
   );
   write("dev-docs/private.md", "Private");
   write("user-docs/private.md", "Private");
-  symlinkSync(
-    path.join(root, "dev-docs/private.md"),
-    path.join(root, "site/public/escape.md"),
-  );
+  if (
+    !symlinkOrSkip(
+      t,
+      path.join(root, "dev-docs/private.md"),
+      path.join(root, "site/public/escape.md"),
+    )
+  )
+    return;
   for (const link of [
     "private.md",
     "../dev-docs/private.md",
@@ -133,7 +137,7 @@ test("symlink demo sources are rejected without changing existing ZIPs", (t) => 
   write("secret.tex", "Private");
   const source = path.join(root, "examples/demo-tikz/main.tex");
   rmSync(source);
-  symlinkSync(path.join(root, "secret.tex"), source);
+  if (!symlinkOrSkip(t, path.join(root, "secret.tex"), source)) return;
   assert.throws(() => prepareDemos(root), /symlinks/);
   assert.deepEqual(readFileSync(zipPath), before);
 });
@@ -233,10 +237,14 @@ test("published download totals, release counts and date must match the snapshot
 test("preview serves only public files and blocks symlink escapes and writes", async (t) => {
   const { root, write } = fixture(t);
   write("secret.txt", "Private");
-  symlinkSync(
-    path.join(root, "secret.txt"),
-    path.join(root, "site/dist/secret.txt"),
-  );
+  if (
+    !symlinkOrSkip(
+      t,
+      path.join(root, "secret.txt"),
+      path.join(root, "site/dist/secret.txt"),
+    )
+  )
+    return;
   const server = previewServer(path.join(root, "site/dist"), "/FerMatter");
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   t.after(

@@ -1,4 +1,4 @@
-import { FILE_MANAGER } from "./platform";
+import { FILE_MANAGER, shortcutHint } from "./platform";
 import { defaults, palette } from "./appearance";
 import { useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
@@ -260,7 +260,7 @@ export function Settings({
                 }
               >
                 <option value="auto">After changes</option>
-                <option value="manual">Manually · ⌘ S</option>
+                <option value="manual">{shortcutHint("Manually · ⌘S")}</option>
               </select>
             </label>
             <p className="muted">

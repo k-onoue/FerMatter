@@ -142,6 +142,7 @@ pub struct Variant {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Open {
     /// Absolute path to an exported FerMatter SVG containing its editable recipe.
+    #[cfg_attr(not(unix), allow(dead_code))] // Read by the Unix resident transport.
     pub path: PathBuf,
 }
 pub fn validate_color(color: &str) -> Result<(), ApiError> {

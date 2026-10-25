@@ -12,6 +12,7 @@ import {
   effectiveBindings,
 } from "./shortcuts";
 import type { Keybindings } from "./types";
+import { isWindows } from "./platform";
 
 it("only exports the current source, template, style, format and size", () => {
   const draft = { ...initialInstant(), source: "x^2" };
@@ -83,10 +84,10 @@ it("new Instant shortcut yields to a saved custom binding", () => {
     commandForEvent(
       {
         key: "k",
-        metaKey: true,
+        metaKey: !isWindows(),
         shiftKey: true,
         altKey: false,
-        ctrlKey: false,
+        ctrlKey: isWindows(),
       } as KeyboardEvent,
       old,
     ),

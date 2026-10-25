@@ -207,6 +207,7 @@ impl Storage {
         let path = p.canonicalize().map_err(err)?;
         if [&self.home, &self.legacy]
             .iter()
+            .filter_map(|base| base.canonicalize().ok())
             .any(|base| path.starts_with(base))
         {
             Ok(path)
@@ -367,6 +368,20 @@ pub fn import_zip(archive: &Path, parent: &Path) -> Result<PathBuf> {
 }
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn artifact_access_compares_canonical_storage_roots() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Storage::new(temp.path().join("support"), temp.path().join("legacy")).unwrap();
+        let image = store.home.join("Instant/Exports/sample.svg");
+        atomic(&image, b"<svg/>").unwrap();
+        assert_eq!(
+            store.allowed_artifact(&image).unwrap(),
+            image.canonicalize().unwrap()
+        );
+        let outside = temp.path().join("outside.svg");
+        atomic(&outside, b"<svg/>").unwrap();
+        assert!(store.allowed_artifact(&outside).is_err());
+    }
     use super::*;
     use base64::{engine::general_purpose::STANDARD, Engine};
     #[test]
@@ -518,6 +533,7 @@ mod tests {
         store.save(&ident, &p).unwrap();
         assert_eq!(fs::read(old).unwrap(), before);
     }
+    #[cfg(unix)]
     #[test]
     fn legacy_alias_keeps_variants() {
         let d = tempfile::tempdir().unwrap();

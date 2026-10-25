@@ -16,15 +16,23 @@ const description =
     <div class="actions">
       <a
         class="button primary"
-        href={config.releaseAvailable ? href("download/#mac") : guide()}
+        href={
+          config.releaseAvailable || config.windowsReleaseAvailable
+            ? href("download/")
+            : guide()
+        }
       >
-        {config.releaseAvailable ? "Download for macOS ↓" : "Get started"}
+        {config.releaseAvailable || config.windowsReleaseAvailable
+          ? "Download ↓"
+          : "Get started"}
       </a>
     </div>
     <p class="availability">
       macOS · Apple Silicon
       <br />
-      Windows version in development.
+      {config.windowsReleaseAvailable
+        ? "Windows 11 · x64 preview"
+        : "Windows version in development."}
     </p>
   </section>
   <figure class="home-drag">

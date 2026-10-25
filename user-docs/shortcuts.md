@@ -7,6 +7,8 @@ sidebar:
 
 ## Customize a shortcut
 
+The symbols below describe macOS defaults. On Windows, `⌘` means **Ctrl**, `⌥` means **Alt**, `⇧` means **Shift**, and the extra `⌃` modifier means **Win**. For example, Copy Image is **Ctrl+Shift+C** and Instant from Anywhere is **Win+Alt+Ctrl+N**. The app displays the keys for your platform.
+
 1. Open **Settings** (`⌘,`) and choose **Shortcuts**.
 2. Search for a command and click its assignment to record a new one.
 3. Use the row's reset button to restore its default. Duplicate and reserved assignments are rejected.

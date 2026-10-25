@@ -2,7 +2,7 @@
 import Product from "../layouts/Product.astro";
 import InstallCommand from "../components/InstallCommand.astro";
 import config from "../data/site.json";
-import { guide, download } from "../data/links";
+import { guide, download, windowsDownload, releases } from "../data/links";
 const app = `brew install --cask ${config.homebrewCask}`;
 const converters = "brew install pdf2svg poppler ghostscript";
 const full = `brew install --cask mactex-no-gui\n${converters}`;
@@ -19,12 +19,11 @@ const ubuntuLatex =
 
 <Product
   title="Download"
-  description="Download FerMatter for macOS and install LaTeX or Typst."
+  description="Download FerMatter for macOS or Windows, and install LaTeX or Typst."
 >
   <header class="page-intro">
     <h1>Download</h1>
-    <p class="lead">Apple Silicon Mac · macOS 14 or later</p>
-    <p class="availability">Windows version in development.</p>
+    <p class="lead">macOS · Windows</p>
   </header>
   <div class="download-layout">
     <section class="download-section" id="mac">
@@ -33,6 +32,7 @@ const ubuntuLatex =
           ? `FerMatter ${config.releaseName}`
           : "Development preview"}
       </h2>
+      <p>Apple Silicon Mac · macOS 14 or later · unnotarized preview.</p>
       <div class="actions">
         {config.releaseAvailable && (
           <a class="button primary" href={download}>
@@ -40,6 +40,97 @@ const ubuntuLatex =
           </a>
         )}
       </div>
+    </section>
+    <section class="download-section" id="windows">
+      <h2>For Windows (preview)</h2>
+      <p>Windows 11 · x64. ARM64 and 32-bit installers are not included.</p>
+      {config.windowsReleaseAvailable ? (
+        <>
+          <p>{config.windowsReleaseName} · unsigned installer.</p>
+          <div class="actions">
+            <a class="button primary" href={windowsDownload}>
+              Download EXE ↓
+            </a>
+          </div>
+          <p>
+            Run the installer, then open FerMatter from the Start menu. It
+            installs for your Windows account and includes the WebView2 runtime
+            installer. LaTeX and Typst are installed separately.
+          </p>
+          <p>
+            Windows may show an unknown-publisher or SmartScreen warning. Check
+            the{" "}
+            <a href={`${releases}/tag/${config.windowsReleaseTag}`}>
+              release and SHA-256 checksum
+            </a>{" "}
+            before continuing. If you trust this preview and Windows permits it,
+            choose <strong>More info → Run anyway</strong>.{" "}
+            <a href="https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app#step-6-handle-smartscreen-for-new-apps">
+              Microsoft's SmartScreen guidance
+            </a>
+            .
+          </p>
+        </>
+      ) : (
+        <p>
+          The Windows installer is being validated. Downloads will appear here
+          when ready.
+        </p>
+      )}
+      <h3>Typst on Windows</h3>
+      <p>Run in PowerShell, then reopen FerMatter:</p>
+      <InstallCommand
+        label="Windows Typst"
+        command="winget install --exact --id Typst.Typst"
+      />
+      <p>
+        <a href="https://github.com/typst/typst#installation">
+          Typst installation instructions
+        </a>
+        .
+      </p>
+      <h3>LaTeX on Windows</h3>
+      <p>
+        Install <a href="https://tug.org/texlive/windows.html">TeX Live</a> or{" "}
+        <a href="https://yihui.org/tinytex/">TinyTeX</a>, then reopen PowerShell
+        and install the packages used by the included demos:
+      </p>
+      <InstallCommand
+        label="Windows LaTeX packages"
+        command={
+          "tlmgr update --self\ntlmgr install latexmk pdfcrop preview pgf mathtools tools cm-super standalone xcolor amsmath amsfonts grfext synctex"
+        }
+      />
+      <p>
+        TinyTeX and TeX Live include the Windows Perl and Ghostscript helpers
+        used by LaTeX rendering; separate installations are unnecessary for this
+        setup.
+      </p>
+      <p>
+        Install the{" "}
+        <a href="https://github.com/oschwartz10612/poppler-windows">
+          Windows Poppler package
+        </a>{" "}
+        in PowerShell:
+      </p>
+      <InstallCommand
+        label="Windows PDF tools"
+        command="winget install --exact --id oschwartz10612.Poppler"
+      />
+      <p>
+        Reopen FerMatter and check{" "}
+        <a href={guide("requirements", "tool-discovery")}>Settings → Tools</a>.
+        If a tool is missing, select its executable path there.
+      </p>
+      <p>
+        Recoverable project deletion, the screen color eyedropper and MCP/CLI
+        are unavailable in this Windows preview.
+      </p>
+      <h3>Update</h3>
+      <p>
+        Quit FerMatter from its tray menu and run the newer installer. Your
+        project files and saved settings are preserved.
+      </p>
     </section>
     {config.releaseAvailable && (
       <section class="download-section" id="homebrew">

@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Add a Windows 11 x64 preview installer, native Windows build/check scripts, and separate Windows downloads and rendering-tool setup instructions.
+
 - Share a compact footer across all pages, with guide pagination above it and GitHub shown there only when absent from the header.
 
 - Publish a Declaration with commitments to open source, no automatic data collection, and free access without paywalled features or usage limits tied to payment.

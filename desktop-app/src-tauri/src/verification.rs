@@ -329,8 +329,8 @@ fn verify_zip_compiler_defaults(output: &Path) -> Result<()> {
     ] {
         let archive = workspace.join(format!("{name}.zip"));
         let mut zip = zip::ZipWriter::new(fs::File::create(&archive).map_err(err)?);
-        let rc =
-            format!("$ENV{{'TEXINPUTS'}} = './styles//:' . ($ENV{{'TEXINPUTS'}} // '');\n{mode}\n");
+        let separator = if cfg!(windows) { ';' } else { ':' };
+        let rc = format!("$ENV{{'TEXINPUTS'}} = './styles//{separator}' . ($ENV{{'TEXINPUTS'}} // '');\n{mode}\n");
         let main = format!("\\documentclass{{article}}\n\\input{{definitions}}\n{engine_check}\n\\begin{{document}}\n$\\sample{{x}}$\n\\end{{document}}\n");
         for (path, text) in [
             ("main.tex", main.as_str()),
@@ -670,6 +670,12 @@ fn normalize(scan: &Value) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    #[ignore = "requires real LaTeX, Ghostscript and Poppler tools"]
+    fn real_zip_compilers_preserve_rc_defaults_and_project_sources() {
+        let output = tempfile::tempdir().unwrap();
+        verify_zip_compiler_defaults(output.path()).unwrap();
+    }
     #[test]
     fn each_verification_has_fresh_sources_and_cache() {
         let parent = tempfile::tempdir().unwrap();

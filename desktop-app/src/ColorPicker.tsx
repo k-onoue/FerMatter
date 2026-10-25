@@ -6,6 +6,7 @@ import { rpc } from "./api";
 import { loadColorHistory, rememberColor } from "./colorHistory";
 import { parseHexInput } from "./outputColor";
 import "./ColorPicker.css";
+import { isWindows } from "./platform";
 
 const colors: [string, string][] = [
   ["Black", "#000000"],
@@ -225,8 +226,12 @@ export function ColorPicker({
               Color Picker
               <button
                 aria-label="Pick color from screen"
-                title="Pick color from screen"
-                disabled={sampling}
+                title={
+                  isWindows()
+                    ? "Screen color sampling is unavailable on this Windows preview"
+                    : "Pick color from screen"
+                }
+                disabled={sampling || isWindows()}
                 onClick={() => void sample()}
               >
                 {sampling ? (

@@ -1,20 +1,13 @@
 //! Validate stored metadata before it reaches commands or the webview.
 use crate::files::*;
 use serde_json::{json, Value};
-use std::{collections::HashSet, fs, io::Read, path::Path};
+#[cfg(test)]
+use std::fs;
+use std::{collections::HashSet, io::Read, path::Path};
 
 const LIMIT: u64 = 16 * 1024 * 1024;
 pub fn bytes(path: &Path) -> Result<Vec<u8>> {
-    let mut options = fs::OpenOptions::new();
-    options.read(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
-    }
-    let file = options
-        .open(path)
-        .map_err(|_| "Cannot read metadata file.".to_string())?;
+    let file = regular_file(path).map_err(|_| "Cannot read metadata file.".to_string())?;
     let metadata = file
         .metadata()
         .map_err(|_| "Cannot inspect metadata file.".to_string())?;
@@ -282,7 +275,7 @@ pub fn recover(path: &Path, expected: &str) -> Result<()> {
 mod tests {
     use super::*;
     fn project() -> Value {
-        json!({"root":"/synthetic/project", "cards":[{"id":"custom-1", "tex":"x+y", "origin":"custom", "extensions":{"example.keep":true}}], "extensions":{"future":{"value":7}}, "sectionAssignments":{"custom-1":"talk"}, "sections":[{"id":"talk", "name":"Talk"}]})
+        json!({"root":std::env::temp_dir().join("synthetic/project"), "cards":[{"id":"custom-1", "tex":"x+y", "origin":"custom", "extensions":{"example.keep":true}}], "extensions":{"future":{"value":7}}, "sectionAssignments":{"custom-1":"talk"}, "sections":[{"id":"talk", "name":"Talk"}]})
     }
     #[test]
     fn missing_active_file_does_not_replace_a_valid_backup_with_empty_metadata() {

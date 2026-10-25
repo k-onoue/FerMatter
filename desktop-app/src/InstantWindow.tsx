@@ -1,4 +1,4 @@
-import { FILE_MANAGER } from "./platform";
+import { FILE_MANAGER, primaryModifier, shortcutHint } from "./platform";
 import { registerWindowFlush } from "./persistence";
 import { installWindowPersistence } from "./windowPersistence";
 import { WindowControls } from "./WindowControls";
@@ -496,7 +496,7 @@ export default function InstantWindow() {
       if (
         command === "instant" ||
         command === "rescan" ||
-        (event.metaKey && event.key === "Enter")
+        (primaryModifier(event) && event.key === "Enter")
       )
         action = refresh;
       if (command === "saveEquation")
@@ -513,10 +513,10 @@ export default function InstantWindow() {
       if (command === "zoomWindowOut")
         action = () => setZoom((value) => Math.max(0.5, value - 0.1));
       if (command === "resetWindowZoom") action = () => setZoom(1);
-      if (event.metaKey && event.key === ",")
+      if (primaryModifier(event) && event.key === ",")
         action = () => setDetails((value) => !value);
       if (
-        event.metaKey &&
+        primaryModifier(event) &&
         event.key.toLowerCase() === "c" &&
         !event.shiftKey &&
         !(event.target as HTMLElement).closest(
@@ -565,7 +565,7 @@ export default function InstantWindow() {
         </button>
         <button
           aria-label="New equation"
-          title="New equation (⌘N)"
+          title={shortcutHint("New equation (⌘N)")}
           disabled={!draft}
           onClick={newEquation}
         >
@@ -701,7 +701,11 @@ export default function InstantWindow() {
               <option value="figure">Code</option>
             </select>
             <span className="spacer" />
-            <button aria-label="Render" title="Render (⌘↵)" onClick={refresh}>
+            <button
+              aria-label="Render"
+              title={shortcutHint("Render (⌘↵)")}
+              onClick={refresh}
+            >
               <RefreshCw size={16} className={busy ? "spin" : ""} />
             </button>
           </div>
@@ -924,7 +928,7 @@ export default function InstantWindow() {
             <span className="spacer" />
             <button
               aria-label="Copy image"
-              title="Copy image (⇧⌘C)"
+              title={shortcutHint("Copy image (⇧⌘C)")}
               className="primary"
               disabled={!current || outputBusy}
               onClick={() => void copy()}
@@ -934,7 +938,7 @@ export default function InstantWindow() {
             </button>
             <button
               aria-label="Export image"
-              title="Export image (⇧⌘S)"
+              title={shortcutHint("Export image (⇧⌘S)")}
               disabled={!current || outputBusy}
               onClick={() => void exportImage()}
             >

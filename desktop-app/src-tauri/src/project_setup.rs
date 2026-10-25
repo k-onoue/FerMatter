@@ -344,7 +344,11 @@ mod tests {
         assert_eq!(projects.len(), 4); // Legacy metadata cannot resurrect the old demo.
         let target = projects
             .iter()
-            .find(|p| string(p, "root").ends_with("/demo-typst"))
+            .find(|p| {
+                Path::new(string(p, "root"))
+                    .file_name()
+                    .is_some_and(|name| name == "demo-typst")
+            })
             .unwrap();
         assert_eq!(target["cards"], original["cards"]);
         assert_eq!(target["sections"], original["sections"]);
@@ -365,6 +369,7 @@ mod tests {
         store.open(&source, None).unwrap(); // Explicitly reopening the original remains possible.
         assert_eq!(store.recent().unwrap().len(), 5);
     }
+    #[cfg(unix)]
     #[test]
     fn modified_or_linked_sources_are_not_reclassified_as_built_in_demos() {
         let temp = tempfile::tempdir().unwrap();
