@@ -12,6 +12,8 @@
 
 - Publish a Declaration with commitments to open source, no automatic data collection, and free access without paywalled features or usage limits tied to payment.
 
+- Organize downloads into macOS, Windows and Linux tabs with keyboard navigation; shorten Windows and Linux setup instructions.
+
 ## [0.11.0-windows-preview.1] — 2026-10-26
 
 - Add a Windows 11 x64 preview installer, native Windows build/check scripts, and separate Windows downloads and rendering-tool setup instructions.

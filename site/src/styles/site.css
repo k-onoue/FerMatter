@@ -459,9 +459,45 @@ html:has(.product-page) .main-pane > main > .content-panel > .sl-container {
   justify-self: end;
   text-align: end;
 }
+.download-platform-tabs {
+  display: flex;
+  gap: 1.75rem;
+  border-bottom: 1px solid var(--fm-rule);
+}
+.download-platform-tabs a {
+  padding: 0.75rem 0.1rem;
+  border-bottom: 2px solid transparent;
+  color: var(--fm-muted);
+  text-decoration: none;
+}
+.download-platform-tabs a:hover,
+.download-platform-tabs a[aria-selected="true"] {
+  color: var(--fm-ink);
+  border-bottom-color: currentColor;
+}
+.download-platform-tabs a:focus-visible {
+  outline: 2px solid var(--fm-ink);
+  outline-offset: 4px;
+}
+.download-platform-panel {
+  padding-top: 2rem;
+  scroll-margin-top: 6rem;
+}
+.download-platform-panel[hidden] {
+  display: none;
+}
 .download-section {
   padding-block: 2rem;
   border-top: 1px solid var(--fm-rule);
+}
+.download-platform-panel > .download-section {
+  padding-top: 0;
+  border-top: 0;
+}
+.download-platform-panel > h2:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 .download-section h2 {
   margin-bottom: 0.8rem;

@@ -5,7 +5,7 @@ import config from "../data/site.json";
 import { download, windowsDownload, releases } from "../data/links";
 const macos = (await getEntry("download", "macos"))!;
 const windows = (await getEntry("download", "windows"))!;
-const { title, description, platform, requirements } = macos.data;
+const { title, description, requirements } = macos.data;
 const { Content: MacOS } = await render(macos);
 const { Content: Windows } = await render(windows);
 const { Content: WindowsInstaller } = await render(
@@ -19,31 +19,50 @@ const { Content: Ubuntu } = await render(
 <Product markdown title={title} description={description}>
   <header class="page-intro not-content">
     <h1>{title}</h1>
-    {platform && <p class="lead">{platform}</p>}
   </header>
-  <section class="download-section not-content" id="mac">
-    <h2>
-      {config.releaseAvailable
-        ? `FerMatter ${config.releaseName}`
-        : "Development preview"}
-    </h2>
-    {requirements && <p>{requirements}</p>}
+  <nav
+    class="download-platform-tabs not-content"
+    aria-label="Operating system"
+    data-download-tabs
+  >
+    <a id="download-tab-mac" href="#mac">
+      macOS
+    </a>
+    <a id="download-tab-windows" href="#windows">
+      Windows
+    </a>
+    {config.ubuntuAptAvailable && (
+      <a id="download-tab-ubuntu" href="#ubuntu">
+        Linux
+      </a>
+    )}
+  </nav>
+  <section class="download-platform-panel" id="mac" data-download-panel>
+    <div class="download-section not-content">
+      <h2>
+        {config.releaseAvailable
+          ? `FerMatter ${config.releaseName}`
+          : "Development preview"}
+      </h2>
+      {requirements && <p>{requirements}</p>}
+      {config.releaseAvailable && (
+        <div class="actions">
+          <a class="button primary" href={download}>
+            Download DMG ↓
+          </a>
+        </div>
+      )}
+    </div>
     {config.releaseAvailable && (
-      <div class="actions">
-        <a class="button primary" href={download}>
-          Download DMG ↓
-        </a>
+      <div class="download-markdown product-markdown sl-markdown-content">
+        <MacOS />
       </div>
     )}
   </section>
-  {config.releaseAvailable && (
-    <div class="download-markdown product-markdown sl-markdown-content">
-      <MacOS />
-    </div>
-  )}
   <section
     id="windows"
-    class="download-markdown product-markdown sl-markdown-content"
+    class="download-platform-panel download-markdown product-markdown sl-markdown-content"
+    data-download-panel
   >
     <h2>{windows.data.title}</h2>
     <p>{windows.data.platform}</p>
@@ -70,9 +89,14 @@ const { Content: Ubuntu } = await render(
   {config.ubuntuAptAvailable && (
     <section
       id="ubuntu"
-      class="download-markdown product-markdown sl-markdown-content"
+      class="download-platform-panel download-markdown product-markdown sl-markdown-content"
+      data-download-panel
     >
       <Ubuntu />
     </section>
   )}
 </Product>
+
+<script>
+  import "../scripts/download-tabs.js";
+</script>
