@@ -91,7 +91,7 @@ it("changes a presentation variant's color and saves safely before its new previ
   expect(
     screen.queryByRole("dialog", { name: "Equation color picker" }),
   ).toBeNull();
-  expect(screen.getByRole("dialog", { name: "Edit Variant" })).toBeTruthy();
+  expect(screen.getByRole("dialog", { name: "Edit" })).toBeTruthy();
   expect(closed).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Save Variant" }));
   expect(saved).toHaveBeenCalledWith(

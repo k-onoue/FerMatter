@@ -165,14 +165,32 @@ small,
   );
 }
 .titlebar {
-  height: 36px;
+  position: relative;
+  height: 30px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 12px;
+}
+.titlebar-drag-region {
+  position: absolute;
+  inset: 0;
+}
+.window-controls {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.window-controls button {
+  padding: 4px 7px;
 }
 .workspace-tabs {
   display: flex;
   flex-shrink: 0;
   gap: 5px;
-  padding: 2px 16px 9px;
+  padding: 2px 16px 4px;
   overflow-x: auto;
   scrollbar-width: thin;
   border-bottom: 1px solid color-mix(in srgb, var(--text) 9%, transparent);
@@ -688,11 +706,11 @@ button.danger {
   flex-direction: column;
 }
 .workspace-heading {
-  margin: 12px 19px 10px;
-  padding: 17px 19px;
+  margin: 4px 10px;
+  padding: 4px 8px;
   background: color-mix(in srgb, var(--surfaceBackground) 50%, transparent);
   border: 1px solid color-mix(in srgb, var(--text) 6%, transparent);
-  border-radius: 17px;
+  border-radius: 9px;
   flex-shrink: 0;
 }
 .workspace-heading > div {
@@ -700,11 +718,17 @@ button.danger {
   align-items: center;
   gap: 4px;
 }
-.workspace-heading h1 {
-  font-size: 25px;
+.workspace-heading > [role="group"] button {
+  padding: 4px 7px;
+}
+.workspace-heading.source-tools {
+  margin: 2px 10px 4px;
+  padding: 0 3px;
+  border: 0;
+  background: none;
 }
 .library-controls {
-  margin-top: 20px;
+  margin-top: 4px;
 }
 .segmented button {
   padding: 5px 12px;
@@ -899,13 +923,12 @@ button.danger {
   display: flex;
   align-items: center;
   gap: 3px;
-  padding: 13px 10px;
-  min-height: 52px;
+  padding: 3px 8px;
+  min-height: 32px;
   font-size: 11px;
 }
-.pdf-pane header strong {
-  font-size: 12px;
-  margin-right: 9px;
+.pdf-pane > header button {
+  padding: 4px 7px;
 }
 .pdf-content {
   flex: 1;
@@ -1633,10 +1656,6 @@ kbd {
   }
   .projects-heading .search input {
     width: 100%;
-  }
-  .workspace-heading {
-    margin: 10px;
-    padding: 13px;
   }
   .cards-grid {
     padding: 8px 11px 20px;

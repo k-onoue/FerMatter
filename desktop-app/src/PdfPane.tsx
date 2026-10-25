@@ -296,9 +296,8 @@ export function PdfPane({
     return () => window.removeEventListener("pdf-command", command);
   }, [pdf, pageSize.scale]);
   return (
-    <section className="pdf-pane" ref={scrollZoom}>
+    <section className="pdf-pane" aria-label="Project PDF" ref={scrollZoom}>
       <header>
-        <strong>PDF</strong>
         <span className="spacer" />
         <button
           title="Previous page"

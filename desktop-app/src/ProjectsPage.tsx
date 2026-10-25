@@ -10,8 +10,6 @@ import {
   Plus,
   Redo2,
   Search,
-  Settings2,
-  SunMoon,
   Trash2,
   Undo2,
   Zap,
@@ -38,7 +36,6 @@ export function ProjectsPage({
   onOpen,
   onOpenDialog,
   onNew,
-  onSettingsDialog,
   onInstant,
   onError,
   onNotice,
@@ -52,7 +49,6 @@ export function ProjectsPage({
   onOpen: (p: Project) => void;
   onOpenDialog: (type?: string) => void;
   onNew: () => void;
-  onSettingsDialog: () => void;
   onInstant: () => void;
   onError: (e: string) => void;
   onNotice: (n: string) => void;
@@ -294,23 +290,6 @@ export function ProjectsPage({
       <div className="brand">
         <BrandMark />
         <strong>FerMatter</strong>
-        <span className="spacer" />
-        <button
-          title="Appearance"
-          onClick={() =>
-            onSettings({
-              appearance:
-                document.documentElement.dataset.appearance === "dark"
-                  ? "light"
-                  : "dark",
-            })
-          }
-        >
-          <SunMoon size={19} />
-        </button>
-        <button title="Settings" onClick={onSettingsDialog}>
-          <Settings2 size={19} />
-        </button>
       </div>
       <header className="projects-heading">
         <h1>Projects</h1>
