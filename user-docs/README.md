@@ -1,28 +1,41 @@
 ---
 title: "Use FerMatter"
-description: "From LaTeX or Typst source to slides."
+description: "Set up your workspace and manage your projects."
 sidebar:
   order: 1
 ---
 
 ![Open paper files in Library, then copy or drag SVG to PowerPoint. Library variants preserve the manuscript; Source mode edits files.](../site/public/assets/guide/workflow.svg)
 
-<div class="fm-guide-links fm-guide-links-primary">
+## Before you start
 
-- [Open a paper](paper-to-slides.md)
-- [Choose size and format](export.md)
-
-</div>
+[Install and open FerMatter](https://fermatter.github.io/download/#mac), then check the [LaTeX or Typst requirements](requirements.md) for your projects.
 
 ## First launch
 
-Choose a default project folder and review **Compiler tools**. New projects and imports use this folder; four editable demos are included under **Demos**.
+1. Choose a default project folder. New projects and imports will be saved there.
+2. Review **Compiler tools** using the [tool discovery guide](requirements.md#tool-discovery).
+3. Open one of the four editable projects under **Demos**: LaTeX, Typst, TikZ or CeTZ. Follow [From your paper to a slide](paper-to-slides.md) to try it.
 
-<div class="fm-guide-links">
+## Project folders
 
-- [Install LaTeX or Typst](requirements.md)
-- [Shortcuts](shortcuts.md)
-- [Appearance](appearance.md)
-- [MCP](automation.md)
+Change the default folder in **Settings → Projects → Default project folder**. Existing projects stay in their current locations.
 
-</div>
+| Action | Folder behavior |
+| --- | --- |
+| **Open Project** (`⌘O`) | Opens an existing folder or main file in place |
+| **New Project** (`⇧⌘N`) | Creates a project from pasted source and a template; **Location** can override the default folder |
+| Drop a folder / import a ZIP | Copies into the default project folder; an existing direct child opens in place |
+| **Delete** (`⌘⌫`) | Moves the actual source folder to Finder Trash |
+
+Project tabs retain their Library/Source view, open source files and PDF view. Opening the same project selects its existing tab.
+
+## Continue by task
+
+| Task | Guide |
+| --- | --- |
+| Find or edit an equation or drawing | [From your paper to a slide](paper-to-slides.md) |
+| Choose image format, size and color; reopen SVG | [Choose size and format](export.md) |
+| Change keyboard commands or display zoom | [Shortcuts](shortcuts.md) |
+| Choose a theme, transparency or window pinning | [Appearance](appearance.md) |
+| Connect a local agent | [MCP](automation.md) |
