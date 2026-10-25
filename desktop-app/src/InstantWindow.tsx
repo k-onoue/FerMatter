@@ -1,6 +1,6 @@
 import { registerWindowFlush } from "./persistence";
 import { installWindowPersistence } from "./windowPersistence";
-import { WindowTitlebar } from "./WindowTitlebar";
+import { WindowControls } from "./WindowControls";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { dropSVG, openSVG } from "./svgImport";
@@ -546,31 +546,7 @@ export default function InstantWindow() {
           style={{ backgroundImage: `url(${wallpaper})` }}
         />
       )}
-      <WindowTitlebar>
-        <button
-          aria-label="Always on top"
-          title="Always on top"
-          className={pin ? "active" : ""}
-          onClick={togglePin}
-        >
-          <Pin size={17} />
-        </button>
-        <button
-          aria-label="Appearance"
-          title="Appearance"
-          onClick={() => setDark(!dark)}
-        >
-          <SunMoon size={18} />
-        </button>
-        <button
-          aria-label="Instant settings"
-          title="Instant settings"
-          className={details ? "active" : ""}
-          onClick={() => setDetails(!details)}
-        >
-          <Settings2 size={18} />
-        </button>
-      </WindowTitlebar>
+      <div className="titlebar" data-tauri-drag-region />
       <header className="instant-toolbar">
         <button
           aria-label="Open SVG"
@@ -616,6 +592,32 @@ export default function InstantWindow() {
         >
           <CopyPlus size={18} />
         </button>
+        <span className="spacer" />
+        <WindowControls>
+          <button
+            aria-label="Always on top"
+            title="Always on top"
+            className={pin ? "active" : ""}
+            onClick={togglePin}
+          >
+            <Pin size={17} />
+          </button>
+          <button
+            aria-label="Appearance"
+            title="Appearance"
+            onClick={() => setDark(!dark)}
+          >
+            <SunMoon size={18} />
+          </button>
+          <button
+            aria-label="Instant settings"
+            title="Instant settings"
+            className={details ? "active" : ""}
+            onClick={() => setDetails(!details)}
+          >
+            <Settings2 size={18} />
+          </button>
+        </WindowControls>
       </header>
       {!draft ? (
         <div className="empty">

@@ -42,7 +42,7 @@ import { mergeScan, mergeRenderedCard } from "./projectUpdates";
 import { SourceWorkspace, type SourceSession } from "./SourceWorkspace";
 import { PdfPane, type PdfViewState } from "./PdfPane";
 import { WorkspaceArtifacts, WorkspaceTabs } from "./WorkspaceTabs";
-import { WindowTitlebar } from "./WindowTitlebar";
+import { WindowControls } from "./WindowControls";
 import { newWorkspace, type WorkspaceState } from "./workspaces";
 import { restoredVariant } from "./restoredVariant";
 import type { InstantDraft } from "./instant";
@@ -1398,9 +1398,16 @@ export default function App() {
           style={{ backgroundImage: `url(${desktopBackground})` }}
         />
       )}
-      <WindowTitlebar>
-        {ready && !setupRequired && (
-          <>
+      <div className="titlebar" data-tauri-drag-region />
+      {ready && !setupRequired && (
+        <div className="workspace-bar">
+          <WorkspaceTabs
+            workspaces={workspaces}
+            active={project?.id || null}
+            onSelect={(id) => void selectWorkspace(id).catch(report)}
+            onClose={(id) => void closeWorkspace(id).catch(report)}
+          />
+          <WindowControls>
             <button
               title="Always on top"
               className={pin ? "active" : ""}
@@ -1421,16 +1428,8 @@ export default function App() {
             <button title="Settings" onClick={() => setShowSettings(true)}>
               <Settings2 size={17} />
             </button>
-          </>
-        )}
-      </WindowTitlebar>
-      {ready && !setupRequired && (
-        <WorkspaceTabs
-          workspaces={workspaces}
-          active={project?.id || null}
-          onSelect={(id) => void selectWorkspace(id).catch(report)}
-          onClose={(id) => void closeWorkspace(id).catch(report)}
-        />
+          </WindowControls>
+        </div>
       )}
       {workspaces
         .filter((item) => item.project.id !== project?.id)

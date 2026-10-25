@@ -165,35 +165,38 @@ small,
   );
 }
 .titlebar {
-  position: relative;
   height: 30px;
   flex-shrink: 0;
+}
+.workspace-bar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding: 0 12px;
-}
-.titlebar-drag-region {
-  position: absolute;
-  inset: 0;
+  flex-shrink: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--text) 9%, transparent);
 }
 .window-controls {
-  position: relative;
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   gap: 4px;
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1px solid color-mix(in srgb, var(--text) 9%, transparent);
+}
+.workspace-bar > .window-controls {
+  margin-right: 12px;
 }
 .window-controls button {
   padding: 4px 7px;
 }
 .workspace-tabs {
   display: flex;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
   gap: 5px;
   padding: 2px 16px 4px;
   overflow-x: auto;
   scrollbar-width: thin;
-  border-bottom: 1px solid color-mix(in srgb, var(--text) 9%, transparent);
 }
 .workspace-tab {
   display: flex;
