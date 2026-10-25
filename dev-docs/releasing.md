@@ -11,7 +11,7 @@
 ## Unnotarized public preview
 
 - First preview: app version `0.11.0`, build `12`, prerelease tag `v0.11.0-preview.1`.
-- Current preview: app version `0.11.0`, build `14`, prerelease tag `v0.11.0-preview.3`; outlined drag-to-Applications arrow and fixed DMG layout.
+- Current preview: app version `0.11.0`, build `15`, prerelease tag `v0.11.0-preview.4`; compact and consistent workspace controls, updated guides, and experimental Ubuntu APT distribution.
 - Source stays in `k-onoue/FerMatter`; publish reviewed binaries and notices in `FerMatter/fermatter.github.io` Releases. Repository visibility is managed separately from distribution.
 - Run app checks, clippy, build, dependency audits and publication checks on the committed candidate. Record skipped native/clean-Mac checks honestly; a preview is not a stable-release validation pass.
 - Preserve the development-signed local bundle. Copy it to an ignored staging directory, sign that copy ad hoc, then run `package.sh --preview --app PATH`.

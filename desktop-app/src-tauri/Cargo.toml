@@ -40,7 +40,7 @@ lopdf = "0.42"
 typstyle-core = "=0.15.1"
 typst-syntax = "=0.15.1"
 rmcp = { version = "3.5.0", default-features = false, features = ["server", "transport-io"] }
-tokio = { version = "1.53.1", features = ["rt-multi-thread", "io-std", "macros", "sync"] }
+tokio = { version = "1.53.3", features = ["rt-multi-thread", "io-std", "macros", "sync"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"

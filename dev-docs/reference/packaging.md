@@ -6,7 +6,7 @@
 ## Experimental Ubuntu
 
 - Scope: Ubuntu 24.04, amd64, `.deb` only. No Snap/Flatpak service, root installer scripts or bundled TeX/Typst toolchains.
-- [Ubuntu workflow](../../.github/workflows/ubuntu.yml): builds with Tauri, runs frontend/Rust tests and all four real compiler paths, installs through signed APT in a clean Ubuntu container, and checks headless startup with an isolated data directory. Physical desktops, Wayland, native clipboard and cross-application drag are not established by these checks.
+- [Ubuntu workflow](../../.github/workflows/ubuntu.yml): builds with Tauri, runs frontend/Rust tests and all four real compiler paths, installs through signed APT in a clean Ubuntu container, and checks headless startup with an isolated data directory. The public check also upgrades from the previous retained APT version and preserves synthetic project/draft files. Physical desktops, Wayland, native clipboard and cross-application drag are not established by these checks.
 - Package name/executable: `fermatter`; suite: `experimental`; metadata/version: [ubuntu.json](../../desktop-app/packaging/ubuntu.json). Increment the Debian version for every changed published binary; never replace a published version. Bundle identity and legacy data/project paths remain unchanged.
 - Rendering dependencies remain optional external tools. Native image clipboard and recoverable project deletion are not available on Linux; use file export for images.
 - [APT builder](../../scripts/apt-repository.py) preserves old package versions and immutable by-hash indexes. Release metadata expires after 365 days; refresh it before expiry even if the app has not changed.

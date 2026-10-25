@@ -4,7 +4,8 @@ set -euo pipefail
 repository="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$repository"
 fingerprint="$(python3 -c 'import json; print(json.load(open("desktop-app/packaging/ubuntu.json"))["signingFingerprint"])')"
-arguments=(--rm -i -e DEBIAN_FRONTEND=noninteractive -e "EXPECTED_FINGERPRINT=$fingerprint")
+version="$(python3 -c 'import json; print(json.load(open("desktop-app/packaging/ubuntu.json"))["version"])')"
+arguments=(--rm -i -e DEBIAN_FRONTEND=noninteractive -e "EXPECTED_FINGERPRINT=$fingerprint" -e "EXPECTED_VERSION=$version")
 if [[ "${1:-}" == "--published" ]]; then
   arguments+=(-e APT_MODE=published)
 else
@@ -46,6 +47,7 @@ test "$actual" = "$EXPECTED_FINGERPRINT"
 apt-get update
 apt-get install -y --no-install-recommends fermatter
 test "$(command -v fermatter)" = /usr/bin/fermatter
+test "$(dpkg-query -W -f='${Version}' fermatter)" = "$EXPECTED_VERSION"
 dpkg-query -W -f='${Package} ${Version} ${Architecture}\n' fermatter
 MATHLIDELUX_DATA_DIR=/tmp/fermatter-test fermatter cli tools > /tmp/tools.json
 python3 - <<'PY'
@@ -56,4 +58,33 @@ assert len(result['tools']) == 8
 assert any(tool['name'] == 'list_projects' for tool in result['tools'])
 print('Clean Ubuntu APT installation and CLI check passed.')
 PY
+if [ "$APT_MODE" = published ]; then
+  previous=""
+  for candidate in $(apt-cache madison fermatter | awk '{print $3}'); do
+    if dpkg --compare-versions "$candidate" lt "$EXPECTED_VERSION"; then
+      previous="$candidate"
+      break
+    fi
+  done
+  if [ -n "$previous" ]; then
+    # Downgrade only this disposable container, then exercise a normal update.
+    apt-get install -y --allow-downgrades "fermatter=$previous"
+    test "$(dpkg-query -W -f='${Version}' fermatter)" = "$previous"
+    mkdir -p /tmp/fermatter-upgrade-fixture/Documents/Example \
+      /tmp/fermatter-upgrade-fixture/.local/share/Mathlidelux/SourceDrafts
+    printf '%s\n' 'Synthetic equation: x^2 + y^2' > /tmp/fermatter-upgrade-fixture/Documents/Example/main.tex
+    printf '%s\n' '{"syntheticDraft":"preserve this draft"}' \
+      > /tmp/fermatter-upgrade-fixture/.local/share/Mathlidelux/SourceDrafts/upgrade-check.json
+    sha256sum /tmp/fermatter-upgrade-fixture/Documents/Example/main.tex \
+      /tmp/fermatter-upgrade-fixture/.local/share/Mathlidelux/SourceDrafts/upgrade-check.json > /tmp/preserved.sha256
+    apt-get install -y --only-upgrade fermatter
+    test "$(dpkg-query -W -f='${Version}' fermatter)" = "$EXPECTED_VERSION"
+    sha256sum --check /tmp/preserved.sha256
+    MATHLIDELUX_DATA_DIR=/tmp/fermatter-test fermatter cli tools > /tmp/upgraded-tools.json
+    cmp /tmp/tools.json /tmp/upgraded-tools.json
+    echo "APT upgrade from $previous to $EXPECTED_VERSION and data preservation passed."
+  else
+    echo 'Initial APT bootstrap: no previous version is available for an upgrade check.'
+  fi
+fi
 SH
