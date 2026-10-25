@@ -11,7 +11,7 @@
 - Browse equations and TikZ/CeTZ drawings; edit slide-specific variants; copy/export SVG, PDF, PNG, or JPEG.
 - Unnotarized public preview for **Apple Silicon Mac (macOS 14+)**.
 
-![FerMatter Library with a synthetic sample](site/public/assets/demos/library.png)
+![FerMatter Source and PDF views, dragging an equation from a synthetic paper](site/public/assets/demos/drag-from-pdf.webp)
 
 ## Start here
 
