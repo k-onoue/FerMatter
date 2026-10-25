@@ -7,6 +7,12 @@ const app = `brew install --cask ${config.homebrewCask}`;
 const converters = "brew install pdf2svg poppler ghostscript";
 const full = `brew install --cask mactex-no-gui\n${converters}`;
 const minimal = `brew install --cask basictex\n${converters}\nsudo /Library/TeX/texbin/tlmgr update --self\nsudo /Library/TeX/texbin/tlmgr install latexmk preview pdfcrop pgf mathtools`;
+const aptSetup = `sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://fermatter.github.io/apt/fermatter.gpg | sudo tee /etc/apt/keyrings/fermatter.gpg > /dev/null
+curl -fsSL https://fermatter.github.io/apt/fermatter.sources | sudo tee /etc/apt/sources.list.d/fermatter.sources > /dev/null
+sudo apt update`;
+const ubuntuLatex =
+  "sudo apt install latexmk texlive-latex-extra texlive-extra-utils texlive-pictures ghostscript pdf2svg poppler-utils lmodern cm-super-minimal";
 ---
 
 <Product
@@ -49,6 +55,36 @@ const minimal = `brew install --cask basictex\n${converters}\nsudo /Library/TeX/
         <InstallCommand label="FerMatter" command={app} />
       </section>
     )}
+    {config.ubuntuAptAvailable && (
+      <section class="download-section" id="ubuntu">
+        <h2>For Ubuntu (experimental)</h2>
+        <p>
+          Ubuntu 24.04 · amd64. Limited testing; use file export for images.
+          Native image clipboard and recoverable project deletion are
+          unavailable.
+        </p>
+        <details>
+          <summary>First-time APT setup</summary>
+          <InstallCommand label="APT repository setup" command={aptSetup} />
+        </details>
+        <InstallCommand
+          label="FerMatter for Ubuntu"
+          command="sudo apt install fermatter"
+        />
+        <p>Install LaTeX or Typst separately:</p>
+        <details>
+          <summary>LaTeX tools for Ubuntu</summary>
+          <InstallCommand label="Ubuntu LaTeX tools" command={ubuntuLatex} />
+        </details>
+        <p>
+          For Typst, follow the{" "}
+          <a href="https://github.com/typst/typst#installation">
+            official installation instructions
+          </a>
+          .
+        </p>
+      </section>
+    )}
     <section class="download-section" id="updates">
       <h2>Updates</h2>
       <p>
@@ -57,10 +93,20 @@ const minimal = `brew install --cask basictex\n${converters}\nsudo /Library/TeX/
         settings and drafts are stored outside the app. In-app update downloads
         are not available.
       </p>
+      {config.ubuntuAptAvailable && (
+        <p>
+          On Ubuntu, quit FerMatter, then run <code>sudo apt update</code> and{" "}
+          <code>sudo apt install fermatter</code> to install the latest
+          available package.
+        </p>
+      )}
     </section>
     <section class="download-section" id="rendering-engines">
       <h2>Math rendering engine</h2>
-      <p>FerMatter requires LaTeX or Typst to render equations and drawings.</p>
+      <p>
+        FerMatter requires LaTeX or Typst to render equations and drawings. The
+        commands below are for macOS.
+      </p>
       {config.releaseAvailable && (
         <section id="install">
           <h3>LaTeX</h3>

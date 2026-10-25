@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Add experimental Ubuntu 24.04 amd64 packages with signed APT installation; support safe Linux project moves and a default project folder when XDG Documents is unset.
+- Group download-page compiler setup under Math rendering engine, remove its First launch section and rename Extraction limitations in the guide.
 - Organize guides by setup, editing, output and customization; clarify output controls, Instant input and MCP connection checks, and add installation and first-launch instructions to the download page.
 - Link the homepage demo to Features and reuse its PDF-drag screenshot in the README.
 

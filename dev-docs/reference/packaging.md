@@ -1,7 +1,42 @@
-# Prototype packaging
+# Packaging
 
 - Current implementation: [package.sh](../../desktop-app/scripts/package.sh); [recipient notes](../../desktop-app/packaging/PROTOTYPE-README.txt).
 - Ad hoc signed app; unsigned, unnotarized containers. Packaging does not create a public release.
+
+## Experimental Ubuntu
+
+- Scope: Ubuntu 24.04, amd64, `.deb` only. No Snap/Flatpak service, root installer scripts or bundled TeX/Typst toolchains.
+- [Ubuntu workflow](../../.github/workflows/ubuntu.yml): builds with Tauri, runs frontend/Rust tests and all four real compiler paths, installs through signed APT in a clean Ubuntu container, and checks headless startup with an isolated data directory. Physical desktops, Wayland, native clipboard and cross-application drag are not established by these checks.
+- Package name/executable: `fermatter`; suite: `experimental`; metadata/version: [ubuntu.json](../../desktop-app/packaging/ubuntu.json). Increment the Debian version for every changed published binary; never replace a published version. Bundle identity and legacy data/project paths remain unchanged.
+- Rendering dependencies remain optional external tools. Native image clipboard and recoverable project deletion are not available on Linux; use file export for images.
+- [APT builder](../../scripts/apt-repository.py) preserves old package versions and immutable by-hash indexes. Release metadata expires after 365 days; refresh it before expiry even if the app has not changed.
+- Public packages and `apt-repository.tar.gz` live in the website repository's `ubuntu-apt` prerelease. Pages uses the [staging helper](../../scripts/stage-apt-repository.py) to verify signatures, checksums, allowed package names and archive paths before deploying `/apt/`; binaries stay out of Git.
+
+### Signing and publication
+
+- Maintainer requirements: Python 3.11+, GnuPG and authenticated `gh` with access to source Actions artifacts and public website Releases/Actions/variables.
+- Private key: `${XDG_DATA_HOME:-$HOME/.local/share}/fermatter/apt-signing`, mode 0700; keep an encrypted offline backup. Never commit or upload the private key, revocation certificate or signing home. The build workflow does not receive it.
+- Public key: [fermatter-archive-keyring.asc](../../desktop-app/packaging/fermatter-archive-keyring.asc); fingerprint `8FB5E7A5ECB5E99601CD9C1BD049D613DE9DE3AF`, expires 2028-10-24. A rotation requires reviewed changes to the configuration, website workflow's pinned fingerprint and public key. Existing users must install the replacement scoped key before relying on it.
+
+```sh
+# Check out clean current main and run/wait for its Ubuntu workflow.
+gh workflow run ubuntu.yml --ref main
+gh run list --workflow ubuntu.yml --branch main
+python3 scripts/publish-ubuntu.py SUCCESSFUL_RUN_ID desktop-app/build/apt-publication-NEW \
+  --signing-home "${XDG_DATA_HOME:-$HOME/.local/share}/fermatter/apt-signing"
+gh workflow run ubuntu.yml --ref main -f verify-published=true
+```
+
+- Publication checks the successful workflow/source commit, artifact checksum and Debian control metadata. It rejects changed bytes for an already published version, uploads the signed snapshot, sets `FERMATTER_APT_AVAILABLE=true` on the website repository and requests Pages deployment. Wait for Pages before running the public installation check.
+- Keep `site/src/data/site.json` → `ubuntuAptAvailable` false until the public clean-container installation check passes. Then enable commands through a reviewed PR. Users register the scoped APT source once; after that `sudo apt install fermatter` installs/upgrades the package.
+- APT signing and metadata verification do not prove full desktop compatibility. Keep this distribution explicitly experimental.
+
+```sh
+python3 -m unittest discover -s scripts/tests -p 'test_apt_repository.py' -v
+# Linux with Docker; use a disposable Ubuntu host for the startup check.
+bash desktop-app/scripts/verify-ubuntu-install.sh /absolute/path/to/fermatter_VERSION_amd64.deb
+bash desktop-app/scripts/verify-ubuntu-install.sh --published
+```
 
 ## Public preview
 
