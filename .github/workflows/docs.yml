@@ -17,12 +17,13 @@ jobs:
           fetch-depth: 2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "24"
+          node-version-file: .node-version
           cache: npm
           cache-dependency-path: |
             scripts/package-lock.json
             site/package-lock.json
       - run: npm --prefix scripts ci && npm --prefix site ci
+      - run: npm --prefix scripts audit && npm --prefix site audit
       - run: npm --prefix scripts test
       - run: node scripts/build-guides.mjs --check
       - run: node scripts/check-publication.mjs
