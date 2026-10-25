@@ -234,7 +234,8 @@ pub fn atomic(path: &Path, bytes: &[u8]) -> Result<()> {
     }
     temp.write_all(bytes).map_err(err)?;
     temp.as_file().sync_all().map_err(err)?;
-    temp.persist(path).map_err(err)?;
+    temp.persist(path)
+        .map_err(|error| format!("Atomic publication to {} failed: {error}", path.display()))?;
     Ok(())
 }
 pub fn json_read(path: &Path) -> Result<Value> {

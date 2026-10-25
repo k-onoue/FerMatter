@@ -12,6 +12,7 @@
 - Open project setup and the bundled demos from global Instant without discarding editor drafts.
 - Keep project-action undo from touching a replacement folder on Windows, even when it inherits the original folder's creation time.
 - Include the latest Library extraction exclusions in the next Windows preview.
+- Avoid rewriting unchanged settings recovery backups on read, preventing unnecessary Windows sharing errors during rendering and export.
 
 - Share a compact footer across all pages, with guide pagination above it and GitHub shown there only when absent from the header.
 

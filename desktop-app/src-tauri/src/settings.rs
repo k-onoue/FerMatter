@@ -109,7 +109,13 @@ impl SettingsFiles {
             atomic(&path, &bytes)?;
             hash(bytes)
         };
-        json_write(&backup, &value)?;
+        let backup_bytes = serde_json::to_vec_pretty(&value).map_err(err)?;
+        // Reading unchanged settings must not repeatedly replace their recovery
+        // copy (which another reader or Windows scanner may have open).
+        // Keep the bounded, no-follow reader for this comparison too.
+        if !read_document(&backup).is_ok_and(|bytes| bytes == backup_bytes) {
+            atomic(&backup, &backup_bytes)?;
+        }
         Ok(json!({"value":value,"revision":revision}))
     }
     #[cfg(test)]
@@ -503,6 +509,59 @@ mod tests {
         }
     }
     use super::*;
+    #[cfg(windows)]
+    #[test]
+    fn unchanged_reads_do_not_replace_a_recovery_backup_but_changed_values_must_refresh_it() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let home = tempfile::tempdir().unwrap();
+        let settings = SettingsFiles::new(home.path());
+        let initial = settings.snapshot("preferences.json", false).unwrap();
+        let path = home.path().join("Settings/preferences.json");
+        let backup = home.path().join("Settings/.last-valid-preferences.json");
+        let original = fs::read(&backup).unwrap();
+        // A reader may inspect the recovery copy while denying replacement.
+        let reader = fs::OpenOptions::new()
+            .read(true)
+            .share_mode(1) // FILE_SHARE_READ, without FILE_SHARE_DELETE
+            .open(&backup)
+            .unwrap();
+        for _ in 0..10 {
+            assert_eq!(
+                settings.snapshot("preferences.json", false).unwrap(),
+                initial
+            );
+        }
+        let mut changed = initial["value"].clone();
+        changed["appearance"] = json!("light");
+        let changed = serde_json::to_vec_pretty(&changed).unwrap();
+        fs::write(&path, &changed).unwrap();
+        assert!(settings.snapshot("preferences.json", false).is_err());
+        assert_eq!(fs::read(&path).unwrap(), changed);
+        assert_eq!(fs::read(&backup).unwrap(), original);
+        drop(reader);
+        settings.snapshot("preferences.json", false).unwrap();
+        assert_eq!(fs::read(&backup).unwrap(), changed);
+    }
+    #[cfg(unix)]
+    #[test]
+    fn identical_backup_bytes_do_not_authorize_following_a_symbolic_link() {
+        use std::os::unix::fs::symlink;
+        let home = tempfile::tempdir().unwrap();
+        let settings = SettingsFiles::new(home.path());
+        let initial = settings.snapshot("preferences.json", false).unwrap();
+        let backup = home.path().join("Settings/.last-valid-preferences.json");
+        let bytes = fs::read(&backup).unwrap();
+        let outside = home.path().join("outside.json");
+        fs::write(&outside, &bytes).unwrap();
+        fs::remove_file(&backup).unwrap();
+        symlink(&outside, &backup).unwrap();
+        assert_eq!(
+            settings.snapshot("preferences.json", false).unwrap(),
+            initial
+        );
+        assert!(!backup.symlink_metadata().unwrap().file_type().is_symlink());
+        assert_eq!(fs::read(&outside).unwrap(), bytes);
+    }
     #[test]
     fn output_size_accepts_decimals_and_legacy_source_sizes_but_rejects_invalid_values() {
         for size in [json!(1), json!(30.5), json!(200), json!(0)] {
