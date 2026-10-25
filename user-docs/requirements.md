@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-**Apple Silicon · macOS 14+**, or **Windows 11 · x64 preview**. Install LaTeX or Typst separately.
+**Apple Silicon · macOS 14+**, or **Windows 11 · x64**. Install LaTeX or Typst separately.
 
 Windows installer and rendering tools: [Windows installation](https://fermatter.github.io/download/#windows). The installer includes WebView2 runtime setup; Node.js, Rust and Python are not required to run the app.
 
@@ -23,7 +23,7 @@ Install the tools for your source format; they are separate from the FerMatter a
 
 Project packages/fonts remain required. LaTeX PDF navigation uses SyncTeX.
 
-The Windows preview uses Poppler for SVG conversion. TinyTeX and TeX Live include the Windows Perl and Ghostscript helpers used by LaTeX rendering. See [Windows rendering-tool setup](https://fermatter.github.io/download/#windows).
+Windows uses Poppler for SVG conversion. TinyTeX and TeX Live include the Windows Perl and Ghostscript helpers used by LaTeX rendering. See [Windows rendering-tool setup](https://fermatter.github.io/download/#windows).
 
 Recoverable project deletion and the screen color eyedropper are unavailable on Windows; project files can be managed in Explorer.
 

@@ -2,7 +2,7 @@
 import { getEntry, render } from "astro:content";
 import Product from "../layouts/Product.astro";
 import config from "../data/site.json";
-import { download, windowsDownload, releases } from "../data/links";
+import { download, windowsDownload } from "../data/links";
 const macos = (await getEntry("download", "macos"))!;
 const windows = (await getEntry("download", "windows"))!;
 const { title, description, requirements } = macos.data;
@@ -39,11 +39,7 @@ const { Content: Ubuntu } = await render(
   </nav>
   <section class="download-platform-panel" id="mac" data-download-panel>
     <div class="download-section not-content">
-      <h2>
-        {config.releaseAvailable
-          ? `FerMatter ${config.releaseName}`
-          : "Development preview"}
-      </h2>
+      <h2>FerMatter {config.version}</h2>
       {requirements && <p>{requirements}</p>}
       {config.releaseAvailable && (
         <div class="actions">
@@ -68,17 +64,12 @@ const { Content: Ubuntu } = await render(
     <p>{windows.data.platform}</p>
     {config.windowsReleaseAvailable ? (
       <>
-        <p>{config.windowsReleaseName} · unsigned installer.</p>
+        <p>FerMatter {config.version}</p>
         <div class="actions not-content">
           <a class="button primary" href={windowsDownload}>
             Download EXE ↓
           </a>
         </div>
-        <p>
-          <a href={`${releases}/tag/${config.windowsReleaseTag}`}>
-            Release and SHA-256 checksum
-          </a>
-        </p>
         <WindowsInstaller />
       </>
     ) : (

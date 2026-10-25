@@ -1,11 +1,11 @@
 ---
 title: "Linux installation"
-description: "Experimental Ubuntu packages and rendering tools."
+description: "Ubuntu packages and rendering tools."
 ---
 
-<h2 id="for-ubuntu-experimental">Linux (experimental)</h2>
+<h2 id="for-ubuntu-experimental">Linux</h2>
 
-Ubuntu 24.04 · amd64. Limited testing.
+Ubuntu 24.04 · amd64.
 
 <details>
 <summary>First-time APT setup</summary>
@@ -39,5 +39,3 @@ sudo apt install latexmk texlive-latex-extra texlive-extra-utils texlive-picture
 </details>
 
 [Check installed tools →](https://fermatter.github.io/guide/requirements/#tool-discovery)
-
-Use file export for images. Native image clipboard and recoverable project deletion are unavailable.

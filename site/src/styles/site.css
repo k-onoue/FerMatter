@@ -306,9 +306,16 @@ html:has(.product-page) .main-pane > main > .content-panel > .sl-container {
   opacity: 0.8;
   text-decoration: none;
 }
-.product-page .availability {
+.product-page .home-intro .availability {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.25rem;
+  margin: 1rem 0 0;
   font-size: 0.8125rem;
-  margin-top: 1.3rem;
+  line-height: 1.6;
+}
+.home-intro .availability span {
+  white-space: nowrap;
 }
 .details-grid p {
   margin-top: 0.6rem;

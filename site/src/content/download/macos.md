@@ -1,7 +1,7 @@
 ---
 title: "Download"
 description: "Download FerMatter for macOS, Windows or Linux, and install LaTeX or Typst."
-requirements: "Apple Silicon Mac · macOS 14 or later · unnotarized preview."
+requirements: "Apple Silicon Mac · macOS 14 or later."
 ---
 
 ## Homebrew

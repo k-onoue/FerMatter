@@ -7,7 +7,7 @@ sidebar:
 
 ![A local MCP client connects over stdio to FerMatter, which renders saved projects with LaTeX or Typst and exports image files.](../site/public/assets/guide/mcp.svg)
 
-MCP and CLI are available on macOS and Linux. The Windows preview currently uses the desktop interface.
+MCP and CLI are available on macOS and Linux. On Windows, use the desktop interface.
 
 Open the project in FerMatter and configure its [compiler tools](requirements.md#tool-discovery) before connecting your local agent.
 

@@ -26,7 +26,7 @@ Change the default folder in **Settings → Projects → Default project folder*
 | **Open Project** (`⌘O`) | Opens an existing folder or main file in place |
 | **New Project** (`⇧⌘N`) | Creates a project from pasted source and a template; **Location** can override the default folder |
 | Drop a folder / import a ZIP | Copies into the default project folder; an existing direct child opens in place |
-| **Delete** (`⌘⌫`, macOS) | Moves the actual source folder to Finder Trash; unavailable in the Windows preview |
+| **Delete** (`⌘⌫`, macOS) | Moves the actual source folder to Finder Trash; unavailable on Windows |
 
 Project tabs retain their Library/Source view, open source files and PDF view. Opening the same project selects its existing tab.
 
