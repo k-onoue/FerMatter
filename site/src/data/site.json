@@ -11,7 +11,7 @@
   "releaseNotarized": false,
   "homebrewCask": "fermatter/tap/fermatter",
   "ubuntuAptAvailable": true,
-  "windowsReleaseAvailable": false,
+  "windowsReleaseAvailable": true,
   "windowsReleaseTag": "v0.11.0-windows-preview.1",
   "windowsReleaseName": "0.11.0 Windows Preview 1",
   "windowsAssetName": "FerMatter_0.11.0_windows_x64_preview.1_unsigned_setup.exe",

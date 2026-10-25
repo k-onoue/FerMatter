@@ -16,8 +16,10 @@
 ./desktop-app/scripts/audit-windows.ps1
 ./desktop-app/scripts/build-windows.ps1
 Get-FileHash ./desktop-app/build/windows/*setup.exe -Algorithm SHA256
+./desktop-app/scripts/verify-windows-install.ps1 -Installer ./desktop-app/build/windows/FerMatter_0.11.0_windows_x64_preview.1_unsigned_setup.exe -CheckCompilers
 ```
 
+- Run installer verification on a disposable Windows account or CI machine without an existing FerMatter installation. `-CheckCompilers` tests the installed EXE with a minimal Windows system PATH: LaTeX align/equation and Typst must produce nonempty SVG/PNG/PDF files without changing the synthetic sources. The script also checks replacement, notices, startup, uninstall and data preservation; it does not establish native UI or clean-machine compatibility.
 - Preview tag: `v0.11.0-windows-preview.1`; filename: `FerMatter_0.11.0_windows_x64_preview.1_unsigned_setup.exe`. Increment the preview revision for changed published bytes; never replace an existing asset.
 - Publish reviewed binaries to a **prerelease** in `FerMatter/fermatter.github.io`, with the checksum manifest and installation/validation notes. Windows assets have independent site fields; existing macOS downloads stay pinned.
 - Before setting `windowsReleaseAvailable: true`, verify anonymous download/checksum and install/launch the exact downloaded installer. Record the tested Windows version and native/clean-machine limitations.

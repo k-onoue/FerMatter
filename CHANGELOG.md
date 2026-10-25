@@ -8,13 +8,15 @@
 
 ## [Unreleased]
 
-- Add a Windows 11 x64 preview installer, native Windows build/check scripts, and separate Windows downloads and rendering-tool setup instructions.
-- Use Consolas in Windows editors and fill the client area without white corner gaps; keep the macOS font and window appearance.
-- Align Library and Source action icons with the same workspace inset on all desktop platforms.
-
 - Share a compact footer across all pages, with guide pagination above it and GitHub shown there only when absent from the header.
 
 - Publish a Declaration with commitments to open source, no automatic data collection, and free access without paywalled features or usage limits tied to payment.
+
+## [0.11.0-windows-preview.1] — 2026-10-26
+
+- Add a Windows 11 x64 preview installer, native Windows build/check scripts, and separate Windows downloads and rendering-tool setup instructions.
+- Use Consolas in Windows editors and fill the client area without white corner gaps; keep the macOS font and window appearance.
+- Align Library and Source action icons with the same workspace inset on all desktop platforms.
 
 ## [0.11.0-preview.4] — 2026-10-25
 
@@ -151,6 +153,7 @@
 - Obsolete web UI prototype; retain the native app and product site.
 
 [Unreleased]: https://github.com/k-onoue/FerMatter/commits/main/
+[0.11.0-windows-preview.1]: https://github.com/FerMatter/fermatter.github.io/releases/tag/v0.11.0-windows-preview.1
 
 ### Security
 
