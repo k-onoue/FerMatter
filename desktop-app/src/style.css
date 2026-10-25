@@ -155,6 +155,10 @@ html[data-platform="windows"] #root {
 html[data-platform="windows"] .app {
   border-radius: 0;
 }
+html[data-platform="windows"] pre,
+html[data-platform="windows"] code {
+  font-family: Consolas, "Courier New", monospace;
+}
 .desktop-wallpaper {
   position: fixed;
   inset: 0;

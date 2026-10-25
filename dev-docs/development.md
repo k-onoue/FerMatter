@@ -30,7 +30,7 @@ open desktop-app/src-tauri/target/release/bundle/macos/FerMatter.app
 ./desktop-app/src-tauri/target/release/FerMatter.exe
 ```
 
-- `build-windows.ps1 -Debug` builds a debug app. Release builds create the NSIS setup EXE and [package/checksum metadata](reference/packaging.md#windows-preview).
+- `build-windows.ps1 -DebugBuild` builds a debug app. Release builds create the NSIS setup EXE and [package/checksum metadata](reference/packaging.md#windows-preview).
 - App/build identity and `Slide Math` storage names are retained. Never move legacy data into a new directory as a side effect of adding a platform.
 - Windows previews are unsigned; Authenticode signing and clean-machine validation remain distinct release checks.
 
