@@ -8,8 +8,8 @@
 
 ## Build and run
 
-- Apple Silicon development build; macOS 14+ deployment target, verified on macOS 26. Rust stable (1.92+), Node.js 22+, Xcode command-line tools.
-- Verified development toolchain: Rust 1.98.1, Node.js 26.5.0, macOS 26.5.2.
+- Apple Silicon development build; macOS 14+ deployment target, verified on macOS 26. Rust stable (1.92+), Node.js 24.22.1+ LTS (see `../.node-version`), Xcode command-line tools.
+- Verified development toolchain: Rust 1.98.1, Node.js 26.12.1, macOS 26.5.2.
 - A project-local toolchain at `build/rustup/` is optional; scripts otherwise use the installed Rust toolchain.
 
 ```sh

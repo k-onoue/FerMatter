@@ -2,7 +2,7 @@
 
 ## Setup
 
-- Apple Silicon Mac; Rust stable (1.92+), Node.js 22+, Xcode command-line tools.
+- Apple Silicon Mac; Rust stable (1.92+), Node.js 24.22.1+ LTS (see `.node-version`), Xcode command-line tools.
 - macOS 14+ deployment target; verified on macOS 26.
 - Install the tools for the selected format: [requirements](../user-docs/requirements.md).
 - Run from the repository root:

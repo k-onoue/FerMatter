@@ -15,10 +15,11 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "24"
+          node-version-file: .node-version
           cache: npm
           cache-dependency-path: package-lock.json
       - run: rustup toolchain install stable --profile minimal --component rustfmt
       - run: rustup default stable
       - run: npm ci
+      - run: npm audit
       - run: npm run format:check
