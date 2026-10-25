@@ -7,7 +7,9 @@ const app = `brew install --cask ${config.homebrewCask}`;
 const converters = "brew install pdf2svg poppler ghostscript";
 const full = `brew install --cask mactex-no-gui\n${converters}`;
 const minimal = `brew install --cask basictex\n${converters}\nsudo /Library/TeX/texbin/tlmgr update --self\nsudo /Library/TeX/texbin/tlmgr install latexmk preview pdfcrop pgf mathtools`;
-const aptSetup = `sudo install -m 0755 -d /etc/apt/keyrings
+const aptSetup = `sudo apt update
+sudo apt install curl
+sudo install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://fermatter.github.io/apt/fermatter.gpg | sudo tee /etc/apt/keyrings/fermatter.gpg > /dev/null
 curl -fsSL https://fermatter.github.io/apt/fermatter.sources | sudo tee /etc/apt/sources.list.d/fermatter.sources > /dev/null
 sudo apt update`;
@@ -86,19 +88,16 @@ const ubuntuLatex =
       </section>
     )}
     <section class="download-section" id="updates">
-      <h2>Updates</h2>
-      <p>
-        Quit FerMatter before replacing the app in Applications. For Homebrew,
-        run <code>brew upgrade --cask {config.homebrewCask}</code>. Projects,
-        settings and drafts are stored outside the app. In-app update downloads
-        are not available.
-      </p>
+      <h2>Update</h2>
+      <InstallCommand
+        label="Homebrew update"
+        command={`brew upgrade --cask ${config.homebrewCask}`}
+      />
       {config.ubuntuAptAvailable && (
-        <p>
-          On Ubuntu, quit FerMatter, then run <code>sudo apt update</code> and{" "}
-          <code>sudo apt install fermatter</code> to install the latest
-          available package.
-        </p>
+        <InstallCommand
+          label="Ubuntu update"
+          command={"sudo apt update\nsudo apt install --only-upgrade fermatter"}
+        />
       )}
     </section>
     <section class="download-section" id="rendering-engines">

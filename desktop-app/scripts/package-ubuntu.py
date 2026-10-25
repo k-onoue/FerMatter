@@ -41,7 +41,8 @@ def main():
         fields["Version"] = config["version"]
         fields["X-FerMatter-Commit"] = commit
         dependencies = fields.get("Depends", "")
-        fields["Depends"] = (dependencies + ", " if dependencies else "") + "xdg-utils"
+        # Ubuntu 24.04 builds use GLIBC_2.39; reject older incompatible systems.
+        fields["Depends"] = (dependencies + ", " if dependencies else "") + "libc6 (>= 2.39), libgcc-s1, xdg-utils"
         control.write_text("".join(f"{key}: {value}\n" for key, value in fields.items()))
         if not (stage / "usr/bin/fermatter").is_file():
             raise RuntimeError("The package must install /usr/bin/fermatter.")
