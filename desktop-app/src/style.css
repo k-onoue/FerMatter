@@ -706,11 +706,8 @@ button.danger {
   flex-direction: column;
 }
 .workspace-heading {
-  margin: 4px 10px;
-  padding: 4px 8px;
-  background: color-mix(in srgb, var(--surfaceBackground) 50%, transparent);
-  border: 1px solid color-mix(in srgb, var(--text) 6%, transparent);
-  border-radius: 9px;
+  margin: 2px 10px 4px;
+  padding: 0 3px;
   flex-shrink: 0;
 }
 .workspace-heading > div {
@@ -720,12 +717,6 @@ button.danger {
 }
 .workspace-heading > [role="group"] button {
   padding: 4px 7px;
-}
-.workspace-heading.source-tools {
-  margin: 2px 10px 4px;
-  padding: 0 3px;
-  border: 0;
-  background: none;
 }
 .library-controls {
   margin-top: 4px;

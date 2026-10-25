@@ -1532,7 +1532,7 @@ export default function App() {
           </aside>
           <div className="main-column">
             <header
-              className={`workspace-heading ${mode === "source" ? "source-tools" : ""}`}
+              className="workspace-heading"
               aria-label={mode === "source" ? "Source tools" : "Library tools"}
             >
               <div role="group" aria-label="Project actions">
