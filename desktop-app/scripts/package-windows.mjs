@@ -29,6 +29,22 @@ export function peMachine(bytes) {
   return bytes.readUInt16LE(offset + 4);
 }
 
+export function nsisApplicationBytes(bytes) {
+  // Tauri patches this three-byte bundle marker while building the installer,
+  // then restores the loose executable. Account for that exact change only.
+  const marker = Buffer.from("__TAURI_BUNDLE_TYPE_VAR_");
+  const offset = bytes.indexOf(marker);
+  if (offset < 0 || bytes.indexOf(marker, offset + 1) >= 0)
+    throw new Error("Expected exactly one Tauri bundle type marker.");
+  const typeOffset = offset + marker.length;
+  const bundleType = bytes.toString("ascii", typeOffset, typeOffset + 3);
+  if (!["UNK", "NSS"].includes(bundleType))
+    throw new Error(`Unexpected Tauri bundle type: ${bundleType}`);
+  const bundled = Buffer.from(bytes);
+  bundled.write("NSS", typeOffset, "ascii");
+  return bundled;
+}
+
 export function preserveFile(path, bytes) {
   if (existsSync(path)) {
     if (!readFileSync(path).equals(bytes))
@@ -100,7 +116,8 @@ export function packageWindows(outputDirectory) {
     dirty: command("git", ["status", "--porcelain"]).length > 0,
     file: name,
     sha256: checksum,
-    applicationSha256: sha256(executableBytes),
+    applicationSha256: sha256(nsisApplicationBytes(executableBytes)),
+    unbundledApplicationSha256: sha256(executableBytes),
     signing: "unsigned",
     webview: "offlineInstaller",
     compilerTools: "external",

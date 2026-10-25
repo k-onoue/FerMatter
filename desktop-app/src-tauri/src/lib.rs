@@ -755,7 +755,10 @@ fn dispatch(
     }
 }
 pub fn run() {
-    if automation::entry() || formatting::worker_requested() {
+    if verification::installed_instant_entry()
+        || automation::entry()
+        || formatting::worker_requested()
+    {
         return;
     }
     let mut context = tauri::generate_context!();

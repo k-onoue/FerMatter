@@ -3,7 +3,35 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { peMachine, preserveFile } from "./package-windows.mjs";
+import {
+  nsisApplicationBytes,
+  peMachine,
+  preserveFile,
+} from "./package-windows.mjs";
+
+test("installer executable hash includes Tauri's temporary NSIS bundle marker", () => {
+  const loose = Buffer.from("before\0__TAURI_BUNDLE_TYPE_VAR_UNK\0after");
+  const bundled = nsisApplicationBytes(loose);
+  assert.equal(
+    bundled.toString(),
+    "before\0__TAURI_BUNDLE_TYPE_VAR_NSS\0after",
+  );
+  assert.equal(loose.toString(), "before\0__TAURI_BUNDLE_TYPE_VAR_UNK\0after");
+  assert.deepEqual(nsisApplicationBytes(bundled), bundled);
+});
+
+test("installer hashing rejects missing, duplicate and unknown bundle markers", () => {
+  for (const bytes of [
+    "missing bundle marker",
+    "__TAURI_BUNDLE_TYPE_VAR_UNK\0__TAURI_BUNDLE_TYPE_VAR_UNK",
+    "__TAURI_BUNDLE_TYPE_VAR_MSI",
+    "__TAURI_BUNDLE_TYPE_VAR_U",
+  ])
+    assert.throws(
+      () => nsisApplicationBytes(Buffer.from(bytes)),
+      /bundle type/i,
+    );
+});
 
 test("Windows packaging rejects malformed and truncated executables", () => {
   assert.throws(

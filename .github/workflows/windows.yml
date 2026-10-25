@@ -81,7 +81,13 @@ jobs:
           Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-pc-windows-msvc.zip' -OutFile $archive
           if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '19ce3551153c2fe7ee9fa2f95208310c8f4d3209fedb699e0333faf8913f6736') { throw 'Typst checksum mismatch.' }
           Expand-Archive -LiteralPath $archive -DestinationPath (Join-Path $env:RUNNER_TEMP 'typst')
-          (Join-Path $env:RUNNER_TEMP 'typst\typst-x86_64-pc-windows-msvc') | Add-Content $env:GITHUB_PATH
+          $typstBin = Join-Path $env:RUNNER_TEMP 'typst\typst-x86_64-pc-windows-msvc'
+          $typstBin | Add-Content $env:GITHUB_PATH
+          # The installed-app check deliberately clears inherited PATH to emulate
+          # an Explorer process that predates tool installation. Persist these
+          # paths only on this disposable CI account so discovery is exercised.
+          $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+          [Environment]::SetEnvironmentVariable('PATH', "$texBin;$typstBin;$userPath", 'User')
       - name: Frontend, Rust, clippy and real compiler checks
         shell: powershell
         run: ./desktop-app/scripts/check-windows.ps1
@@ -96,7 +102,7 @@ jobs:
         run: |
           $installer = @(Get-ChildItem desktop-app/build/windows/*_setup.exe)
           if ($installer.Count -ne 1) { throw 'Expected one packaged installer.' }
-          ./desktop-app/scripts/verify-windows-install.ps1 -Installer $installer.FullName
+          ./desktop-app/scripts/verify-windows-install.ps1 -Installer $installer.FullName -CheckCompilers
       - name: Retain installer and evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -107,5 +113,6 @@ jobs:
             desktop-app/build/windows-qa/
             desktop-app/build/windows-audit/
             desktop-app/build/windows-install-*/verification.json
+            desktop-app/build/windows-install-*/installed-compilers/
           if-no-files-found: ignore
           retention-days: 30

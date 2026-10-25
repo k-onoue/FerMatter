@@ -1,6 +1,6 @@
 # Exercises the installer with synthetic storage. Refuses to replace an existing installation.
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$Installer)
+param([Parameter(Mandatory)][string]$Installer, [switch]$CheckCompilers)
 . "$PSScriptRoot\environment-windows.ps1"
 $Installer = (Resolve-Path -LiteralPath $Installer).Path
 $manifestPath = Join-Path (Split-Path -Parent $Installer) 'build-info.json'
@@ -36,6 +36,7 @@ Set-Content -LiteralPath $source -Value '$ x + 1 $'
 $sentinelHash = (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash
 $sourceHash = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
 $previousDataDirectory = $env:MATHLIDELUX_DATA_DIR
+$compilerReportPath = $null
 $app = $null
 try {
     $env:MATHLIDELUX_DATA_DIR = $dataDirectory
@@ -52,6 +53,61 @@ try {
         }
         if ((Get-FileHash -LiteralPath $sentinel).Hash -ne $sentinelHash -or (Get-FileHash -LiteralPath $source).Hash -ne $sourceHash) {
             throw 'Installation changed synthetic user data.'
+        }
+    }
+    if ($CheckCompilers) {
+        $compilerOutput = Join-Path $qaRoot 'installed-compilers'
+        New-Item -ItemType Directory -Path $compilerOutput | Out-Null
+        $compilerRootPrefix = [IO.Path]::GetFullPath($compilerOutput).TrimEnd('\') + '\'
+        function Assert-CompilerArtifact {
+            param([Parameter(Mandatory)][string]$Path)
+            if (-not [IO.Path]::IsPathRooted($Path)) { throw 'Compiler evidence must use absolute paths.' }
+            $fullPath = [IO.Path]::GetFullPath($Path)
+            if ($fullPath.StartsWith('\\?\UNC\', [StringComparison]::OrdinalIgnoreCase)) {
+                $fullPath = '\\' + $fullPath.Substring(8)
+            } elseif ($fullPath.StartsWith('\\?\', [StringComparison]::OrdinalIgnoreCase)) {
+                $fullPath = $fullPath.Substring(4)
+            }
+            if (-not $fullPath.StartsWith($compilerRootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+                throw 'Compiler evidence leaves the isolated QA directory.'
+            }
+            $item = Get-Item -LiteralPath $fullPath
+            if ($item.PSIsContainer -or $item.Length -le 0) { throw "Missing or empty compiler evidence: $fullPath" }
+            return $fullPath
+        }
+        $previousPath = $env:PATH
+        try {
+            # Simulate Explorer retaining its pre-install PATH. The app must discover
+            # the installed compilers from current registry paths and known folders.
+            $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+            $verification = Start-Process -FilePath (Join-Path $installDirectory 'FerMatter.exe') -ArgumentList @('--fermatter-verify-instant', ('"' + $compilerOutput + '"')) -PassThru -WindowStyle Hidden -RedirectStandardOutput (Join-Path $compilerOutput 'stdout.json') -RedirectStandardError (Join-Path $compilerOutput 'stderr.log')
+            if (-not $verification.WaitForExit(420000)) {
+                & "$env:SystemRoot\System32\taskkill.exe" /PID $verification.Id /T /F | Out-Null
+                throw 'Installed Instant compiler verification timed out.'
+            }
+            $verification.WaitForExit()
+            if ($verification.ExitCode -ne 0) {
+                throw "Installed Instant compiler verification failed (code $($verification.ExitCode)). Evidence: $compilerOutput"
+            }
+        } finally {
+            $env:PATH = $previousPath
+        }
+        $result = Get-Content -LiteralPath (Join-Path $compilerOutput 'stdout.json') -Raw | ConvertFrom-Json
+        if ($result.success -ne $true) { throw 'Installed compiler verification did not report success.' }
+        $compilerReportPath = Assert-CompilerArtifact $result.reportPath
+        $compilerReport = Get-Content -LiteralPath $compilerReportPath -Raw | ConvertFrom-Json
+        $expectedCases = @(@{id='latex-align';format='latex'}, @{id='latex-equation';format='latex'}, @{id='typst';format='typst'})
+        if ($compilerReport.success -ne $true -or @($compilerReport.cases).Count -ne $expectedCases.Count) {
+            throw 'Installed compiler report must contain all three successful Instant cases.'
+        }
+        foreach ($expected in $expectedCases) {
+            $cases = @($compilerReport.cases | Where-Object { $_.id -eq $expected.id -and $_.format -eq $expected.format })
+            if ($cases.Count -ne 1 -or $cases[0].status -ne 'ready' -or $cases[0].sourceUnchanged -ne $true) {
+                throw "Installed compiler case failed: $($expected.id)"
+            }
+            foreach ($format in @('svg', 'png', 'pdf')) {
+                Assert-CompilerArtifact $cases[0].artifacts.$format | Out-Null
+            }
         }
     }
     $app = Start-Process -FilePath (Join-Path $installDirectory 'FerMatter.exe') -PassThru -WindowStyle Hidden
@@ -80,6 +136,8 @@ try {
         installedStartup = $true
         removal = $true
         userDataPreserved = $true
+        compilerChecks = $(if ($CheckCompilers) { 'passed' } else { 'skipped (not requested)' })
+        compilerReport = $compilerReportPath
         uiInteractions = 'Not verified by this smoke check.'
         os = [Environment]::OSVersion.VersionString
     }

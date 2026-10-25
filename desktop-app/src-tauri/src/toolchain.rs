@@ -104,18 +104,28 @@ impl Toolchain {
         );
         #[cfg(windows)]
         {
-            if let Some(appdata) = std::env::var_os("APPDATA") {
-                let tinytex = PathBuf::from(appdata).join("TinyTeX");
+            // Explorer can retain its old PATH after a compiler installer has
+            // updated the user's environment. Read the persisted paths for each
+            // job instead of requiring an Explorer/app restart.
+            paths.extend(registered_windows_paths());
+            for appdata in std::env::var_os("APPDATA")
+                .map(PathBuf::from)
+                .into_iter()
+                .chain(dirs::data_dir())
+            {
+                let tinytex = appdata.join("TinyTeX");
                 paths.push(tinytex.join("bin/windows"));
                 paths.push(tinytex.join("tlpkg/tlgs/bin"));
             }
-            for base in ["ProgramFiles", "LOCALAPPDATA"] {
-                if let Some(base) = std::env::var_os(base) {
-                    let base = PathBuf::from(base);
-                    paths.push(base.join("MiKTeX/miktex/bin/x64"));
-                    paths.push(base.join("Programs/MiKTeX/miktex/bin/x64"));
-                    paths.push(base.join("Microsoft/WinGet/Links"));
-                }
+            let windows_bases = ["ProgramFiles", "LOCALAPPDATA"]
+                .into_iter()
+                .filter_map(std::env::var_os)
+                .map(PathBuf::from)
+                .chain(dirs::data_local_dir());
+            for base in windows_bases {
+                paths.push(base.join("MiKTeX/miktex/bin/x64"));
+                paths.push(base.join("Programs/MiKTeX/miktex/bin/x64"));
+                paths.push(base.join("Microsoft/WinGet/Links"));
             }
             if let Some(programs) = std::env::var_os("ProgramFiles") {
                 if let Ok(versions) = fs::read_dir(PathBuf::from(programs).join("gs")) {
@@ -238,6 +248,79 @@ impl Toolchain {
     }
 }
 
+#[cfg(windows)]
+fn registered_windows_paths() -> Vec<PathBuf> {
+    use std::{
+        ffi::{c_void, OsString},
+        os::windows::ffi::OsStringExt,
+    };
+    #[link(name = "advapi32")]
+    unsafe extern "system" {
+        fn RegGetValueW(
+            key: *mut c_void,
+            subkey: *const u16,
+            value: *const u16,
+            flags: u32,
+            kind: *mut u32,
+            data: *mut c_void,
+            bytes: *mut u32,
+        ) -> i32;
+    }
+    let value: Vec<_> = "Path".encode_utf16().chain(Some(0)).collect();
+    let mut paths = Vec::new();
+    for (key, subkey) in [
+        (-2147483647isize, "Environment"), // HKEY_CURRENT_USER
+        (
+            -2147483646isize,
+            r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+        ), // HKEY_LOCAL_MACHINE
+    ] {
+        let subkey: Vec<_> = subkey.encode_utf16().chain(Some(0)).collect();
+        let mut bytes = 0u32;
+        // Accept SZ/EXPAND_SZ only; RegGetValue expands environment references
+        // and guarantees a terminator. Bound untrusted local configuration.
+        if unsafe {
+            RegGetValueW(
+                key as *mut c_void,
+                subkey.as_ptr(),
+                value.as_ptr(),
+                0x6,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                &mut bytes,
+            )
+        } != 0
+            || bytes == 0
+            || bytes > 128 * 1024
+            || !bytes.is_multiple_of(2)
+        {
+            continue;
+        }
+        let mut data = vec![0u16; bytes as usize / 2];
+        if unsafe {
+            RegGetValueW(
+                key as *mut c_void,
+                subkey.as_ptr(),
+                value.as_ptr(),
+                0x6,
+                std::ptr::null_mut(),
+                data.as_mut_ptr().cast(),
+                &mut bytes,
+            )
+        } != 0
+        {
+            continue;
+        }
+        let length = data
+            .iter()
+            .position(|unit| *unit == 0)
+            .unwrap_or(data.len());
+        let path = OsString::from_wide(&data[..length]);
+        paths.extend(std::env::split_paths(&path).filter(|path| path.is_absolute()));
+    }
+    paths
+}
+
 fn executable_names(name: &str) -> Vec<String> {
     #[cfg(windows)]
     {
@@ -274,6 +357,24 @@ fn executable(path: &Path) -> Result<()> {
 #[cfg(all(test, windows))]
 mod windows_tests {
     use super::*;
+    #[test]
+    #[ignore = "requires real LaTeX/Ghostscript/Poppler/Typst; run separately with PATH reduced to System32"]
+    fn windows_global_instant_renders_without_development_path() {
+        let output = tempfile::tempdir().unwrap();
+        let existing = output.path().join("verification.json");
+        fs::write(&existing, "preserve earlier output").unwrap();
+        let report = crate::verification::verify_installed_instant(output.path()).unwrap();
+        assert_eq!(report["success"], true);
+        assert_eq!(report["cases"].as_array().unwrap().len(), 3);
+        assert_eq!(
+            fs::read_to_string(existing).unwrap(),
+            "preserve earlier output"
+        );
+        assert!(Path::new(string(&report, "reportPath")).is_file());
+        assert!(!Path::new(string(&report, "workspace"))
+            .join("latexmkrc")
+            .exists());
+    }
     #[test]
     fn windows_detection_uses_executable_suffixes_and_ghostscript_console_name() {
         assert_eq!(executable_names("typst")[0], "typst.exe");
