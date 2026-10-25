@@ -146,6 +146,15 @@ small,
   border-radius: 10px;
   overflow: hidden;
 }
+/* The Windows native frame owns the window corners; fill its client rectangle. */
+html[data-platform="windows"],
+html[data-platform="windows"] body,
+html[data-platform="windows"] #root {
+  background: var(--windowBackground, #eef0f4);
+}
+html[data-platform="windows"] .app {
+  border-radius: 0;
+}
 .desktop-wallpaper {
   position: fixed;
   inset: 0;
