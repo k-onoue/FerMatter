@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Require security-patched Node.js for development and update vulnerable build/test dependencies.
+
 - Organize guides by setup, editing, output and customization; clarify output controls, Instant input and MCP connection checks, and add installation and first-launch instructions to the download page.
 - Link the homepage demo to Features and reuse its PDF-drag screenshot in the README.
 

@@ -28,7 +28,7 @@
 
 ## Build and preview
 
-- Node.js 22.22+; CI uses Node.js 24. App runtime requirements are separate.
+- Node.js 24.22.1+ LTS recommended; CI uses `.node-version`. Supported alternatives: 22.23.4+ and 26.12.1+ within those major versions. These minimums include the [2026-10-21 security fixes](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases). App runtime requirements are separate.
 
 ```sh
 npm --prefix scripts ci
