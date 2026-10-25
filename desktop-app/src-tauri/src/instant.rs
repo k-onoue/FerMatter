@@ -376,16 +376,17 @@ fn open_window(app: &tauri::AppHandle, project: Option<&Value>) -> tauri::Result
     })
     .inner_size(780., 640.)
     .min_inner_size(480., 460.)
-    .transparent(true)
+    .transparent(cfg!(target_os = "macos"))
     .disable_drag_drop_handler();
     #[cfg(target_os = "macos")]
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         .hidden_title(true);
-    let window = builder.build()?;
+    let _window = builder.build()?;
     #[cfg(target_os = "macos")]
-    crate::project_drop::install(&window)?;
-    window.set_background_color(Some(tauri::utils::config::Color(0, 0, 0, 0)))?;
+    crate::project_drop::install(&_window)?;
+    #[cfg(target_os = "macos")]
+    _window.set_background_color(Some(tauri::utils::config::Color(0, 0, 0, 0)))?;
     Ok(())
 }
 

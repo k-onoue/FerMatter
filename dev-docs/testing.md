@@ -29,13 +29,14 @@
 ```powershell
 ./desktop-app/scripts/check-windows.ps1
 ./desktop-app/scripts/build-windows.ps1
-./desktop-app/scripts/verify-windows-install.ps1 -Installer ./desktop-app/build/windows/FerMatter_0.11.0_windows_x64_preview.1_unsigned_setup.exe -CheckCompilers
+./desktop-app/scripts/verify-windows-install.ps1 -Installer ./desktop-app/build/windows/FerMatter_0.11.0_windows_x64_preview.2_unsigned_setup.exe -CheckCompilers
 ```
 
 - `check-windows.ps1` builds/tests the frontend, runs Rust tests and clippy, and verifies all four synthetic compiler projects. `-SkipCompilers` is an explicit development-only skip; it is not release evidence.
 - `./desktop-app/scripts/audit-windows.ps1` records production npm and Cargo dependency audits with a hash-pinned official cargo-audit binary. Release candidates require no reported vulnerabilities; retain informational warnings in the validation record.
 - Install the packaged EXE into a disposable directory; verify bundled resources/notices, app startup, project-folder setup, Library/Source/Instant, rendered SVG/PNG/JPEG/PDF, document navigation and cancellation.
 - `verify-windows-install.ps1 -CheckCompilers` requires an account/CI machine without an existing FerMatter installation. It tests the installed EXE's LaTeX align/equation and Typst paths with a minimal Windows system PATH, verifies SVG/PNG/PDF artifacts and unchanged synthetic sources, and retains compiler evidence beside the install report. Omission of the switch is recorded as a compiler-check skip.
+- Install tools from a normal PowerShell/Explorer context, or into a physical user tools directory outside AppData. An [MSIX-packaged host can redirect AppData writes](https://learn.microsoft.com/en-us/windows/msix/desktop/desktop-to-uwp-behind-the-scenes#appdata-operations-on-windows-10-version-1903-and-later) into its private cache; a passing child-process check inside that host does not prove that an app launched from Explorer can see those tools. Include an Explorer-launched compiler check on the final machine.
 - Check Ctrl/Alt shortcuts, IME, clipboard and drag into a receiving app separately. A CLI compiler pass does not establish native UI behavior.
 - Run upgrade/uninstall checks with synthetic saved data and projects; record skipped clean-machine or receiving-app checks.
 

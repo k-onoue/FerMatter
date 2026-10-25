@@ -269,6 +269,40 @@ it("reuses project tabs and restores each Library/Source mode and search without
   expect(screen.getAllByRole("tab")).toHaveLength(3);
 });
 
+it("opening Projects from Instant saves the current Library draft and retains its workspace", async () => {
+  await openProject();
+  edit("draft before demo projects");
+  await act(async () => {
+    for (const event of events.get("projects-open") || []) event();
+  });
+  await screen.findByRole("button", { name: "Open synthetic" });
+  expect((saved.at(-1)?.libraryDraft as Card).tex).toBe(
+    "draft before demo projects",
+  );
+  expect(screen.getAllByRole("tab")).toHaveLength(2);
+  expect(disposeProjectModels).not.toHaveBeenCalled();
+});
+
+it("a failed save keeps the current workspace when Instant requests Projects", async () => {
+  await openProject();
+  edit("keep draft on failed demo navigation");
+  failSave = true;
+  await act(async () => {
+    for (const event of events.get("projects-open") || []) event();
+  });
+  await screen.findByText(/disk full/);
+  expect(screen.queryByRole("button", { name: "Open synthetic" })).toBeNull();
+  expect(
+    (
+      screen.getByRole("textbox", {
+        name: "Variant source",
+      }) as HTMLTextAreaElement
+    ).value,
+  ).toBe("keep draft on failed demo navigation");
+  expect(disposeProjectModels).not.toHaveBeenCalled();
+  failSave = false;
+});
+
 it("closing a project tab saves its draft and disposes only that project's models", async () => {
   await openProject();
   edit("draft before tab close");

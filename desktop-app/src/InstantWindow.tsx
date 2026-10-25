@@ -1,4 +1,9 @@
-import { FILE_MANAGER, primaryModifier, shortcutHint } from "./platform";
+import {
+  FILE_MANAGER,
+  isMacOS,
+  primaryModifier,
+  shortcutHint,
+} from "./platform";
 import { registerWindowFlush } from "./persistence";
 import { installWindowPersistence } from "./windowPersistence";
 import { WindowControls } from "./WindowControls";
@@ -547,8 +552,17 @@ export default function InstantWindow() {
           style={{ backgroundImage: `url(${wallpaper})` }}
         />
       )}
-      <div className="titlebar" data-tauri-drag-region />
+      {isMacOS() && <div className="titlebar" data-tauri-drag-region />}
       <header className="instant-toolbar">
+        {!projectID && (
+          <button
+            title="Open Projects; choose a project folder on first use to add the four demos"
+            onClick={() => void rpc("projects_open").catch(report)}
+          >
+            <FolderOpen size={18} />
+            Demo projects
+          </button>
+        )}
         <button
           aria-label="Open SVG"
           title="Open SVG"

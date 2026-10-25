@@ -9,6 +9,10 @@ export function fileManagerName(userAgent: string): string {
 
 export const FILE_MANAGER = fileManagerName(navigator.userAgent);
 
+export function isMacOS() {
+  return /Mac/i.test(navigator.platform || navigator.userAgent);
+}
+
 // Keep the version-1 shortcut schema portable without rewriting saved settings.
 // On Windows, Command denotes Ctrl and the extra Control modifier denotes Win.
 export function isWindows() {

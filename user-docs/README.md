@@ -17,6 +17,8 @@ sidebar:
 2. Review **Compiler tools** using the [tool discovery guide](requirements.md#tool-discovery).
 3. Open one of the four editable projects under **Demos**: LaTeX, Typst, TikZ or CeTZ. Follow [From your paper to a slide](paper-to-slides.md) to try it.
 
+From standalone Instant, **Demo projects** opens this setup or returns to Projects.
+
 ## Project folders
 
 Change the default folder in **Settings → Projects → Default project folder**. Existing projects stay in their current locations.

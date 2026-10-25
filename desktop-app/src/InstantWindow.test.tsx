@@ -223,6 +223,20 @@ function previewPath() {
     .getAttribute("src");
 }
 
+it("opens demo project setup without replacing the Instant draft or creating projects", async () => {
+  await openInstant();
+  const draft = structuredClone(session.draft);
+  rpc.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Demo projects" }));
+  await waitFor(() => expect(rpc).toHaveBeenCalledWith("projects_open"));
+  expect(session.draft).toEqual(draft);
+  expect(
+    rpc.mock.calls.some(([operation]) =>
+      ["complete_project_setup", "templates", "settings"].includes(operation),
+    ),
+  ).toBe(false);
+});
+
 it("color changes re-render the preview and copy/export the new output", async () => {
   await openInstant();
   color("Red");
