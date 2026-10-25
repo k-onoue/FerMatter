@@ -6,7 +6,11 @@ use std::{
 };
 
 pub fn default_directory() -> Result<PathBuf> {
-    Ok(dirs::document_dir()
+    let documents = dirs::document_dir();
+    // Minimal Linux installations may not define XDG_DOCUMENTS_DIR.
+    #[cfg(target_os = "linux")]
+    let documents = documents.or_else(|| dirs::home_dir().map(|home| home.join("Documents")));
+    Ok(documents
         .ok_or("Documents folder is unavailable")?
         .join("Mathlidelux"))
 }

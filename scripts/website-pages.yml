@@ -26,6 +26,24 @@ jobs:
           test -f index.html
           mkdir -p "$RUNNER_TEMP/website"
           rsync -a --exclude='/.git/' --exclude='/.github/' --exclude='/README.md' ./ "$RUNNER_TEMP/website/"
+      - name: Stage the signed Ubuntu APT repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APT_REQUIRED: ${{ vars.FERMATTER_APT_AVAILABLE }}
+        run: |
+          set -euo pipefail
+          status="$(curl -sS -o "$RUNNER_TEMP/apt-release.json" -w '%{http_code}' \
+            https://api.github.com/repos/FerMatter/fermatter.github.io/releases/tags/ubuntu-apt)"
+          if [ "$status" = 404 ] && [ "$APT_REQUIRED" != true ]; then
+            echo 'APT bootstrap has not been published yet.'
+            exit 0
+          fi
+          test "$status" = 200
+          gh release download ubuntu-apt --repo FerMatter/fermatter.github.io \
+            --pattern apt-repository.tar.gz --dir "$RUNNER_TEMP/apt-download"
+          python3 .github/scripts/stage-apt-repository.py \
+            "$RUNNER_TEMP/apt-download/apt-repository.tar.gz" "$RUNNER_TEMP/website" \
+            --fingerprint 8FB5E7A5ECB5E99601CD9C1BD049D613DE9DE3AF
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:

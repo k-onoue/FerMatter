@@ -20,7 +20,7 @@
 - Search: [Pagefind](https://pagefind.app/), generated at build time; no search backend.
 - One canonical explanation per topic; short bullets, tables, commands, and primary-source links.
 - Guide ownership: overview/project folders in `README.md`; tools/compiler errors in `requirements.md`; editing modes/PDF refresh in `paper-to-slides.md`; image format/size/color/SVG restoration in `export.md`; keybindings/zoom in `shortcuts.md`; app appearance/theme files in `appearance.md`; agent setup/permissions in `automation.md`. Cross-link to the owner instead of repeating instructions.
-- Download owns app installation, macOS first-launch approval and updates. Guide setup begins with workspace selection after the app opens. Keep existing guide routes and section anchors when reorganizing content.
+- Download owns app installation and updates; installer notes cover macOS first-launch approval. Guide setup begins with workspace selection after the app opens. Keep existing guide routes and section anchors when reorganizing content.
 - Release assets/counters use `releaseRepository`, separately from the application source `repository`. The download page owns the copyable full/BasicTeX/Typst install commands; requirements link there. Recheck installer and package-metadata sizes when changing the TeX release.
 - Publish only the allowlisted guides and reviewed assets; developer docs remain on GitHub.
 - No generated HTML in Git. `site/dist/`, `.astro/`, generated ZIP copies, and statistics are ignored.
