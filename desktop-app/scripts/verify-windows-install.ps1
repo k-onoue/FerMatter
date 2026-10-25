@@ -19,7 +19,7 @@ foreach ($registryRoot in $uninstallRoots) {
     if (-not (Test-Path -LiteralPath $registryRoot)) { continue }
     foreach ($key in Get-ChildItem -LiteralPath $registryRoot) {
         $entry = Get-ItemProperty -LiteralPath $key.PSPath
-        if ($entry.PSObject.Properties.Name -contains 'DisplayName' -and $entry.DisplayName -eq 'FerMatter') {
+        if ($null -ne $entry -and $null -ne $entry.PSObject.Properties['DisplayName'] -and $entry.DisplayName -eq 'FerMatter') {
             throw 'An existing FerMatter installation was found. Run installer verification on a disposable Windows account or CI machine.'
         }
     }
