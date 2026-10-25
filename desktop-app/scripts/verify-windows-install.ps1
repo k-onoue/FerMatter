@@ -81,6 +81,9 @@ try {
             # the installed compilers from current registry paths and known folders.
             $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
             $verification = Start-Process -FilePath (Join-Path $installDirectory 'FerMatter.exe') -ArgumentList @('--fermatter-verify-instant', ('"' + $compilerOutput + '"')) -PassThru -WindowStyle Hidden -RedirectStandardOutput (Join-Path $compilerOutput 'stdout.json') -RedirectStandardError (Join-Path $compilerOutput 'stderr.log')
+            # Windows PowerShell 5 needs the native handle retained before waiting
+            # to reliably expose ExitCode after a redirected process exits.
+            $verificationHandle = $verification.Handle
             if (-not $verification.WaitForExit(420000)) {
                 & "$env:SystemRoot\System32\taskkill.exe" /PID $verification.Id /T /F | Out-Null
                 throw 'Installed Instant compiler verification timed out.'
