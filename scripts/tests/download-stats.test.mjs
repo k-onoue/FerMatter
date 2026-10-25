@@ -1,11 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { accumulate, fetchReleases, installer } from "../download-stats.mjs";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 const repo = "example/FerMatter";
 const release = (assets, extra = {}) => ({
   tag_name: "v1.0",
@@ -98,63 +93,4 @@ test("pagination includes every release and asset, rejecting partial API failure
     /public repository/,
   );
   assert.equal(privateCalls, 1);
-});
-test("statistics publish only to their data branch, preserving the application checkout", (t) => {
-  const root = mkdtempSync(path.join(tmpdir(), "fermatter-counts-"));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
-  const git = (...args) =>
-    execFileSync("git", args, {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    }).trim();
-  git("init", "-q", "--initial-branch=main");
-  git("config", "user.name", "Statistics test");
-  git("config", "user.email", "test@example.invalid");
-  writeFileSync(path.join(root, "app.txt"), "Application");
-  git("add", "app.txt");
-  git("commit", "-qm", "Application baseline");
-  const head = git("rev-parse", "HEAD");
-  git("init", "--bare", "-q", "remote.git");
-  git("remote", "add", "origin", path.join(root, "remote.git"));
-  mkdirSync(path.join(root, "site/public/stats"), { recursive: true });
-  const snapshot = path.join(root, "site/public/stats/downloads.json");
-  const script = fileURLToPath(
-    new URL("../save-download-stats.sh", import.meta.url),
-  );
-  const publish = () =>
-    execFileSync("bash", [script], { cwd: root, stdio: "pipe" });
-  writeFileSync(
-    snapshot,
-    JSON.stringify(accumulate(repo, [release([asset(1, 2)])])),
-  );
-  publish();
-  git(
-    "fetch",
-    "-q",
-    "origin",
-    "download-stats:refs/remotes/origin/download-stats",
-  );
-  const first = git("rev-parse", "origin/download-stats");
-  publish();
-  assert.equal(git("rev-parse", "origin/download-stats"), first);
-  writeFileSync(
-    snapshot,
-    JSON.stringify(accumulate(repo, [release([asset(1, 3)])])),
-  );
-  publish();
-  git(
-    "fetch",
-    "-q",
-    "origin",
-    "download-stats:refs/remotes/origin/download-stats",
-  );
-  assert.equal(git("rev-parse", "origin/download-stats^"), first);
-  assert.equal(
-    git("ls-tree", "--name-only", "origin/download-stats"),
-    "downloads.json",
-  );
-  assert.equal(git("rev-parse", "HEAD"), head);
-  assert.equal(git("diff", "--cached"), "");
-  assert.equal(git("branch", "--show-current"), "main");
 });

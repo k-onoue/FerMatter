@@ -21,7 +21,7 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       pages: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -35,25 +35,12 @@ jobs:
             site/package-lock.json
             scripts/package-lock.json
       - run: npm --prefix scripts ci && npm --prefix site ci
-      - name: Restore previous download counters
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p site/public/stats
-          if [[ -n "$(git ls-remote --heads origin download-stats)" ]]; then
-            git fetch origin download-stats:refs/remotes/origin/download-stats
-            git show origin/download-stats:downloads.json > site/public/stats/downloads.json
-          fi
       - name: Collect public release counters
-        id: statistics
         continue-on-error: true
         run: node scripts/download-stats.mjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # The collector rejects private repositories before reading any release metadata.
-      - name: Preserve successful counters
-        if: steps.statistics.outcome == 'success'
-        run: bash scripts/save-download-stats.sh
       - run: npm --prefix scripts test
       - run: node scripts/build-guides.mjs --check
       - run: node scripts/check-publication.mjs

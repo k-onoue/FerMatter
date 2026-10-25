@@ -14,7 +14,7 @@
 | Reviewed screenshots/video | `site/public/assets/` | Public media |
 | Release availability and URLs | `site/src/data/site.json` | Download page |
 | Example ZIPs | `docs/downloads/` from `examples/` | App setup and website |
-| Download counters | `download-stats` Git branch | Generated `site/public/stats/downloads.json` |
+| Download counters | GitHub release asset counters | Generated `site/public/stats/downloads.json` |
 
 - Stack: [Astro](https://docs.astro.build/) + [Starlight](https://starlight.astro.build/); static HTML on GitHub Pages.
 - Search: [Pagefind](https://pagefind.app/), generated at build time; no search backend.
@@ -82,12 +82,12 @@ node scripts/preview-site.mjs
 - CI uses its GitHub token for the API rate limit, but first checks repository visibility and rejects private repositories before reading release metadata. A private repository currently yields no new snapshot.
 - Published installer names starting with FerMatter or legacy Mathlidelux count, including previews: DMG, PKG, EXE, MSI, AppImage, DEB, RPM.
 - Samples, source archives, checksums, signatures and drafts are excluded.
-- Asset ID identifies a counter. Deleted assets retain their last observed count; replacement uploads get a new counter. Counts never decrease.
-- Successfully observed snapshots are committed only to `download-stats`, using a normal fast-forward push. Main is never auto-committed.
-- API failure preserves the prior snapshot and visible timestamp. No prior snapshot means “not available”, not zero.
+- Each clean workflow build collects currently published assets; no statistics branch is created or updated.
+- Asset ID identifies a counter. When a previous local snapshot exists, deleted assets retain their last observed count and counts never decrease; replacement uploads get a new counter. Clean workflow builds do not retain deleted assets across runs.
+- API failure preserves an existing local snapshot and visible timestamp. No prior snapshot means “not available”, not zero.
 - Site preparation imports the validated snapshot as generated build data. Publication checks compare the rendered total, release rows and timestamp with the published JSON.
 - Full release and asset pagination must finish before writing. Deleted assets unseen by any snapshot cannot be recovered.
-- Daily schedule records totals, not real-time installs. Git history retains the dated snapshots.
+- The daily website workflow refreshes totals, not real-time installs. Historical snapshots are not stored in Git.
 - References: [GitHub release assets API](https://docs.github.com/en/rest/releases/assets), [GitHub Pages workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
 ## Demo media
