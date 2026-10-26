@@ -660,7 +660,13 @@ it("applying extraction settings refreshes every open Library and preserves vari
     origin: "custom" as const,
     parentID: "source",
   };
-  project.cards.push(custom);
+  const outside = {
+    ...project.cards[0],
+    id: "outside",
+    name: "Outside table",
+    tex: "y",
+  };
+  project.cards.push(outside, custom);
   const other = { ...structuredClone(project), id: "other", root: "/other" };
   availableProjects.push(other);
   const base = rpc.getMockImplementation()!;
@@ -682,10 +688,8 @@ it("applying extraction settings refreshes every open Library and preserves vari
       const current = availableProjects.find((p) => p.id === payload.project)!;
       return Promise.resolve({
         ...current,
-        cards: [],
-        extractionHiddenCards: current.cards.filter(
-          (c) => c.origin === "source",
-        ),
+        cards: current.cards.filter((c) => c.id === "outside"),
+        extractionHiddenCards: current.cards.filter((c) => c.id === "source"),
         extractionRevision: "filtered",
       });
     }
@@ -713,7 +717,7 @@ it("applying extraction settings refreshes every open Library and preserves vari
   );
   await waitFor(() => expect(document.documentElement.inert).toBe(false));
   for (const p of availableProjects) {
-    expect(p.cards).toEqual([custom]);
+    expect(p.cards).toEqual([outside, custom]);
     expect(p.extractionHiddenCards?.[0].id).toBe("source");
   }
   expect(
@@ -722,4 +726,18 @@ it("applying extraction settings refreshes every open Library and preserves vari
       .map(([, payload]) => payload.project),
   ).toEqual(["p", "other"]);
   expect(rpc.mock.calls.some(([op]) => op === "save_file")).toBe(false);
+  fireEvent.click(screen.getByRole("button", { name: "Close", exact: true }));
+  rpc.mockClear();
+  fireEvent.click(screen.getByTitle("/synthetic"));
+  await waitFor(() =>
+    expect(
+      rpc.mock.calls.some(
+        ([op, payload]) =>
+          op === "render" &&
+          payload.project === "p" &&
+          payload.cards.some((c: Card) => c.id === "outside"),
+      ),
+    ).toBe(true),
+  );
+  expect(rpc.mock.calls.some(([op]) => op === "scan")).toBe(false);
 });

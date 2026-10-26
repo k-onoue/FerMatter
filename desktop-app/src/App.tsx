@@ -572,6 +572,12 @@ export default function App() {
           next.project.extractionRevision !== extractionRevision.current)
       )
         void rescan(next.project);
+      else if (!importing) {
+        const pending = next.project.cards.filter(
+          (card) => card.status === "pending" && card.requiresRender !== true,
+        );
+        if (pending.length) void renderCards(next.project, pending);
+      }
       return true;
     } finally {
       release();
