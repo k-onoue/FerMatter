@@ -218,8 +218,8 @@ fn shortcuts(value: &Value) -> Result<Vec<(Shortcut, String)>> {
         }
         let mut parts = vec![];
         for (field, name) in [
-            ("command", "Super"),
-            ("control", "Control"),
+            ("command", if cfg!(windows) { "Control" } else { "Super" }),
+            ("control", if cfg!(windows) { "Super" } else { "Control" }),
             ("option", "Alt"),
             ("shift", "Shift"),
         ] {
@@ -358,9 +358,13 @@ pub fn install(app: &tauri::AppHandle) -> tauri::Result<()> {
         app,
         &[&instant, &clipboard, &open, &projects, &separator, &quit],
     )?;
-    let tray = image::load_from_memory(include_bytes!("../icons/tray.png"))
-        .expect("The bundled menu-bar icon must be a valid PNG")
-        .into_rgba8();
+    let tray = image::load_from_memory(if cfg!(target_os = "macos") {
+        include_bytes!("../icons/tray.png").as_slice()
+    } else {
+        include_bytes!("../icons/icon.png").as_slice()
+    })
+    .expect("The bundled menu-bar icon must be a valid PNG")
+    .into_rgba8();
     let (width, height) = tray.dimensions();
     let _tray = TrayIconBuilder::with_id("instant")
         .icon(tauri::image::Image::new_owned(
@@ -368,7 +372,7 @@ pub fn install(app: &tauri::AppHandle) -> tauri::Result<()> {
             width,
             height,
         ))
-        .icon_as_template(true)
+        .icon_as_template(cfg!(target_os = "macos"))
         .tooltip("FerMatter")
         .menu(&menu)
         .on_menu_event(|app, event| {

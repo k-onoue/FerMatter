@@ -1,18 +1,21 @@
 //! Private, bounded local transport. Only the resident owns storage and settings.
 use super::{ApiError, ApiResult};
+#[cfg(any(unix, test))]
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use std::{
-    io::{Read, Write},
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-    time::Duration,
-};
+#[cfg(any(unix, test))]
+use serde_json::json;
+use serde_json::Value;
+#[cfg(any(unix, test))]
+use std::io::{Read, Write};
+use std::sync::{atomic::AtomicBool, Arc};
+#[cfg(unix)]
+use std::{sync::atomic::Ordering, time::Duration};
 
+#[cfg(any(unix, test))]
 const REQUEST_LIMIT: usize = 1024 * 1024;
+#[cfg(unix)]
 const RESPONSE_LIMIT: usize = 16 * 1024 * 1024;
+#[cfg(any(unix, test))]
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Request {
@@ -20,9 +23,11 @@ struct Request {
     operation: String,
     arguments: Value,
 }
+#[cfg(any(unix, test))]
 fn io_error(e: impl std::fmt::Display) -> ApiError {
     ApiError::new("connection_error", e.to_string())
 }
+#[cfg(any(unix, test))]
 fn read_frame<T: serde::de::DeserializeOwned>(
     stream: &mut impl Read,
     limit: usize,
@@ -40,6 +45,7 @@ fn read_frame<T: serde::de::DeserializeOwned>(
     stream.read_exact(&mut bytes).map_err(io_error)?;
     serde_json::from_slice(&bytes).map_err(|e| ApiError::new("invalid_request", e.to_string()))
 }
+#[cfg(any(unix, test))]
 fn write_frame(
     stream: &mut impl Write,
     value: &impl Serialize,

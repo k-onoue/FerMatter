@@ -146,7 +146,11 @@ pub fn clipboard() -> Result<Vec<String>> {
         result
     }
 }
-#[cfg(not(target_os = "macos"))]
+#[cfg(windows)]
+pub fn clipboard() -> Result<Vec<String>> {
+    crate::windows_native::import_svg()
+}
+#[cfg(not(any(target_os = "macos", windows)))]
 pub fn clipboard() -> Result<Vec<String>> {
     Err("SVG clipboard import is currently supported on macOS.".into())
 }

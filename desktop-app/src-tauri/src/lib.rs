@@ -29,6 +29,8 @@ mod toolchain;
 pub mod verification;
 #[cfg(target_os = "macos")]
 mod wallpaper;
+#[cfg(windows)]
+mod windows_native;
 use files::*;
 use serde_json::{json, Value};
 use std::{
@@ -72,7 +74,14 @@ fn reveal_command(path: &Path) -> std::process::Command {
         command.arg("-R").arg(path);
         command
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(windows)]
+    {
+        let mut command = std::process::Command::new("explorer.exe");
+        // Explorer expects a conventional drive/UNC path in one /select argument.
+        command.arg(format!("/select,{}", windows_path(path)));
+        command
+    }
+    #[cfg(not(any(target_os = "macos", windows)))]
     {
         // xdg-open cannot select an item, so open the folder that holds it.
         let folder = if path.is_dir() {
@@ -277,7 +286,12 @@ fn dispatch(
         }
         "instant_export" => {
             let path = store.allowed_artifact(Path::new(string(&v, "path")))?;
-            if !path.starts_with(instant::home(store, ident)?.join("Instant/Exports")) {
+            if !path.starts_with(
+                instant::home(store, ident)?
+                    .join("Instant/Exports")
+                    .canonicalize()
+                    .map_err(err)?,
+            ) {
                 return Err("Not an Instant image.".into());
             }
             fs::copy(path, string(&v, "destination")).map_err(err)?;
@@ -682,6 +696,7 @@ fn dispatch(
         }
         "choose_tool" => {
             let name = string(&v, "name").to_owned();
+            #[cfg(target_os = "macos")]
             let initial = string(&v, "path").to_owned();
             toolchain::validate(
                 &json!({"schemaVersion":1,"kind":"mathlidelux.tools","paths":{name.clone():""}}),
@@ -740,7 +755,10 @@ fn dispatch(
     }
 }
 pub fn run() {
-    if automation::entry() || formatting::worker_requested() {
+    if verification::installed_instant_entry()
+        || automation::entry()
+        || formatting::worker_requested()
+    {
         return;
     }
     let mut context = tauri::generate_context!();
@@ -762,6 +780,10 @@ pub fn run() {
         }
     };
     let builder = tauri::Builder::default();
+    #[cfg(windows)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, arguments, cwd| {
+        windows_arguments(app, arguments.into_iter().skip(1), Path::new(&cwd));
+    }));
     #[cfg(unix)]
     let builder = builder.manage(guard);
     builder
@@ -853,6 +875,26 @@ pub fn run() {
             let menu = tauri::menu::Menu::default(app.handle())?;
             for item in menu.items()? {
                 if let Some(submenu) = item.as_submenu() {
+                    #[cfg(windows)]
+                    if submenu.text()? == "Edit" {
+                        // Windows predefined Undo/Redo reserve Ctrl+Z/Y and
+                        // reinject those keys instead of using Monaco's history.
+                        // Let the focused WebView editor handle its own undo stack.
+                        for child in submenu.items()? {
+                            if let Some(predefined) = child.as_predefined_menuitem() {
+                                if matches!(predefined.text()?.as_str(), "Undo" | "Redo") {
+                                    submenu.remove(&child)?;
+                                }
+                            }
+                        }
+                        if let Some(first) = submenu.items()?.first() {
+                            if let Some(predefined) = first.as_predefined_menuitem() {
+                                if predefined.text()?.is_empty() {
+                                    submenu.remove(first)?;
+                                }
+                            }
+                        }
+                    }
                     if submenu.text()? == "File" {
                         submenu.insert(
                             &tauri::menu::MenuItem::with_id(
@@ -916,6 +958,14 @@ pub fn run() {
         .build(context)
         .expect("Unable to start FerMatter")
         .run(|app, event| match event {
+            #[cfg(windows)]
+            tauri::RunEvent::Ready => {
+                windows_arguments(
+                    app,
+                    std::env::args().skip(1),
+                    &std::env::current_dir().unwrap_or_default(),
+                );
+            }
             #[cfg(unix)]
             tauri::RunEvent::Ready => {
                 #[cfg(target_os = "macos")]
@@ -943,6 +993,30 @@ pub fn run() {
             }
             _ => {}
         });
+}
+
+#[cfg(windows)]
+fn windows_arguments(app: &tauri::AppHandle, arguments: impl Iterator<Item = String>, cwd: &Path) {
+    let paths: Vec<_> = arguments
+        .filter(|arg| !arg.starts_with('-'))
+        .map(|arg| {
+            let path = PathBuf::from(arg);
+            if path.is_absolute() {
+                path
+            } else {
+                cwd.join(path)
+            }
+        })
+        .filter(|path| {
+            path.extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("svg"))
+        })
+        .collect();
+    if paths.is_empty() {
+        resident::show_projects(app);
+    } else {
+        resident::open_files(app, paths);
+    }
 }
 
 #[cfg(test)]
@@ -980,7 +1054,28 @@ mod request_tests {
         let args: Vec<_> = command.get_args().collect();
         assert_eq!(args, [std::ffi::OsStr::new("-R"), file.as_os_str()]);
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(windows)]
+    #[test]
+    fn reveal_selects_the_item_in_explorer_with_conventional_windows_paths() {
+        for (path, expected) in [
+            (
+                r"\\?\C:\Synthetic Folder\instant.json",
+                r"/select,C:\Synthetic Folder\instant.json",
+            ),
+            (
+                r"\\?\UNC\server\share\Synthetic Folder\instant.json",
+                r"/select,\\server\share\Synthetic Folder\instant.json",
+            ),
+        ] {
+            let command = reveal_command(Path::new(path));
+            assert_eq!(command.get_program(), "explorer.exe");
+            assert_eq!(
+                command.get_args().collect::<Vec<_>>(),
+                [std::ffi::OsStr::new(expected)]
+            );
+        }
+    }
+    #[cfg(not(any(target_os = "macos", windows)))]
     #[test]
     fn reveal_opens_the_containing_folder_elsewhere() {
         let temp = tempfile::tempdir().unwrap();

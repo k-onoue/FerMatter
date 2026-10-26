@@ -4,7 +4,7 @@
 - App name: **FerMatter**. Bundle ID: `local.slidemath.prototype` (preserved from the Swift app).
 - This is the maintained implementation. The retired Swift/Python source remains available in Git history.
 - Runtime: no Python, Node.js, Rust, Swift SDK, or Xcode installation required by app users.
-- Compilers remain external: Typst; or TeX/`latexmk`, `pdfcrop`, `pdf2svg`, `pdftocairo`, `pdfinfo`, and `synctex`. See [requirements](../user-docs/requirements.md).
+- Compilers remain external: Typst; or TeX/`latexmk`, `pdfcrop`, `pdftocairo`, `pdfinfo`, and `synctex`. macOS/Linux also use `pdf2svg`; Windows uses Poppler for SVG conversion. See [requirements](../user-docs/requirements.md).
 
 ## Build and run
 
@@ -25,6 +25,21 @@ open 'src-tauri/target/release/bundle/macos/FerMatter.app'
 - `./scripts/package.sh`: verified local DMG and PKG; artifacts remain unnotarized prototypes.
 - Dependency notices are generated into `public/vendor/` and included in the bundle. Theme source notices remain with the bundled theme files.
 
+### Windows 11 x64 preview
+
+- Build requirements: Rust MSVC 1.92+, Node.js 24.22.1+ LTS, Visual Studio C++ tools and a Windows SDK. See [Windows setup](../dev-docs/development.md#windows).
+- The unsigned NSIS installer includes the offline WebView2 installer and dependency notices. Rendering tools remain external.
+
+```powershell
+./desktop-app/scripts/check-windows.ps1
+./desktop-app/scripts/build-windows.ps1
+./desktop-app/src-tauri/target/release/FerMatter.exe
+```
+
+- Versioned setup EXE, SHA-256 and build metadata: `desktop-app/build/windows/`. Install/replace/startup/uninstall verification: [packaging](../dev-docs/reference/packaging.md#windows-preview).
+- Windows uses Ctrl for the existing Command modifier and Win for the additional Control modifier. Ctrl+Tab switches Source tabs; saved version-1 keybinding files are retained.
+- Recoverable project deletion, screen color sampling, and local CLI/MCP are unavailable in this Windows preview. Manage project deletion in File Explorer. Cross-application drag and clean-machine compatibility require separate verification.
+
 ## Implemented paths
 
 | Area | Rust desktop implementation |
@@ -42,6 +57,7 @@ open 'src-tauri/target/release/bundle/macos/FerMatter.app'
 ## Compatibility boundaries
 
 - Metadata: `~/Library/Application Support/Slide Math/Rust Preview/`.
+- Windows metadata: `%APPDATA%\Slide Math\Rust Preview\`; bundle identity and legacy storage names are unchanged.
 - Existing project metadata and theme/shortcut files are read/copied on first use; original Swift storage is preserved.
 - Old card IDs, variant metadata, labels, and unknown project fields are retained. Source scans preserve presentation variants.
 - Library edits save to the existing internal `Rust Preview` directory. Keeping this name preserves earlier preview edits and cached paths; Swift metadata remains a read-only import source.
@@ -62,7 +78,7 @@ open 'src-tauri/target/release/bundle/macos/FerMatter.app'
 - Existing manual Library order metadata is retained; the current UI displays source order and does not expose manual ordering.
 - In-app release checks/downloads are not yet implemented in this app; install newer builds manually. Signed updates need a separate release feed/artifact setup.
 - Experimental Ubuntu 24.04 amd64 packages use a signed APT repository; see [packaging](../dev-docs/reference/packaging.md#experimental-ubuntu). CI checks rendering, clean APT installation, CLI tools and headless startup. Physical Linux desktops/Wayland and cross-application drag remain unverified; native image clipboard and recoverable project deletion are unavailable.
-- Intel macOS and Windows have not been built or tested.
+- Intel macOS has not been built or tested. Windows 11 x64 has native test/build coverage; this is an unsigned preview, with the limitations above.
 - Public signing/notarization and installer/update verification remain release work.
 
 ## Validation

@@ -1,4 +1,4 @@
-import { FILE_MANAGER } from "./platform";
+import { FILE_MANAGER, primaryModifier, shortcutHint } from "./platform";
 import { mergeAutomationVariants } from "./automation";
 import { dropSVG } from "./svgImport";
 import { LibraryNavigation } from "./LibraryNavigation";
@@ -1224,7 +1224,7 @@ export default function App() {
       }
       if (!ready || setupRequired) return;
       if (
-        event.metaKey &&
+        primaryModifier(event) &&
         !event.shiftKey &&
         event.key.toLowerCase() === "w" &&
         project
@@ -1248,7 +1248,7 @@ export default function App() {
         'input,textarea,.monaco-editor,[contenteditable="true"]',
       );
       if (
-        event.metaKey &&
+        primaryModifier(event) &&
         event.key === "a" &&
         !typing &&
         mode === "library" &&
@@ -1259,7 +1259,7 @@ export default function App() {
         return;
       }
       if (
-        (event.metaKey || event.ctrlKey) &&
+        (primaryModifier(event) || event.ctrlKey) &&
         !event.shiftKey &&
         !event.altKey &&
         event.key.toLowerCase() === "c" &&
@@ -1273,7 +1273,7 @@ export default function App() {
         void copyImages();
         return;
       }
-      if (event.metaKey && event.key === ",") {
+      if (primaryModifier(event) && event.key === ",") {
         event.preventDefault();
         setShowSettings(true);
         return;
@@ -1535,7 +1535,11 @@ export default function App() {
               className="workspace-heading"
               aria-label={mode === "source" ? "Source tools" : "Library tools"}
             >
-              <div role="group" aria-label="Project actions">
+              <div
+                className="workspace-actions"
+                role="group"
+                aria-label="Project actions"
+              >
                 <button
                   title="Open with Instant Mode"
                   aria-label="Open with Instant Mode"
@@ -1621,7 +1625,7 @@ export default function App() {
                       if ((e.target as HTMLElement).closest(".equation-card"))
                         return;
                       const origin = { x: e.clientX, y: e.clientY },
-                        previous = e.metaKey
+                        previous = primaryModifier(e)
                           ? new Set(selected)
                           : new Set<string>();
                       setSelected(previous);
@@ -1758,11 +1762,11 @@ export default function App() {
                       }
                     />
                     <button
-                      title={
+                      title={shortcutHint(
                         selected.size > 1
                           ? `Copy ${selected.size} images (⌘C)`
-                          : "Copy image (⌘C)"
-                      }
+                          : "Copy image (⌘C)",
+                      )}
                       disabled={!selectedCard}
                       onClick={() => void copyImages()}
                     >

@@ -17,6 +17,6 @@ export function asset(path: string) {
   return value;
 }
 export function projectName(root: string) {
-  return root.split("/").filter(Boolean).at(-1) || "Project";
+  return root.split(/[\\/]/).filter(Boolean).at(-1) || "Project";
 }
 export const uid = () => crypto.randomUUID();

@@ -111,7 +111,13 @@ fn run(
 ) -> Result<String> {
     cancel.check()?;
     let bytes = serde_json::to_vec(input).map_err(err)?;
-    let mut child = Command::new(program)
+    let mut command = Command::new(program);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x0800_0000);
+    }
+    let mut child = command
         .arg(WORKER_FLAG)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

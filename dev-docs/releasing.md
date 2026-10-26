@@ -8,6 +8,14 @@
 - Repository is private as of 2026-09-28; Pages is public. Test release access without authentication before advertising downloads.
 - Keep stable downloads disabled until all public-release checks pass. A preview download must identify its prerelease tag and unnotarized status; verify anonymous access and its checksum before enabling it.
 
+## Windows public preview
+
+- Windows 11 x64 preview uses the separate `v0.11.0-windows-preview.1` tag. App version remains `0.11.0`; the immutable installer filename includes its Windows preview revision.
+- Run [Windows checks and packaging](reference/packaging.md#windows-preview) on the reviewed candidate; install and launch the exact final setup EXE with isolated synthetic data.
+- Publish an **unsigned prerelease** and checksum manifest to `FerMatter/fermatter.github.io`. Verify anonymous access and the downloaded bytes before enabling `windowsReleaseAvailable` in a separate reviewed site change.
+- Keep macOS `releaseTag`/`assetName` unchanged. Windows download fields are independent so a Windows release cannot break the existing DMG/Homebrew channel.
+- Clearly identify SmartScreen/unknown-publisher warnings and unverified native/clean-machine checks. A Windows preview does not establish a signed stable release or macOS notarization.
+
 ## Unnotarized public preview
 
 - First preview: app version `0.11.0`, build `12`, prerelease tag `v0.11.0-preview.1`.

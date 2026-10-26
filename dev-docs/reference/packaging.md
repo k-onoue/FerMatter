@@ -3,6 +3,27 @@
 - Current implementation: [package.sh](../../desktop-app/scripts/package.sh); [recipient notes](../../desktop-app/packaging/PROTOTYPE-README.txt).
 - Ad hoc signed app; unsigned, unnotarized containers. Packaging does not create a public release.
 
+## Windows preview
+
+- Scope: Windows 11 x64, current-user NSIS installer. No ARM64 or 32-bit package. Windows installer metadata: [windows.json](../../desktop-app/packaging/windows.json).
+- [build-windows.ps1](../../desktop-app/scripts/build-windows.ps1) uses Tauri's Windows configuration, includes the offline WebView2 installer, then calls [package-windows.ps1](../../desktop-app/scripts/package-windows.ps1).
+- Output: ignored `desktop-app/build/windows/`; an unsigned setup EXE, `SHA256SUMS.txt` and `build-info.json`. LICENSE, NOTICE, theme attribution and generated dependency notices stay in the installed payload.
+- TeX/Typst and PDF conversion tools remain external. App users do not need Rust, Node.js or Python.
+- Preserve bundle identity, legacy `Slide Math` data names and user-selected project folders. Installation, upgrades and removal must not delete project files, drafts or settings.
+
+```powershell
+./desktop-app/scripts/check-windows.ps1
+./desktop-app/scripts/audit-windows.ps1
+./desktop-app/scripts/build-windows.ps1
+Get-FileHash ./desktop-app/build/windows/*setup.exe -Algorithm SHA256
+```
+
+- Preview tag: `v0.11.0-windows-preview.1`; filename: `FerMatter_0.11.0_windows_x64_preview.1_unsigned_setup.exe`. Increment the preview revision for changed published bytes; never replace an existing asset.
+- Publish reviewed binaries to a **prerelease** in `FerMatter/fermatter.github.io`, with the checksum manifest and installation/validation notes. Windows assets have independent site fields; existing macOS downloads stay pinned.
+- Before setting `windowsReleaseAvailable: true`, verify anonymous download/checksum and install/launch the exact downloaded installer. Record the tested Windows version and native/clean-machine limitations.
+- Unsigned previews may trigger SmartScreen or an unknown-publisher warning. State this clearly and link to [Microsoft's guidance](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app#step-6-handle-smartscreen-for-new-apps). Do not disable security features in the installer.
+- Authenticode signing and broader clean-machine/upgrade validation remain requirements for a stable Windows release; macOS notarization is a separate process.
+
 ## Experimental Ubuntu
 
 - Scope: Ubuntu 24.04, amd64, `.deb` only. No Snap/Flatpak service, root installer scripts or bundled TeX/Typst toolchains.

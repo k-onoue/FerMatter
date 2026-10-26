@@ -8,6 +8,7 @@
 - Keep the same resident lock identity so launching an older app copy cannot create a second resident.
 - Preserve `~/Library/Application Support/Slide Math` and existing absolute source/cache paths.
 - Current metadata directory: `~/Library/Application Support/Slide Math/Rust Preview/`.
+- Windows metadata directory: `%APPDATA%\Slide Math\Rust Preview\`. Platform support retains the same `Slide Math`/`Rust Preview` names and version-1 schemas; installing or upgrading does not relocate saved projects or drafts.
 - The internal preview directory name stays unchanged to preserve already-saved work after promotion.
 - Sources: [storage.rs](../../desktop-app/src-tauri/src/storage.rs), [files.rs](../../desktop-app/src-tauri/src/files.rs), [settings.rs](../../desktop-app/src-tauri/src/settings.rs).
 

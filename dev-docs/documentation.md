@@ -78,6 +78,7 @@ node scripts/preview-site.mjs
 - GitHub Pages environment approvals/rules still apply.
 - Keep `repositoryPublic: false` while source access is restricted; switch it only after verifying anonymous repository access.
 - Download availability is manual: keep `releaseAvailable: false` until anonymous download, checksum and the selected release-channel checks pass. Preview downloads must explicitly state their unnotarized status; stable releases retain the full signing/install checklist. See [releasing](releasing.md).
+- Windows uses independent `windowsReleaseAvailable`, `windowsReleaseTag`, `windowsReleaseName` and `windowsAssetName` fields. Enable its unsigned preview only after the exact EXE's anonymous download, checksum and installation/startup checks; retain the existing macOS asset fields.
 - Review the Pages artifact and public-repository diff: app sources, Git history and secrets must not enter either. `deployment.json` exposes only the source commit ID for deployment readiness checks.
 
 ## Download counts

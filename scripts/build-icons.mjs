@@ -58,6 +58,12 @@ function render(source, destination, size) {
   ]);
 }
 render(path.join(resources, "AppIcon.svg"), path.join(icons, "icon.png"), 1024);
+execFileSync("magick", [
+  path.join(icons, "icon.png"),
+  "-define",
+  "icon:auto-resize=256,128,64,48,32,16",
+  path.join(icons, "icon.ico"),
+]);
 copyFileSync(path.join(icons, "icon.png"), path.join(assets, "icon.png"));
 const work = mkdtempSync(path.join(tmpdir(), "fermatter-icons-"));
 try {

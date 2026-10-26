@@ -1,7 +1,122 @@
 //! Headless checks use only the repository's synthetic examples.
 use crate::{compiler, files::*, scan};
 use serde_json::{json, Value};
-use std::{fs, path::Path};
+use std::{
+    ffi::OsString,
+    fs,
+    path::{Path, PathBuf},
+};
+
+const INSTANT_VERIFY_FLAG: &str = "--fermatter-verify-instant";
+
+fn installed_instant_arguments(arguments: &[OsString]) -> Option<Result<PathBuf>> {
+    if !arguments
+        .iter()
+        .any(|argument| argument.to_string_lossy().starts_with(INSTANT_VERIFY_FLAG))
+    {
+        return None;
+    }
+    Some(
+        if arguments.len() == 2
+            && arguments[0] == INSTANT_VERIFY_FLAG
+            && Path::new(&arguments[1]).is_absolute()
+        {
+            Ok(PathBuf::from(&arguments[1]))
+        } else {
+            Err(format!(
+                "Usage: FerMatter {INSTANT_VERIFY_FLAG} ABSOLUTE_OUTPUT_DIRECTORY"
+            ))
+        },
+    )
+}
+
+/// Internal final-artifact QA. Runs before constructing any application runtime
+/// and never opens the user's library, settings, history or project files.
+pub(crate) fn installed_instant_entry() -> bool {
+    let arguments: Vec<_> = std::env::args_os().skip(1).collect();
+    let Some(output) = installed_instant_arguments(&arguments) else {
+        return false;
+    };
+    let output = match output {
+        Ok(output) => output,
+        Err(error) => {
+            println!("{}", json!({"success":false,"error":error}));
+            std::process::exit(2);
+        }
+    };
+    match verify_installed_instant(&output) {
+        Ok(report) => println!("{report}"),
+        Err(error) => {
+            println!("{}", json!({"success":false,"error":error}));
+            std::process::exit(1);
+        }
+    }
+    true
+}
+
+/// Exercise the same project-free renderer and bundled defaults as Instant in
+/// a unique synthetic workspace. Existing output directories are never reused.
+pub fn verify_installed_instant(output: &Path) -> Result<Value> {
+    if !output.is_absolute() {
+        return Err("Choose an absolute verification output directory.".into());
+    }
+    fs::create_dir_all(output).map_err(err)?;
+    let workspace = fresh_workspace(output)?;
+    let sources = workspace.join("Sources");
+    fs::create_dir(&sources).map_err(err)?;
+    fs::write(
+        sources.join("main.tex"),
+        r"\documentclass{article}\begin{document}Synthetic source kept unchanged.\end{document}",
+    )
+    .map_err(err)?;
+    fs::write(sources.join("main.typ"), "Synthetic source kept unchanged.").map_err(err)?;
+    let before = fingerprint(&sources)?;
+    let defaults = crate::instant_settings::defaults();
+    let tools = std::sync::Arc::new(crate::toolchain::Toolchain::default());
+    let mut cases = Vec::new();
+    for (id, template_id, source) in [
+        (
+            "latex-align",
+            "builtin-latex",
+            "\\begin{align}\n  x^2 +\n\\end{align}",
+        ),
+        ("latex-equation", "builtin-latex", r"\frac{x}{2}"),
+        ("typst", "builtin-typst", "frac(x, 2)"),
+    ] {
+        let template = defaults["templates"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|template| template["id"] == template_id)
+            .unwrap();
+        let home = workspace.join(id);
+        let _cache = crate::cache::Cache::new(&home);
+        let cancellation = compiler::Cancellation::with_tools(tools.clone());
+        let draft = json!({"source":source,"kind":"block","fontSize":24,"color":"#000000","exportFormat":"svg","template":template});
+        let rendered = crate::instant::render(&home, &draft, &cancellation)?;
+        let mut artifacts = serde_json::Map::new();
+        for format in ["svg", "png", "pdf"] {
+            let path = crate::export::image_file(
+                &rendered["card"],
+                format,
+                24.,
+                &home.join("Instant/Exports"),
+            )?;
+            if path.metadata().map_err(err)?.len() == 0 {
+                return Err(format!("{id}: empty {format} artifact."));
+            }
+            artifacts.insert(format.into(), json!(path));
+        }
+        if fingerprint(&sources)? != before {
+            return Err("Instant verification changed synthetic project sources.".into());
+        }
+        cases.push(json!({"id":id,"format":template["format"],"status":"ready","sourceUnchanged":true,"artifacts":artifacts}));
+    }
+    let report_path = workspace.join("verification.json");
+    let report = json!({"success":true,"workspace":workspace,"reportPath":report_path,"cases":cases,"tools":tools.status()["tools"]});
+    json_write(&report_path, &report)?;
+    Ok(report)
+}
 /// Explicit compiler selection for compatibility checks without changing the
 /// installed tools or application settings. Covers both Typst JSON query paths.
 pub fn verify_typst_version(repository: &Path, output: &Path, executable: &Path) -> Result<Value> {
@@ -329,8 +444,8 @@ fn verify_zip_compiler_defaults(output: &Path) -> Result<()> {
     ] {
         let archive = workspace.join(format!("{name}.zip"));
         let mut zip = zip::ZipWriter::new(fs::File::create(&archive).map_err(err)?);
-        let rc =
-            format!("$ENV{{'TEXINPUTS'}} = './styles//:' . ($ENV{{'TEXINPUTS'}} // '');\n{mode}\n");
+        let separator = if cfg!(windows) { ';' } else { ':' };
+        let rc = format!("$ENV{{'TEXINPUTS'}} = './styles//{separator}' . ($ENV{{'TEXINPUTS'}} // '');\n{mode}\n");
         let main = format!("\\documentclass{{article}}\n\\input{{definitions}}\n{engine_check}\n\\begin{{document}}\n$\\sample{{x}}$\n\\end{{document}}\n");
         for (path, text) in [
             ("main.tex", main.as_str()),
@@ -670,6 +785,42 @@ fn normalize(scan: &Value) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn installed_instant_arguments_reject_malformed_requests_before_gui_startup() {
+        assert!(installed_instant_arguments(&[]).is_none());
+        assert!(installed_instant_arguments(&[OsString::from("cli")]).is_none());
+        for arguments in [
+            vec![INSTANT_VERIFY_FLAG],
+            vec![INSTANT_VERIFY_FLAG, "relative"],
+            vec!["other", INSTANT_VERIFY_FLAG],
+            vec!["--fermatter-verify-instant-typo"],
+        ] {
+            assert!(installed_instant_arguments(
+                &arguments
+                    .into_iter()
+                    .map(OsString::from)
+                    .collect::<Vec<_>>()
+            )
+            .unwrap()
+            .is_err());
+        }
+        let directory = std::env::temp_dir().join("synthetic-output");
+        assert_eq!(
+            installed_instant_arguments(&[
+                OsString::from(INSTANT_VERIFY_FLAG),
+                directory.clone().into_os_string()
+            ])
+            .unwrap()
+            .unwrap(),
+            directory
+        );
+    }
+    #[test]
+    #[ignore = "requires real LaTeX, Ghostscript and Poppler tools"]
+    fn real_zip_compilers_preserve_rc_defaults_and_project_sources() {
+        let output = tempfile::tempdir().unwrap();
+        verify_zip_compiler_defaults(output.path()).unwrap();
+    }
     #[test]
     fn each_verification_has_fresh_sources_and_cache() {
         let parent = tempfile::tempdir().unwrap();

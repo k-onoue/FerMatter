@@ -26,10 +26,44 @@ pub fn ignored(name: &str) -> bool {
         ".git" | ".build" | "build" | "target" | "node_modules" | "__MACOSX" | "__pycache__"
     )
 }
+pub fn relative_name(path: &Path) -> String {
+    let name = path.to_string_lossy();
+    #[cfg(windows)]
+    return name.replace('\\', "/");
+    #[cfg(not(windows))]
+    name.into_owned()
+}
+#[cfg(windows)]
+pub fn windows_path(path: &Path) -> String {
+    let value = path.to_string_lossy();
+    value
+        .strip_prefix(r"\\?\UNC\")
+        .map(|tail| format!(r"\\{tail}"))
+        .unwrap_or_else(|| value.strip_prefix(r"\\?\").unwrap_or(&value).to_owned())
+}
 pub fn relative(name: &str) -> Result<&Path> {
     let p = Path::new(name);
     if name.is_empty() || p.components().any(|c| !matches!(c, Component::Normal(_))) {
         return Err("Choose a path inside the project.".into());
+    }
+    #[cfg(windows)]
+    for component in p.components() {
+        let part = component.as_os_str().to_string_lossy();
+        let stem = part.split('.').next().unwrap_or("").to_ascii_uppercase();
+        let numbered_device = ["COM", "LPT"].iter().any(|prefix| {
+            stem.strip_prefix(prefix).is_some_and(|suffix| {
+                matches!(suffix, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9")
+            })
+        });
+        if part.ends_with(['.', ' '])
+            || part
+                .chars()
+                .any(|c| c.is_control() || matches!(c, ':' | '"' | '<' | '>' | '|' | '?' | '*'))
+            || matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+            || numbered_device
+        {
+            return Err("Choose a valid Windows file name inside the project.".into());
+        }
     }
     Ok(p)
 }
@@ -84,7 +118,27 @@ pub fn rename_no_replace(source: &Path, destination: &Path) -> Result<()> {
         }
         Ok(())
     }
-    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::OsStrExt;
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn MoveFileExW(source: *const u16, destination: *const u16, flags: u32) -> i32;
+        }
+        let source: Vec<_> = source.as_os_str().encode_wide().chain(Some(0)).collect();
+        let destination: Vec<_> = destination
+            .as_os_str()
+            .encode_wide()
+            .chain(Some(0))
+            .collect();
+        // With no MOVEFILE_REPLACE_EXISTING flag Windows rejects an existing
+        // destination atomically, including directories and dangling links.
+        if unsafe { MoveFileExW(source.as_ptr(), destination.as_ptr(), 0) } == 0 {
+            return Err(std::io::Error::last_os_error().to_string());
+        }
+        Ok(())
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", windows)))]
     {
         let _ = (source, destination);
         Err("Safe file moves are not implemented on this platform.".into())
@@ -104,7 +158,21 @@ pub fn regular_file(path: &Path) -> Result<fs::File> {
         use std::os::unix::fs::OpenOptionsExt;
         options.custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW);
     }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        // Inspect the reparse point itself instead of following a replacement
+        // symlink between validation and open.
+        options.custom_flags(0x0020_0000); // FILE_FLAG_OPEN_REPARSE_POINT
+    }
     let file = options.open(path).map_err(err)?;
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        if file.metadata().map_err(err)?.file_attributes() & 0x400 != 0 {
+            return Err("Symbolic links and reparse points cannot be read.".into());
+        }
+    }
     if !file.metadata().map_err(err)?.is_file() {
         return Err("Only regular files can be read.".into());
     }
@@ -203,11 +271,7 @@ pub fn entries_checked(
             ));
         }
         result.push((
-            e.path()
-                .strip_prefix(root)
-                .unwrap()
-                .to_string_lossy()
-                .into_owned(),
+            relative_name(e.path().strip_prefix(root).unwrap()),
             e.path().to_path_buf(),
             e.file_type().is_dir(),
         ));
@@ -317,6 +381,26 @@ pub fn save_buffer(root: &Path, buffer: &Value) -> Result<Value> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(windows)]
+    #[test]
+    fn windows_source_names_are_portable_and_reject_device_and_stream_aliases() {
+        for name in [
+            "source/main.typ:private",
+            "AUX.tex",
+            "COM1",
+            "dir/NUL",
+            "dir/trailing.",
+            "dir/trailing ",
+        ] {
+            assert!(relative(name).is_err(), "{name}");
+        }
+        let root = tempfile::tempdir().unwrap();
+        fs::create_dir(root.path().join("source")).unwrap();
+        fs::write(root.path().join("source/main.typ"), "$ x $").unwrap();
+        let entries = entries(root.path()).unwrap();
+        assert!(entries.iter().any(|(name, _, _)| name == "source/main.typ"));
+        assert!(relative("source/main.typ").is_ok());
+    }
     use super::*;
     #[test]
     fn large_streaming_fixture_records_cancel_latency() {
@@ -416,7 +500,7 @@ mod tests {
         assert!(relative("/tmp/a").is_err());
         assert!(relative("a/../b").is_err());
     }
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux", windows))]
     #[test]
     fn rename_never_overwrites_existing_file() {
         let t = tempfile::tempdir().unwrap();

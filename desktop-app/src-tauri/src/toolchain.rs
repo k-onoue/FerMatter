@@ -87,6 +87,7 @@ impl Toolchain {
             .values()
             .filter_map(|p| Path::new(p).parent().map(Path::to_path_buf))
             .collect();
+        #[cfg(not(windows))]
         paths.extend(
             [
                 "/Library/TeX/texbin",
@@ -101,6 +102,66 @@ impl Toolchain {
             std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())
                 .filter(|p| p.is_absolute()),
         );
+        #[cfg(windows)]
+        {
+            // Explorer can retain its old PATH after a compiler installer has
+            // updated the user's environment. Read the persisted paths for each
+            // job instead of requiring an Explorer/app restart.
+            paths.extend(registered_windows_paths());
+            for appdata in std::env::var_os("APPDATA")
+                .map(PathBuf::from)
+                .into_iter()
+                .chain(dirs::data_dir())
+            {
+                let tinytex = appdata.join("TinyTeX");
+                paths.push(tinytex.join("bin/windows"));
+                paths.push(tinytex.join("tlpkg/tlgs/bin"));
+            }
+            let windows_bases = ["ProgramFiles", "LOCALAPPDATA"]
+                .into_iter()
+                .filter_map(std::env::var_os)
+                .map(PathBuf::from)
+                .chain(dirs::data_local_dir());
+            for base in windows_bases {
+                paths.push(base.join("MiKTeX/miktex/bin/x64"));
+                paths.push(base.join("Programs/MiKTeX/miktex/bin/x64"));
+                paths.push(base.join("Microsoft/WinGet/Links"));
+            }
+            if let Some(programs) = std::env::var_os("ProgramFiles") {
+                if let Ok(versions) = fs::read_dir(PathBuf::from(programs).join("gs")) {
+                    let mut versions: Vec<_> = versions
+                        .flatten()
+                        .map(|entry| entry.path())
+                        .filter(|path| {
+                            path.is_dir()
+                                && path
+                                    .file_name()
+                                    .is_some_and(|name| name.to_string_lossy().starts_with("gs"))
+                        })
+                        .collect();
+                    versions.sort_by_cached_key(|path| {
+                        path.file_name()
+                            .unwrap()
+                            .to_string_lossy()
+                            .trim_start_matches("gs")
+                            .split('.')
+                            .map(|part| part.parse::<u32>().unwrap_or(0))
+                            .collect::<Vec<_>>()
+                    });
+                    paths.extend(versions.into_iter().rev().map(|path| path.join("bin")));
+                }
+            }
+            // TeX Live's installer need not update the running app's PATH.
+            if let Ok(versions) = fs::read_dir(r"C:\texlive") {
+                let mut tex: Vec<_> = versions
+                    .flatten()
+                    .map(|v| v.path().join("bin/windows"))
+                    .filter(|p| p.is_dir())
+                    .collect();
+                tex.sort();
+                paths.extend(tex.into_iter().rev());
+            }
+        }
         paths
     }
     fn resolve(&self, name: &str) -> Result<PathBuf> {
@@ -111,7 +172,11 @@ impl Toolchain {
         }
         self.search_paths()
             .into_iter()
-            .map(|p| p.join(name))
+            .flat_map(|p| {
+                executable_names(name)
+                    .into_iter()
+                    .map(move |name| p.join(name))
+            })
             .find(|p| executable(p).is_ok())
             .ok_or_else(|| format!("{name}: not found"))
     }
@@ -142,15 +207,19 @@ impl Toolchain {
                         // latexmk/pdfcrop/ps2pdf invoke other tools by name. A small
                         // launcher preserves exact overrides (including missing ones)
                         // instead of silently falling through to a different binary.
-                        let quoted = path.replace('\'', "'\\''");
-                        let file = dir.path().join(name);
-                        fs::write(&file, format!("#!/bin/sh\nexec '{quoted}' \"$@\"\n"))
-                            .map_err(err)?;
                         #[cfg(unix)]
                         {
                             use std::os::unix::fs::PermissionsExt;
+                            let quoted = path.replace('\'', "'\\''");
+                            let file = dir.path().join(name);
+                            fs::write(&file, format!("#!/bin/sh\nexec '{quoted}' \"$@\"\n")).map_err(err)?;
                             fs::set_permissions(file, fs::Permissions::from_mode(0o700))
                                 .map_err(err)?;
+                        }
+                        #[cfg(windows)]
+                        {
+                            let quoted = path.replace('%', "%%");
+                            fs::write(dir.path().join(format!("{name}.cmd")), format!("@echo off\r\nsetlocal DisableDelayedExpansion\r\n\"{quoted}\" %*\r\n")).map_err(err)?;
                         }
                     }
                     Ok(dir)
@@ -170,8 +239,104 @@ impl Toolchain {
         };
         let mut command = Command::new(executable);
         command.env("PATH", self.environment_path()?);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+        }
         Ok(command)
     }
+}
+
+#[cfg(windows)]
+fn registered_windows_paths() -> Vec<PathBuf> {
+    use std::{
+        ffi::{c_void, OsString},
+        os::windows::ffi::OsStringExt,
+    };
+    #[link(name = "advapi32")]
+    unsafe extern "system" {
+        fn RegGetValueW(
+            key: *mut c_void,
+            subkey: *const u16,
+            value: *const u16,
+            flags: u32,
+            kind: *mut u32,
+            data: *mut c_void,
+            bytes: *mut u32,
+        ) -> i32;
+    }
+    let value: Vec<_> = "Path".encode_utf16().chain(Some(0)).collect();
+    let mut paths = Vec::new();
+    for (key, subkey) in [
+        (-2147483647isize, "Environment"), // HKEY_CURRENT_USER
+        (
+            -2147483646isize,
+            r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+        ), // HKEY_LOCAL_MACHINE
+    ] {
+        let subkey: Vec<_> = subkey.encode_utf16().chain(Some(0)).collect();
+        let mut bytes = 0u32;
+        // Accept SZ/EXPAND_SZ only; RegGetValue expands environment references
+        // and guarantees a terminator. Bound untrusted local configuration.
+        if unsafe {
+            RegGetValueW(
+                key as *mut c_void,
+                subkey.as_ptr(),
+                value.as_ptr(),
+                0x6,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                &mut bytes,
+            )
+        } != 0
+            || bytes == 0
+            || bytes > 128 * 1024
+            || !bytes.is_multiple_of(2)
+        {
+            continue;
+        }
+        let mut data = vec![0u16; bytes as usize / 2];
+        if unsafe {
+            RegGetValueW(
+                key as *mut c_void,
+                subkey.as_ptr(),
+                value.as_ptr(),
+                0x6,
+                std::ptr::null_mut(),
+                data.as_mut_ptr().cast(),
+                &mut bytes,
+            )
+        } != 0
+        {
+            continue;
+        }
+        let length = data
+            .iter()
+            .position(|unit| *unit == 0)
+            .unwrap_or(data.len());
+        let path = OsString::from_wide(&data[..length]);
+        paths.extend(std::env::split_paths(&path).filter(|path| path.is_absolute()));
+    }
+    paths
+}
+
+fn executable_names(name: &str) -> Vec<String> {
+    #[cfg(windows)]
+    {
+        let mut names = vec![
+            format!("{name}.exe"),
+            format!("{name}.com"),
+            format!("{name}.cmd"),
+            format!("{name}.bat"),
+        ];
+        if name == "gs" {
+            names.insert(0, "gswin64c.exe".into());
+        }
+        names
+    }
+    #[cfg(not(windows))]
+    vec![name.to_owned()]
 }
 
 fn executable(path: &Path) -> Result<()> {
@@ -189,7 +354,84 @@ fn executable(path: &Path) -> Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
+#[cfg(all(test, windows))]
+mod windows_tests {
+    use super::*;
+    #[test]
+    #[ignore = "requires real LaTeX/Ghostscript/Poppler/Typst; run separately with PATH reduced to System32"]
+    fn windows_global_instant_renders_without_development_path() {
+        let output = tempfile::tempdir().unwrap();
+        let existing = output.path().join("verification.json");
+        fs::write(&existing, "preserve earlier output").unwrap();
+        let report = crate::verification::verify_installed_instant(output.path()).unwrap();
+        assert_eq!(report["success"], true);
+        assert_eq!(report["cases"].as_array().unwrap().len(), 3);
+        assert_eq!(
+            fs::read_to_string(existing).unwrap(),
+            "preserve earlier output"
+        );
+        assert!(Path::new(string(&report, "reportPath")).is_file());
+        assert!(!Path::new(string(&report, "workspace"))
+            .join("latexmkrc")
+            .exists());
+    }
+    #[test]
+    fn windows_detection_uses_executable_suffixes_and_ghostscript_console_name() {
+        assert_eq!(executable_names("typst")[0], "typst.exe");
+        assert_eq!(executable_names("gs")[0], "gswin64c.exe");
+        let executable = std::env::current_exe().unwrap();
+        let tools = Toolchain::from_value(
+            &json!({"schemaVersion":1,"kind":"mathlidelux.tools","paths":{"typst":executable}}),
+        )
+        .unwrap();
+        assert_eq!(tools.resolve("typst").unwrap(), executable);
+        assert!(tools.check_overrides().is_ok());
+        let missing = executable.with_file_name("missing-selected-engine.exe");
+        let tools = Toolchain::from_value(
+            &json!({"schemaVersion":1,"kind":"mathlidelux.tools","paths":{"typst":missing}}),
+        )
+        .unwrap();
+        assert!(tools.resolve("typst").is_err());
+        assert!(tools.command("typst").is_err());
+        if let Some(appdata) = std::env::var_os("APPDATA") {
+            let tinytex = PathBuf::from(appdata).join("TinyTeX");
+            let automatic = Toolchain::default();
+            let paths = automatic.search_paths();
+            assert!(paths.contains(&tinytex.join("bin/windows")));
+            assert!(paths.contains(&tinytex.join("tlpkg/tlgs/bin")));
+        }
+    }
+    #[test]
+    fn windows_child_engine_overrides_keep_exact_paths_and_do_not_fall_back() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("compiler tools with spaces");
+        fs::create_dir(&path).unwrap();
+        let driver = path.join("driver.cmd");
+        let engine = path.join("chosen %FERMATTER_TEST_TOKEN% & engine.cmd");
+        fs::write(&driver, "@echo off\r\npdflatex %*\r\n").unwrap();
+        fs::write(&engine, "@echo off\r\necho chosen-engine\r\n").unwrap();
+        let tools = Toolchain::from_value(&json!({"schemaVersion":1,"kind":"mathlidelux.tools","paths":{"latexmk":driver,"pdflatex":engine}})).unwrap();
+        let output = crate::compiler::run(
+            "latexmk",
+            &[],
+            directory.path(),
+            &crate::compiler::Cancellation::with_tools(std::sync::Arc::new(tools)),
+        )
+        .unwrap();
+        assert_eq!(output.trim(), "chosen-engine");
+        fs::remove_file(&engine).unwrap();
+        let tools = Toolchain::from_value(&json!({"schemaVersion":1,"kind":"mathlidelux.tools","paths":{"latexmk":driver,"pdflatex":engine}})).unwrap();
+        assert!(crate::compiler::run(
+            "latexmk",
+            &[],
+            directory.path(),
+            &crate::compiler::Cancellation::with_tools(std::sync::Arc::new(tools))
+        )
+        .is_err());
+    }
+}
+
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use crate::{compiler, settings::SettingsFiles};

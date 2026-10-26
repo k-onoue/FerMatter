@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "build": {
+    "windows": {
+      "staticVCRuntime": true
+    }
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "FerMatter",
+        "width": 1360,
+        "height": 880,
+        "minWidth": 850,
+        "minHeight": 550,
+        "transparent": false,
+        "dragDropEnabled": false
+      }
+    ]
+  },
+  "bundle": {
+    "targets": ["nsis"],
+    "icon": ["icons/icon.ico", "icons/icon.png"],
+    "licenseFile": "../../LICENSE",
+    "resources": {
+      "../packaging/WINDOWS-PREVIEW-README.txt": "WINDOWS-PREVIEW-README.txt"
+    },
+    "windows": {
+      "allowDowngrades": false,
+      "webviewInstallMode": {
+        "type": "offlineInstaller",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["English", "Japanese"],
+        "displayLanguageSelector": true,
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico"
+      }
+    }
+  }
+}
