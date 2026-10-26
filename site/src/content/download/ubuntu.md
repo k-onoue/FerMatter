@@ -1,11 +1,12 @@
 ---
 title: "Linux installation"
 description: "Ubuntu packages and rendering tools."
+platform: "Ubuntu 24.04 · amd64"
 ---
 
-<h2 id="for-ubuntu-experimental">Linux</h2>
+<span id="for-ubuntu-experimental"></span>
 
-Ubuntu 24.04 · amd64.
+<h3 id="ubuntu-install">Install</h3>
 
 <details>
 <summary>First-time APT setup</summary>
@@ -20,14 +21,14 @@ curl -fsSL https://fermatter.github.io/apt/fermatter.sources | sudo tee /etc/apt
 
 </details>
 
-<h3 id="ubuntu-update">Install or update</h3>
-
 ```sh
 sudo apt update
 sudo apt install fermatter
 ```
 
-Install LaTeX or [Typst](https://github.com/typst/typst#installation) separately.
+<h3 id="ubuntu-rendering-tools">Rendering tools</h3>
+
+Install LaTeX or [Typst](https://github.com/typst/typst#installation).
 
 <details>
 <summary>LaTeX tools for Ubuntu</summary>
@@ -39,3 +40,7 @@ sudo apt install latexmk texlive-latex-extra texlive-extra-utils texlive-picture
 </details>
 
 [Check installed tools →](https://fermatter.github.io/guide/requirements/#tool-discovery)
+
+<h3 id="ubuntu-update">Update</h3>
+
+Use the same [APT commands](#ubuntu-install) to update FerMatter.

@@ -1,19 +1,19 @@
 ---
 import { getEntry, render } from "astro:content";
 import Product from "../layouts/Product.astro";
+import DownloadPlatform from "../components/DownloadPlatform.astro";
 import config from "../data/site.json";
 import { download, windowsDownload } from "../data/links";
 const macos = (await getEntry("download", "macos"))!;
 const windows = (await getEntry("download", "windows"))!;
+const ubuntu = (await getEntry("download", "ubuntu"))!;
 const { title, description, requirements } = macos.data;
 const { Content: MacOS } = await render(macos);
 const { Content: Windows } = await render(windows);
 const { Content: WindowsInstaller } = await render(
   (await getEntry("download", "windows-installer"))!,
 );
-const { Content: Ubuntu } = await render(
-  (await getEntry("download", "ubuntu"))!,
-);
+const { Content: Ubuntu } = await render(ubuntu);
 ---
 
 <Product markdown title={title} description={description}>
@@ -37,54 +37,45 @@ const { Content: Ubuntu } = await render(
       </a>
     )}
   </nav>
-  <section class="download-platform-panel" id="mac" data-download-panel>
-    <div class="download-section not-content">
-      <h2>FerMatter {config.version}</h2>
-      {requirements && <p>{requirements}</p>}
-      {config.releaseAvailable && (
-        <div class="actions">
-          <a class="button primary" href={download}>
-            Download DMG ↓
-          </a>
-        </div>
-      )}
-    </div>
-    {config.releaseAvailable && (
-      <div class="download-markdown product-markdown sl-markdown-content">
-        <MacOS />
-      </div>
-    )}
-  </section>
-  <section
-    id="windows"
-    class="download-platform-panel download-markdown product-markdown sl-markdown-content"
-    data-download-panel
+  <DownloadPlatform
+    id="mac"
+    version={config.version}
+    requirements={requirements!}
+    action={
+      config.releaseAvailable
+        ? { href: download, label: "Download DMG ↓" }
+        : undefined
+    }
   >
-    <h2>{windows.data.title}</h2>
-    <p>{windows.data.platform}</p>
+    {config.releaseAvailable && <MacOS />}
+  </DownloadPlatform>
+  <DownloadPlatform
+    id="windows"
+    version={config.version}
+    requirements={windows.data.platform!}
+    action={
+      config.windowsReleaseAvailable
+        ? { href: windowsDownload, label: "Download EXE ↓" }
+        : undefined
+    }
+  >
+    <h3 id="windows-install">Install</h3>
     {config.windowsReleaseAvailable ? (
-      <>
-        <p>FerMatter {config.version}</p>
-        <div class="actions not-content">
-          <a class="button primary" href={windowsDownload}>
-            Download EXE ↓
-          </a>
-        </div>
-        <WindowsInstaller />
-      </>
+      <WindowsInstaller />
     ) : (
       <p>{windows.data.availability}</p>
     )}
     <Windows />
-  </section>
+  </DownloadPlatform>
   {config.ubuntuAptAvailable && (
-    <section
+    <DownloadPlatform
       id="ubuntu"
-      class="download-platform-panel download-markdown product-markdown sl-markdown-content"
-      data-download-panel
+      version={config.version}
+      requirements={ubuntu.data.platform!}
+      action={{ href: "#ubuntu-install", label: "Install with APT" }}
     >
       <Ubuntu />
-    </section>
+    </DownloadPlatform>
   )}
 </Product>
 

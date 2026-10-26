@@ -5,7 +5,9 @@ platform: "Windows 11 · x64"
 availability: "The Windows installer is being validated. Downloads will appear here when ready."
 ---
 
-### Rendering tools
+<span id="rendering-tools"></span>
+
+<h3 id="windows-rendering-tools">Rendering tools</h3>
 
 Install Typst or LaTeX, then reopen FerMatter.
 
