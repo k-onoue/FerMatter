@@ -55,7 +55,7 @@ node scripts/preview-site.mjs
 
 - **Guides:** edit `user-docs/*.md`; add new pages to `user-docs/pages.json`. The same Markdown renders on GitHub and the website; do not maintain a second HTML copy.
 - **Download:** edit `site/src/content/download/*.md` (macOS, Windows, Windows installer notes and Ubuntu). Markdown owns headings, instructions, tables and shell commands. Fenced `sh` blocks get the same copy controls as guides. Keep Ubuntu last and preserve the explicit legacy anchors.
-- `site/src/pages/download.astro` owns the dynamic release button/name and availability gates from `site.json`. Update those values through the release process; Markdown edits do not publish app binaries.
+- `site/src/pages/download.astro` owns the OS tabs, dynamic release button/name and availability gates from `site.json`. Tabs follow the URL fragment or detected OS, support arrow/Home/End keys, and keep every OS section readable without JavaScript. Retain `#mac`, `#windows`, `#ubuntu` and existing nested anchors. Update release values through the release process; Markdown edits do not publish app binaries.
 - **News:** add a dated `.md` file to `site/src/content/news/`. The homepage automatically lists the five newest dates and titles. Each article appears in `/news/`, linked from every footer, and gets its own `/news/<filename>/` route.
 
 ```yaml

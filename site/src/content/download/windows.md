@@ -1,41 +1,46 @@
 ---
-title: "For Windows (preview)"
+title: "Windows (preview)"
 description: "Windows preview installation and rendering tools."
-platform: "Windows 11 · x64. ARM64 and 32-bit installers are not included."
+platform: "Windows 11 · x64"
 availability: "The Windows installer is being validated. Downloads will appear here when ready."
 ---
 
-### Typst on Windows
+### Rendering tools
 
-Run in PowerShell, then reopen FerMatter:
+Install Typst or LaTeX, then reopen FerMatter.
+
+<h4 id="typst-on-windows">Typst</h4>
+
+Run in PowerShell:
 
 ```powershell
 winget install --exact --id Typst.Typst
 ```
 
-[Typst installation instructions](https://github.com/typst/typst#installation).
+<h4 id="latex-on-windows">LaTeX</h4>
 
-### LaTeX on Windows
+Install [TeX Live](https://tug.org/texlive/windows.html) or [TinyTeX](https://yihui.org/tinytex/) and [Poppler](https://github.com/oschwartz10612/poppler-windows):
 
-Install [TeX Live](https://tug.org/texlive/windows.html) or [TinyTeX](https://yihui.org/tinytex/), then reopen PowerShell and install the packages used by the included demos:
+```powershell
+winget install --exact --id oschwartz10612.Poppler
+```
+
+<details>
+<summary>Additional packages for TinyTeX</summary>
+
+Reopen PowerShell after installing TeX, then run:
 
 ```powershell
 tlmgr update --self
 tlmgr install latexmk pdfcrop preview pgf mathtools tools cm-super standalone xcolor amsmath amsfonts grfext synctex
 ```
 
-TinyTeX and TeX Live include the Windows Perl and Ghostscript helpers used by LaTeX rendering; separate installations are unnecessary for this setup.
+</details>
 
-Install the [Windows Poppler package](https://github.com/oschwartz10612/poppler-windows) in PowerShell:
-
-```powershell
-winget install --exact --id oschwartz10612.Poppler
-```
-
-Reopen FerMatter and check [Settings → Tools](https://fermatter.github.io/guide/requirements/#tool-discovery). If a tool is missing, select its executable path there.
-
-Recoverable project deletion, the screen color eyedropper and MCP/CLI are unavailable in this Windows preview.
+[Check installed tools →](https://fermatter.github.io/guide/requirements/#tool-discovery)
 
 <h3 id="windows-update">Update</h3>
 
-Quit FerMatter from its tray menu and run the newer installer. Your project files and saved settings are preserved.
+Quit FerMatter from its tray menu and run the newer installer. Projects and settings are preserved.
+
+This preview has no recoverable project deletion, screen eyedropper or MCP/CLI.
