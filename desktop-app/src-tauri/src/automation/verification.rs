@@ -16,7 +16,8 @@ pub fn run(output: &Path) -> Result<Value> {
             .map_err(|e| format!("{}: {}", e.code, e.message))
     };
     for language in ["latex", "typst"] {
-        let root = home.join(format!("{language}-source"));
+        // Project roots cannot live inside application storage.
+        let root = output.join(format!("automation-{language}-source"));
         fs::create_dir_all(&root).map_err(err)?;
         let (main, text, source) = if language == "latex" {
             ("main.tex","\\documentclass[12pt]{article}\n\\usepackage{amsmath}\n\\newcommand{\\projectValue}{x+7}\n\\begin{document}\n\\[\\projectValue\\]\n\\end{document}",r"\projectValue+1")

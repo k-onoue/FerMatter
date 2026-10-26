@@ -17,10 +17,9 @@ pub fn open(store: &Storage, settings: &SettingsFiles, v: &Value) -> Result<Valu
     {
         let _guard = store.writes.lock().unwrap();
         let mut history = project_history::History::load(store)?;
-        let imported = storage::import_zip(
-            &path,
-            &project_location::directory(&settings.load("preferences.json")?, "")?,
-        )?;
+        let parent = project_location::directory(&settings.load("preferences.json")?, "")?;
+        store.check_project_parent(&parent)?;
+        let imported = storage::import_zip(&path, &parent)?;
         let project = project_history::open_created(store, &imported, None)?;
         history.record_created(store, vec![imported], "Import Projects")?;
         return Ok(project);
@@ -47,7 +46,12 @@ pub fn open(store: &Storage, settings: &SettingsFiles, v: &Value) -> Result<Valu
 pub fn create(store: &Storage, settings: &SettingsFiles, v: &Value) -> Result<Value> {
     let _guard = store.writes.lock().unwrap();
     let mut history = project_history::History::load(store)?;
-    let target = project_location::create(&settings.load("preferences.json")?, v)?;
+    let preferences = settings.load("preferences.json")?;
+    store.check_project_parent(&project_location::directory(
+        &preferences,
+        string(v, "directory"),
+    )?)?;
+    let target = project_location::create(&preferences, v)?;
     let typst = string(v, "format") == "typst";
     let main = if typst { "main.typ" } else { "main.tex" };
     let mut project = project_history::open_created(store, &target, Some(main))?;
@@ -101,6 +105,7 @@ pub fn action(
     };
     match action {
         "import" => {
+            store.check_project_parent(&parent)?;
             let paths = v["paths"]
                 .as_array()
                 .ok_or("Drop project folders or ZIPs.")?;
@@ -128,6 +133,7 @@ pub fn action(
             history.record_created(store, created.clone(), "Import Projects")?;
         }
         "duplicate" => {
+            store.check_project_parent(&parent)?;
             for root in project_history::roots(store, &v["ids"])? {
                 match project_history::duplicate(store, &root, &parent) {
                     Ok(copy) => created.push(copy),

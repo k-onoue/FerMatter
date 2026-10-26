@@ -276,8 +276,12 @@ fn dispatch(
             Ok(Value::Null)
         }
         "instant_export" => {
-            let path = store.allowed_artifact(Path::new(string(&v, "path")))?;
-            if !path.starts_with(instant::home(store, ident)?.join("Instant/Exports")) {
+            let path = store.artifact_file(Path::new(string(&v, "path")))?;
+            let exports = instant::home(store, ident)?.join("Instant/Exports");
+            if !exports
+                .canonicalize()
+                .is_ok_and(|dir| path.starts_with(dir))
+            {
                 return Err("Not an Instant image.".into());
             }
             fs::copy(path, string(&v, "destination")).map_err(err)?;
@@ -286,7 +290,7 @@ fn dispatch(
         "instant_render" => {
             let c = cancellation.ok_or("Missing request ownership")?;
             let result = if ident.is_empty() {
-                instant::render(&store.home, &v["draft"], &c)
+                instant::render(store, &v["draft"], &c)
             } else {
                 instant::render_project(store, ident, &v["draft"], &c)
             };
@@ -456,14 +460,20 @@ fn dispatch(
                 .as_array()
                 .ok_or("Missing artifact paths")?
                 .iter()
-                .map(|p| store.allowed_artifact(Path::new(p.as_str().unwrap_or(""))))
+                .map(|p| {
+                    // PDF panes also retain their source snapshot folder.
+                    let path = Path::new(p.as_str().unwrap_or(""));
+                    store
+                        .artifact_file(path)
+                        .or_else(|_| store.artifact_dir(path))
+                })
                 .collect::<Result<Vec<_>>>()?;
             runtime.cache.lease(string(&v, "key"), &json!(paths));
             Ok(Value::Null)
         }
         "artifact" => {
             use base64::Engine;
-            let p = store.allowed_artifact(Path::new(string(&v, "path")))?;
+            let p = store.artifact_file(Path::new(string(&v, "path")))?;
             let bytes = read_bounded(&p, ARTIFACT_LIMIT)?;
             let mime = match p.extension().and_then(|e| e.to_str()).unwrap_or("") {
                 "svg" => "image/svg+xml",
@@ -489,13 +499,14 @@ fn dispatch(
                     .iter()
                     .find(|c| c["id"] == *id)
                     .ok_or("Equation not found")?;
-                store.allowed_artifact(Path::new(string(card, "svgPath")))?;
+                store.artifact_file(Path::new(string(card, "svgPath")))?;
                 let size = export::font_size(&Value::Null, card, &p, &runtime.settings)?;
                 let mut card = card.clone();
                 if string(&v, "format") == "svg" {
                     card["restoreMetadata"] = roundtrip::card_recipe(store, &p, &card, size)?;
                 }
                 paths.push(export::image_file(
+                    store,
                     &card,
                     string(&v, "format"),
                     size,
@@ -515,7 +526,7 @@ fn dispatch(
                 .as_array()
                 .ok_or("No images selected")?
                 .iter()
-                .map(|p| store.allowed_artifact(Path::new(p.as_str().unwrap_or(""))))
+                .map(|p| store.artifact_file(Path::new(p.as_str().unwrap_or(""))))
                 .collect::<Result<Vec<_>>>()?;
             cache::copy_images(&store.home, &paths, || {
                 let owned = paths.clone();
@@ -616,20 +627,25 @@ fn dispatch(
         }
         "pdf_navigate" | "pdf_drag_target" | "pdf_prepare_drag" => {
             let c = cancellation.unwrap_or_default();
-            store.allowed_artifact(Path::new(string(&v["document"], "pdfPath")))?;
-            store.allowed_artifact(Path::new(string(&v["document"], "sourceRoot")))?;
+            // Compile and SyncTeX only in the resolved managed paths.
+            let mut document = v["document"].clone();
+            document["pdfPath"] =
+                json!(store.artifact_file(Path::new(string(&document, "pdfPath")))?);
+            document["sourceRoot"] =
+                json!(store.artifact_dir(Path::new(string(&document, "sourceRoot")))?);
             let result = (|| {
                 c.check()?;
                 if op == "pdf_navigate" {
-                    return compiler::navigate(&v["document"], &v, &c);
+                    return compiler::navigate(&document, &v, &c);
                 }
                 if op == "pdf_drag_target" {
-                    return compiler::drag_target(&v["document"], &v, &c);
+                    return compiler::drag_target(&document, &v, &c);
                 }
-                store.allowed_artifact(Path::new(string(&v["document"], "renderRoot")))?;
+                document["renderRoot"] =
+                    json!(store.artifact_dir(Path::new(string(&document, "renderRoot")))?);
                 let p = store.load(ident)?;
                 let mut card = compiler::document_artwork(
-                    &v["document"],
+                    &document,
                     string(&v, "targetID"),
                     &store.project_dir(ident)?.join("Cache/PDFArtwork"),
                     &c,
@@ -643,6 +659,7 @@ fn dispatch(
                     card["restoreMetadata"] = roundtrip::card_recipe(store, &p, &card, size)?;
                 }
                 let path = export::image_file(
+                    store,
                     &card,
                     string(&v, "format"),
                     size,
@@ -667,13 +684,14 @@ fn dispatch(
         }
         "preview_export" => {
             let mut card = v["card"].clone();
-            store.allowed_artifact(Path::new(string(&card, "svgPath")))?;
+            store.artifact_file(Path::new(string(&card, "svgPath")))?;
             let p = store.load(ident)?;
             let size = export::font_size(&v["fontSize"], &card, &p, &runtime.settings)?;
             if string(&v, "format") == "svg" {
                 card["restoreMetadata"] = roundtrip::card_recipe(store, &p, &card, size)?;
             }
             Ok(json!(export::image_file(
+                store,
                 &card,
                 string(&v, "format"),
                 size,

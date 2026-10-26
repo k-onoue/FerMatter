@@ -1,4 +1,4 @@
-use crate::{compiler, files::*, scan};
+use crate::{compiler, files::*, scan, storage::Storage};
 use serde_json::Value;
 use std::{
     fs,
@@ -28,14 +28,27 @@ pub fn font_size(
         .unwrap_or(30.))
 }
 
-pub fn image_file(card: &Value, format: &str, point_size: f64, folder: &Path) -> Result<PathBuf> {
+/// Card paths may come from the webview or stored metadata. Resolve them before
+/// any lease, cache hit or read, and read only the resolved files.
+pub fn image_file(
+    store: &Storage,
+    card: &Value,
+    format: &str,
+    point_size: f64,
+    folder: &Path,
+) -> Result<PathBuf> {
     let _permit = EXPORT.lock().unwrap();
     if !["svg", "png", "jpeg", "pdf"].contains(&format) {
         return Err("Unsupported image format.".into());
     }
+    let source = store.artifact_file(Path::new(string(card, "svgPath")))?;
+    let pdf = if format == "pdf" {
+        Some(store.artifact_file(Path::new(string(card, "pdfPath")))?)
+    } else {
+        None
+    };
     let _source_lease = crate::cache::Lease::new(folder, card);
-    let source = Path::new(string(card, "svgPath"));
-    let svg = String::from_utf8(read_bounded(source, ARTIFACT_LIMIT)?).map_err(err)?;
+    let svg = String::from_utf8(read_bounded(&source, ARTIFACT_LIMIT)?).map_err(err)?;
     let original = card["sourceFontSize"].as_f64().unwrap_or(11.);
     let scale = if point_size > 0. {
         point_size / original
@@ -63,16 +76,15 @@ pub fn image_file(card: &Value, format: &str, point_size: f64, folder: &Path) ->
     let staging = tempfile::tempdir().map_err(err)?;
     let base = staging.path().join(base.file_name().unwrap());
     let dest = base.with_extension(if format == "jpeg" { "jpg" } else { format });
-    if format == "pdf" {
-        let source = Path::new(string(card, "pdfPath"));
+    if let Some(source) = pdf {
         if (scale - 1.).abs() < 0.0001 {
-            let mut input = regular_file(source)?.take(ARTIFACT_LIMIT + 1);
+            let mut input = regular_file(&source)?.take(ARTIFACT_LIMIT + 1);
             let mut output = fs::File::create(&dest).map_err(err)?;
             if std::io::copy(&mut input, &mut output).map_err(err)? > ARTIFACT_LIMIT {
                 return Err("Export PDF exceeds the 100 MiB limit.".into());
             }
         } else {
-            scale_pdf(source, &dest, scale as f32)?;
+            scale_pdf(&source, &dest, scale as f32)?;
         }
         crate::cache::publish(&[(dest, final_dest.clone())])?;
         return Ok(final_dest);
@@ -190,14 +202,25 @@ fn scale_pdf(source: &Path, dest: &Path, scale: f32) -> Result<()> {
 mod tests {
     use super::*;
     use serde_json::json;
+    const PROJECT: &str = "0123456789abcdef01234567";
+    const SVG: &str = "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20pt\" height=\"10pt\" viewBox=\"0 0 20 10\"><path d=\"M1 1h8v8H1z\"/></svg>";
+    /// Storage with a rendered SVG in a project cache; returns it and the export folder.
+    fn managed(svg: &str) -> (tempfile::TempDir, Storage, PathBuf, PathBuf) {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Storage::new(temp.path().join("data"), temp.path().join("legacy")).unwrap();
+        let project = store.project_dir(PROJECT).unwrap();
+        let source = project.join("Cache/source.svg");
+        atomic(&source, svg.as_bytes()).unwrap();
+        (temp, store, source, project.join("Exports"))
+    }
     #[test]
     fn export_inherits_persisted_defaults_and_preserves_explicit_and_legacy_sizes() {
-        let temp = tempfile::tempdir().unwrap();
+        let (temp, store, source, exports) = managed(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="20pt" height="10pt" viewBox="0 0 20 10"/>"#,
+        );
         let settings = crate::settings::SettingsFiles::new(temp.path());
         let mut prefs = json!({"appearance":"light","autoSave":true});
         settings.initialize("preferences.json", &prefs).unwrap();
-        let source = temp.path().join("source.svg");
-        fs::write(&source, r#"<svg xmlns="http://www.w3.org/2000/svg" width="20pt" height="10pt" viewBox="0 0 20 10"/>"#).unwrap();
         let card = json!({"svgPath":source,"sourceFontSize":10});
         let project = json!({});
         let resolve = |request: &Value, card: &Value, project: &Value| {
@@ -205,7 +228,7 @@ mod tests {
         };
         let size = resolve(&Value::Null, &card, &project);
         assert_eq!(size, 30.);
-        let svg = image_file(&card, "svg", size, &temp.path().join("exports")).unwrap();
+        let svg = image_file(&store, &card, "svg", size, &exports).unwrap();
         assert!(read(&svg).unwrap().contains("width=\"60pt\""));
         let snapshot = settings.snapshot("preferences.json", false).unwrap();
         prefs["exportFontSize"] = json!(31.25);
@@ -241,18 +264,15 @@ mod tests {
     }
     #[test]
     fn scales_svg_with_xml_declaration_without_changing_viewbox() {
-        let temp = tempfile::tempdir().unwrap();
-        let source = temp.path().join("source.svg");
-        fs::write(&source, "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20pt\" height=\"10pt\" viewBox=\"0 0 20 10\"><path d=\"M1 1h8v8H1z\"/></svg>").unwrap();
+        let (_temp, store, source, folder) = managed(SVG);
         let card = json!({"svgPath":source,"sourceFontSize":10});
-        let folder = temp.path().join("exports");
-        let svg = image_file(&card, "svg", 20., &folder).unwrap();
+        let svg = image_file(&store, &card, "svg", 20., &folder).unwrap();
         let text = fs::read_to_string(svg).unwrap();
         assert!(text.contains("width=\"40pt\""));
         assert!(text.contains("height=\"20pt\""));
         assert!(text.contains("viewBox=\"0 0 20 10\""));
-        let png = image_file(&card, "png", 20., &folder).unwrap();
-        let jpeg = image_file(&card, "jpeg", 20., &folder).unwrap();
+        let png = image_file(&store, &card, "png", 20., &folder).unwrap();
+        let jpeg = image_file(&store, &card, "jpeg", 20., &folder).unwrap();
         let png = image::open(png).unwrap().to_rgba8();
         let jpeg = image::open(jpeg).unwrap().to_rgb8();
         assert_eq!(png.dimensions(), jpeg.dimensions());
@@ -262,5 +282,77 @@ mod tests {
             .0
             .iter()
             .all(|c| *c > 245));
+    }
+    #[test]
+    fn image_file_exports_managed_artifacts() {
+        let (_temp, store, source, exports) = managed(SVG);
+        let pdf = source.with_extension("pdf");
+        atomic(&pdf, b"%PDF-1.4 rendered").unwrap();
+        let card = json!({"svgPath":source,"pdfPath":pdf,"sourceFontSize":10});
+        for format in ["svg", "png", "jpeg", "pdf"] {
+            let path = image_file(&store, &card, format, 10., &exports).unwrap();
+            assert!(path.starts_with(&exports), "{format}");
+            assert!(path.metadata().unwrap().len() > 0, "{format}");
+        }
+        let copied = image_file(&store, &card, "pdf", 10., &exports).unwrap();
+        assert_eq!(fs::read(copied).unwrap(), b"%PDF-1.4 rendered");
+        let instant = store.home.join("Instant/Cache/a.svg");
+        atomic(&instant, SVG.as_bytes()).unwrap();
+        let card = json!({"svgPath":instant,"sourceFontSize":10});
+        let folder = store.home.join("Instant/Exports");
+        assert!(image_file(&store, &card, "svg", 10., &folder).is_ok());
+    }
+    #[test]
+    fn image_file_rejects_svg_path_outside_storage() {
+        let (temp, store, _, exports) = managed(SVG);
+        let outside = temp.path().join("outside.svg");
+        fs::write(&outside, SVG).unwrap();
+        let settings = store.home.join("Settings/preferences.svg");
+        fs::write(&settings, SVG).unwrap();
+        for path in [outside, settings] {
+            let card = json!({"svgPath":path,"pdfPath":path,"sourceFontSize":10});
+            for format in ["svg", "png", "jpeg", "pdf"] {
+                assert!(image_file(&store, &card, format, 10., &exports).is_err());
+            }
+        }
+        assert!(!exports.exists());
+    }
+    #[test]
+    fn image_file_rejects_pdf_path_outside_storage_for_pdf_export() {
+        let (temp, store, source, exports) = managed(SVG);
+        let secret = temp.path().join("secret.pdf");
+        fs::write(&secret, b"%PDF-1.4 secret").unwrap();
+        let metadata = store.project_dir(PROJECT).unwrap().join("project.json");
+        fs::write(&metadata, b"{}").unwrap();
+        for path in [&secret, &metadata] {
+            let card = json!({"svgPath":source,"pdfPath":path,"sourceFontSize":10});
+            // Both the plain copy (scale 1) and the scaled path are refused.
+            for size in [10., 20.] {
+                assert!(image_file(&store, &card, "pdf", size, &exports).is_err());
+            }
+        }
+        assert!(!exports.exists());
+    }
+    #[test]
+    fn image_file_rejects_forged_pdf_path_even_when_the_export_is_cached() {
+        let (temp, store, source, exports) = managed(SVG);
+        let pdf = source.with_extension("pdf");
+        atomic(&pdf, b"%PDF-1.4 rendered").unwrap();
+        let card = json!({"svgPath":source,"pdfPath":pdf,"sourceFontSize":10});
+        let cached = image_file(&store, &card, "pdf", 10., &exports).unwrap();
+        let secret = temp.path().join("secret.pdf");
+        fs::write(&secret, b"%PDF-1.4 secret").unwrap();
+        let forged = json!({"svgPath":source,"pdfPath":secret,"sourceFontSize":10});
+        assert!(image_file(&store, &forged, "pdf", 10., &exports).is_err());
+        assert_eq!(fs::read(cached).unwrap(), b"%PDF-1.4 rendered");
+    }
+    #[test]
+    fn image_file_ignores_pdf_path_for_svg_png_and_jpeg_exports() {
+        let (temp, store, source, exports) = managed(SVG);
+        let card =
+            json!({"svgPath":source,"pdfPath":temp.path().join("missing.pdf"),"sourceFontSize":10});
+        for format in ["svg", "png", "jpeg"] {
+            assert!(image_file(&store, &card, format, 10., &exports).is_ok());
+        }
     }
 }

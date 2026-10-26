@@ -3,9 +3,11 @@ use serde_json::{json, Value};
 use std::{
     collections::HashMap,
     fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     sync::Mutex,
 };
+const OUTSIDE_STORAGE: &str = "Artifact is outside application storage. Render it again.";
+const INSIDE_STORAGE: &str = "Choose a project folder outside application storage.";
 pub struct Storage {
     pub home: PathBuf,
     pub legacy: PathBuf,
@@ -24,7 +26,7 @@ impl Storage {
         })
     }
     pub fn project_dir(&self, id: &str) -> Result<PathBuf> {
-        if id.len() != 24 || !id.bytes().all(|c| c.is_ascii_hexdigit()) {
+        if !project_id(id) {
             return Err("Invalid project ID".into());
         }
         Ok(self.home.join("Projects").join(id))
@@ -34,9 +36,34 @@ impl Storage {
         if !root.is_dir() {
             return Err("Choose a project folder.".into());
         }
+        if !self.project_root_allowed(&root) {
+            return Err(INSIDE_STORAGE.into());
+        }
         let ident = id(&path_string(&root));
         self.projects.lock().unwrap().insert(ident.clone(), root);
         Ok(ident)
+    }
+    /// Refuse a parent folder whose new projects `register` would reject,
+    /// before anything is published there.
+    pub fn check_project_parent(&self, parent: &Path) -> Result<()> {
+        let parent = crate::project_location::resolve_destination(parent)?;
+        if !self.project_root_allowed(&parent.join("project")) {
+            return Err(INSIDE_STORAGE.into());
+        }
+        Ok(())
+    }
+    /// Application storage holds no project roots except the per-project
+    /// folders Swift created and imported under legacy `Sources` and `Imports`.
+    fn project_root_allowed(&self, root: &Path) -> bool {
+        let Some((base, legacy)) = self.storage_base(root) else {
+            return true;
+        };
+        let scope = root
+            .strip_prefix(&base)
+            .ok()
+            .and_then(artifact_scope)
+            .unwrap_or_default();
+        legacy && matches!(scope.as_slice(), ["Sources" | "Imports", _, ..])
     }
     pub fn root(&self, id: &str) -> Result<PathBuf> {
         self.projects
@@ -203,16 +230,49 @@ impl Storage {
     pub fn recover_project(&self, ident: &str, expected: &str) -> Result<()> {
         project_data::recover(&self.project_dir(ident)?.join("project.json"), expected)
     }
-    pub fn allowed_artifact(&self, p: &Path) -> Result<PathBuf> {
-        let path = p.canonicalize().map_err(err)?;
-        if [&self.home, &self.legacy]
-            .iter()
-            .any(|base| path.starts_with(base))
-        {
-            Ok(path)
-        } else {
-            Err("Artifact is outside application storage.".into())
+    /// Canonical rendered file under a managed Cache, Exports or PDF output folder.
+    pub fn artifact_file(&self, path: &Path) -> Result<PathBuf> {
+        let path = self.artifact(path, |scope, legacy| match scope {
+            // Swift kept rendered and exported cards here; legacy has nothing else.
+            ["Projects", project, "Cache" | "Exports", _, ..] => project_id(project),
+            _ if legacy => false,
+            ["Projects", project, "Instant", "Cache" | "Exports", _, ..]
+            | ["Projects", project, "Documents", _, "Output", _, ..] => project_id(project),
+            ["Instant", "Cache" | "Exports", _, ..] => true,
+            _ => false,
+        })?;
+        path.is_file().then_some(path).ok_or(OUTSIDE_STORAGE.into())
+    }
+    /// Canonical source snapshot of a compiled PDF document.
+    pub fn artifact_dir(&self, path: &Path) -> Result<PathBuf> {
+        let path = self.artifact(path, |scope, legacy| {
+            !legacy
+                && matches!(scope, ["Projects", project, "Documents", _, "Source" | "Original"] if project_id(project))
+        })?;
+        path.is_dir().then_some(path).ok_or(OUTSIDE_STORAGE.into())
+    }
+    fn artifact(&self, path: &Path, allowed: fn(&[&str], bool) -> bool) -> Result<PathBuf> {
+        let path = path.canonicalize().map_err(err)?;
+        let (base, legacy) = self.storage_base(&path).ok_or(OUTSIDE_STORAGE)?;
+        let scope = path
+            .strip_prefix(&base)
+            .ok()
+            .and_then(artifact_scope)
+            .ok_or(OUTSIDE_STORAGE)?;
+        if !allowed(&scope, legacy) {
+            return Err(OUTSIDE_STORAGE.into());
         }
+        Ok(path)
+    }
+    /// The canonical home or legacy folder holding `path`, and whether it is
+    /// legacy. Either may be nested in the other, so the longest one wins;
+    /// home wins a tie.
+    fn storage_base(&self, path: &Path) -> Option<(PathBuf, bool)> {
+        [(&self.legacy, true), (&self.home, false)]
+            .into_iter()
+            .filter_map(|(base, legacy)| Some((base.canonicalize().ok()?, legacy)))
+            .filter(|(base, _)| path.starts_with(base))
+            .max_by_key(|(base, _)| base.components().count())
     }
     pub fn draft_path(&self, ident: &str) -> Result<PathBuf> {
         Ok(self
@@ -276,6 +336,19 @@ impl Storage {
         }
         Ok(json!({"buffers":drafts,"warnings":warnings}))
     }
+}
+fn project_id(name: &str) -> bool {
+    name.len() == 24 && name.bytes().all(|c| c.is_ascii_hexdigit())
+}
+/// Names below a storage base; `None` for anything but valid UTF-8 names.
+fn artifact_scope(relative: &Path) -> Option<Vec<&str>> {
+    relative
+        .components()
+        .map(|c| match c {
+            Component::Normal(name) => name.to_str(),
+            _ => None,
+        })
+        .collect()
 }
 fn path_string(path: &Path) -> String {
     path.to_string_lossy().into_owned()
@@ -369,6 +442,255 @@ pub fn import_zip(archive: &Path, parent: &Path) -> Result<PathBuf> {
 mod tests {
     use super::*;
     use base64::{engine::general_purpose::STANDARD, Engine};
+    const PROJECT: &str = "0123456789abcdef01234567";
+    fn managed_store(home: &str, legacy: &str) -> (tempfile::TempDir, Storage) {
+        let temp = tempfile::tempdir().unwrap();
+        // macOS temp paths go through the /var symlink; bases stay as given.
+        let base = temp.path().canonicalize().unwrap();
+        let store = Storage::new(base.join(home), base.join(legacy)).unwrap();
+        (temp, store)
+    }
+    fn file(path: &Path) -> PathBuf {
+        atomic(path, b"x").unwrap();
+        path.to_owned()
+    }
+    #[test]
+    fn artifact_file_rejects_settings_metadata_drafts_and_templates() {
+        let (temp, store) = managed_store("data", "legacy");
+        let project = store.project_dir(PROJECT).unwrap();
+        for path in [
+            store.home.join("Settings/preferences.json"),
+            project.join("project.json"),
+            project.join("SourceMutation.json"),
+            project.join("Documents/document-1/Source/main.tex"),
+            project.join("Instant/session.json"),
+            store.home.join("SourceDrafts/x.json"),
+            store.home.join("templates.json"),
+            store.home.join("Cache/x.svg"),
+            store.home.join("Instant/session.json"),
+            store.home.join("Projects/not-a-project-id/Cache/x.svg"),
+            store.legacy.join("Settings/preferences.json"),
+            store.legacy.join("Instant/Cache/a.svg"),
+            store
+                .legacy
+                .join("Projects")
+                .join(PROJECT)
+                .join("Instant/Cache/a.svg"),
+            store
+                .legacy
+                .join("Projects")
+                .join(PROJECT)
+                .join("Documents/document-1/Output/main.pdf"),
+            temp.path().join("outside.svg"),
+        ] {
+            let path = file(&path);
+            assert!(store.artifact_file(&path).is_err(), "{}", path.display());
+        }
+        fs::create_dir_all(project.join("Cache")).unwrap();
+        for dir in [store.home.clone(), project.join("Cache")] {
+            assert!(store.artifact_file(&dir).is_err(), "{}", dir.display());
+        }
+        assert!(store
+            .artifact_file(&project.join("Cache/missing.svg"))
+            .is_err());
+    }
+    #[test]
+    fn artifact_file_accepts_project_instant_and_legacy_outputs() {
+        let (_temp, store) = managed_store("data", "legacy");
+        let project = store.project_dir(PROJECT).unwrap();
+        for path in [
+            project.join("Cache/a.svg"),
+            project.join("Cache/PDFArtwork/a.pdf"),
+            project.join("Exports/a-png.png"),
+            project.join("Documents/document-1/Output/main.pdf"),
+            project.join("Instant/Cache/a.svg"),
+            project.join("Instant/Exports/a.svg"),
+            store.home.join("Instant/Cache/a.png"),
+            store.home.join("Instant/Exports/a.jpg"),
+            store
+                .legacy
+                .join("Projects")
+                .join(PROJECT)
+                .join("Cache/a.svg"),
+            store
+                .legacy
+                .join("Projects")
+                .join(PROJECT)
+                .join("Exports/a.pdf"),
+        ] {
+            let path = file(&path);
+            assert_eq!(store.artifact_file(&path).unwrap(), path);
+        }
+    }
+    #[test]
+    fn artifact_resolvers_handle_home_inside_legacy_and_legacy_inside_home() {
+        // Production nests home in legacy; MATHLIDELUX_DATA_DIR nests legacy in home.
+        for (home, legacy) in [
+            ("Slide Math/Rust Preview", "Slide Math"),
+            ("data", "data/Legacy"),
+        ] {
+            let (_temp, store) = managed_store(home, legacy);
+            let current = file(&store.project_dir(PROJECT).unwrap().join("Cache/a.svg"));
+            let old = file(
+                &store
+                    .legacy
+                    .join("Projects")
+                    .join(PROJECT)
+                    .join("Cache/a.svg"),
+            );
+            assert_eq!(store.artifact_file(&current).unwrap(), current);
+            assert_eq!(store.artifact_file(&old).unwrap(), old);
+            let settings = file(&store.home.join("Settings/preferences.json"));
+            assert!(store.artifact_file(&settings).is_err());
+            let source = store
+                .project_dir(PROJECT)
+                .unwrap()
+                .join("Documents/document-1/Source");
+            fs::create_dir_all(&source).unwrap();
+            assert_eq!(store.artifact_dir(&source).unwrap(), source);
+        }
+    }
+    #[test]
+    fn artifact_file_rejects_symlink_escaping_a_managed_folder() {
+        let (temp, store) = managed_store("data", "legacy");
+        let cache = store.project_dir(PROJECT).unwrap().join("Cache");
+        fs::create_dir_all(&cache).unwrap();
+        let secret = file(&temp.path().join("secret.svg"));
+        let settings = file(&store.home.join("Settings/preferences.json"));
+        std::os::unix::fs::symlink(&secret, cache.join("outside.svg")).unwrap();
+        std::os::unix::fs::symlink(&settings, cache.join("settings.svg")).unwrap();
+        std::os::unix::fs::symlink(temp.path(), cache.join("folder")).unwrap();
+        for name in ["outside.svg", "settings.svg", "folder/secret.svg"] {
+            assert!(store.artifact_file(&cache.join(name)).is_err(), "{name}");
+        }
+        // A link into managed storage resolves to the managed file itself.
+        let real = file(&cache.join("a.svg"));
+        let alias = temp.path().join("alias.svg");
+        std::os::unix::fs::symlink(&real, &alias).unwrap();
+        assert_eq!(store.artifact_file(&alias).unwrap(), real);
+    }
+    #[cfg(unix)]
+    #[test]
+    fn artifact_file_rejects_non_utf8_components() {
+        use std::{ffi::OsStr, os::unix::ffi::OsStrExt};
+        let name = OsStr::from_bytes(b"\xff.svg");
+        let relative = Path::new("Projects").join(PROJECT).join("Cache").join(name);
+        assert!(artifact_scope(&relative).is_none());
+        assert!(artifact_scope(Path::new("Projects/../Cache")).is_none());
+        let (_temp, store) = managed_store("data", "legacy");
+        let cache = store.project_dir(PROJECT).unwrap().join("Cache");
+        fs::create_dir_all(&cache).unwrap();
+        // APFS refuses such names; filesystems that store them must still be rejected.
+        if fs::write(cache.join(name), b"x").is_ok() {
+            assert!(store.artifact_file(&cache.join(name)).is_err());
+        }
+    }
+    #[test]
+    fn artifact_dir_accepts_document_source_and_original_only() {
+        let (_temp, store) = managed_store("data", "legacy");
+        let document = store
+            .project_dir(PROJECT)
+            .unwrap()
+            .join("Documents/document-1");
+        for name in ["Source", "Original", "Output"] {
+            fs::create_dir_all(document.join(name)).unwrap();
+        }
+        let pdf = file(&document.join("Output/main.pdf"));
+        assert_eq!(
+            store.artifact_dir(&document.join("Source")).unwrap(),
+            document.join("Source")
+        );
+        assert_eq!(
+            store.artifact_dir(&document.join("Original")).unwrap(),
+            document.join("Original")
+        );
+        let legacy = store
+            .legacy
+            .join("Projects")
+            .join(PROJECT)
+            .join("Documents/document-1/Source");
+        fs::create_dir_all(&legacy).unwrap();
+        for path in [
+            document.join("Output"),
+            document.clone(),
+            document.join("Source/../Output"),
+            legacy,
+            pdf,
+            store.home.join("Settings"),
+            store.home.clone(),
+        ] {
+            assert!(store.artifact_dir(&path).is_err(), "{}", path.display());
+        }
+    }
+    #[test]
+    fn register_rejects_project_roots_inside_application_storage() {
+        for (home, legacy) in [
+            ("Slide Math/Rust Preview", "Slide Math"),
+            ("data", "data/Legacy"),
+        ] {
+            let (temp, store) = managed_store(home, legacy);
+            for root in [
+                store.home.clone(),
+                store.home.join("Settings"),
+                store.home.join("Projects"),
+                store.legacy.clone(),
+                store.legacy.join("Projects"),
+                store.legacy.join("Settings"),
+                // The containers would expose every legacy project to deletion.
+                store.legacy.join("Sources"),
+                store.legacy.join("Imports"),
+            ] {
+                fs::create_dir_all(&root).unwrap();
+                assert!(store.register(&root).is_err(), "{}", root.display());
+            }
+            // Swift created and imported projects in these legacy folders.
+            for name in ["Sources/paper", "Imports/archive"] {
+                let root = store.legacy.join(name);
+                fs::create_dir_all(&root).unwrap();
+                assert!(store.register(&root).is_ok(), "{name}");
+            }
+            let outside = temp.path().join("project");
+            fs::create_dir_all(&outside).unwrap();
+            assert!(store.register(&outside).is_ok());
+            let link = temp.path().join("settings-link");
+            std::os::unix::fs::symlink(store.home.join("Settings"), &link).unwrap();
+            assert!(store.register(&link).is_err());
+        }
+        // Identical bases are current storage, without the legacy exception.
+        let (_temp, store) = managed_store("data", "data");
+        let root = store.legacy.join("Sources/paper");
+        fs::create_dir_all(&root).unwrap();
+        assert!(store.register(&root).is_err());
+    }
+    #[test]
+    fn project_parents_inside_application_storage_are_refused() {
+        let (temp, store) = managed_store("Slide Math/Rust Preview", "Slide Math");
+        for parent in [
+            store.home.clone(),
+            store.home.join("Settings"),
+            store.home.join("not-yet-created/projects"),
+            store.legacy.clone(),
+            store.legacy.join("Projects"),
+        ] {
+            assert!(
+                store.check_project_parent(&parent).is_err(),
+                "{}",
+                parent.display()
+            );
+        }
+        for parent in [
+            store.legacy.join("Sources"),
+            store.legacy.join("Imports"),
+            temp.path().join("Projects"),
+            temp.path().join("not-yet-created/projects"),
+        ] {
+            assert!(
+                store.check_project_parent(&parent).is_ok(),
+                "{}",
+                parent.display()
+            );
+        }
+    }
     #[test]
     fn corrupt_metadata_is_reported_without_blocking_other_projects() {
         let temp = tempfile::tempdir().unwrap();
