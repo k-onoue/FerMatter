@@ -11,6 +11,7 @@ Import and Export. Shortcuts can be reset; choose Default to reset the theme.
 - `preferences.json` stores appearance, auto-save and window preferences. `projectView` is `grid` (default) or `list`; older files without it keep the grid view. Optional `projectDirectory` is an absolute path; missing/empty uses Documents/Mathlidelux. **Settings → Projects** changes it without moving existing projects.
 - `instant.json` stores reusable global Instant defaults; edit through the settings of Instant opened from Projects, or the revealed JSON file. Drafts/history are separate.
 - Legacy `preferences.json.dockIcon` values (`automatic`, `detailed`, `standard`, `smile`, `frown`) remain valid and are preserved on import/export. The portrait is now fixed; this field is ignored.
+- `extraction.json` stores global Library exclusion rules; **Settings → Extraction** edits them. Apply and Reload rescan open libraries. See [Card extraction](../../user-docs/extraction.md).
 - `tools.json` stores compiler/converter executable overrides; first-launch setup and **Settings → Tools** edit it. Apply saves changes; Reload accepts external edits.
 
 Edit JSON opens the built-in editor. For external edits, save the file and choose
@@ -113,6 +114,15 @@ they operate on the currently selected export format.
 - Configuration changes invalidate equation render-cache keys. Existing jobs finish with their original configuration; subsequent renders/builds use the applied settings.
 - Startup uses the last valid settings/recovery file; external edits require Reload while the app is running. Compiler requests do not reset external-edit conflict tracking.
 - First-launch folder selection is followed by tool configuration; no missing auto-detected tool blocks setup. Existing completed setups are not repeated.
+
+## Card extraction, version 1
+
+- File: `extraction.json`; `schemaVersion: 1`, `kind: "mathlidelux.extraction"`.
+- `ignoreMathInTables` defaults to `false`; optional name lists default to empty. Names and validation: [user guide](../../user-docs/extraction.md#customize-exclusions).
+- Revision-checked atomic writes and last-valid recovery use `SettingsFiles`. Invalid active files never authorize overwrites.
+- Import opens an editor draft; **Use configuration → Apply and rescan** validates and saves it. Reload validates the active file before refreshing libraries.
+- Each Library scan reads one validated snapshot. An expected revision rejects external changes during a multi-project refresh. Closed projects compare their saved extraction revision on activation.
+- Source caret and document/PDF scans use unfiltered options. Explicit custom lists also apply with the table preset off.
 
 ## Global Instant, version 1
 

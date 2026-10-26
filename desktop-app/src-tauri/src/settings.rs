@@ -182,6 +182,7 @@ fn valid_name(name: &str) -> Result<()> {
         "keybindings.json",
         "instant.json",
         "tools.json",
+        "extraction.json",
     ]
     .contains(&name)
     {
@@ -193,6 +194,7 @@ fn valid_name(name: &str) -> Result<()> {
 fn default_document(name: &str) -> Value {
     match name {
         "tools.json" => crate::toolchain::defaults(),
+        "extraction.json" => crate::extraction::defaults(),
         "instant.json" => crate::instant_settings::defaults(),
         "theme.json" => {
             json!({"schemaVersion":1,"kind":"mathlidelux.theme","id":"org.mathlidelux.default","name":"Default","light":{},"dark":{}})
@@ -211,6 +213,7 @@ pub fn validate(name: &str, v: &Value) -> Result<()> {
     }
     match name {
         "tools.json" => crate::toolchain::validate(v),
+        "extraction.json" => crate::extraction::Options::from_value(v).map(|_| ()),
         "instant.json" => crate::instant_settings::validate(v),
         "theme.json" => theme(v),
         "keybindings.json" => keybindings(v),

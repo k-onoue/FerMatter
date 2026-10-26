@@ -108,3 +108,10 @@
 - Projects shows **Review recovery** while healthy projects remain usable. **Restore last valid backup** checks the original revision, keeps rejected bytes separately, and restores metadata only; source files and Source/Instant drafts remain untouched.
 - Without a valid backup, retain the file for manual recovery. Legacy originals are never rewritten by recovery.
 - Parsing errors identify the metadata file and structural field, not its source contents. A root render boundary offers **Reload view** for unexpected display failures.
+
+## Temporarily excluded source cards
+
+- `project.json.extractionHiddenCards` archives source-card metadata hidden by extraction rules; custom presentation variants stay in `cards`.
+- Extraction still counts excluded occurrences when computing IDs, keeping identical equations outside tables stable. Restoring a rule recovers saved source names and font sizes.
+- Visible and hidden IDs must be unique; the normal card validator also validates archived cards. Cache-reference traversal includes the archive.
+- Removing source text follows normal rescan behavior; the archive is for configurable exclusions, not a source-file backup.

@@ -282,7 +282,13 @@ fn path_string(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
 pub fn merge_scan(mut p: Value, scan: Value) -> Value {
-    let old = p["cards"].as_array().cloned().unwrap_or_default();
+    let mut old = p["cards"].as_array().cloned().unwrap_or_default();
+    old.extend(
+        p["extractionHiddenCards"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default(),
+    );
     let mut cards = scan["cards"].as_array().cloned().unwrap_or_default();
     for card in &mut cards {
         if let Some(previous) = old.iter().find(|o| o["id"] == card["id"]) {
@@ -293,8 +299,21 @@ pub fn merge_scan(mut p: Value, scan: Value) -> Value {
             }
         }
     }
+    let hidden = scan["excludedCards"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|card| {
+            old.iter()
+                .find(|previous| previous["id"] == card["id"])
+                .cloned()
+                .unwrap_or(card)
+        })
+        .collect::<Vec<_>>();
     cards.extend(old.into_iter().filter(|v| string(v, "origin") == "custom"));
     p["cards"] = json!(cards);
+    p["extractionHiddenCards"] = json!(hidden);
     p["outline"] = scan["outline"].clone();
     p["warnings"] = scan["warnings"].clone();
     p["files"] = scan["files"].clone();
@@ -384,6 +403,30 @@ mod tests {
     }
     use super::*;
     use base64::{engine::general_purpose::STANDARD, Engine};
+    #[test]
+    fn extraction_exclusions_preserve_source_names_variants_and_recovery_metadata() {
+        let source = json!({"id":"source", "origin":"source", "tex":"x", "name":"My score", "exportFontSize":36, "extensions":{"keep":true}});
+        let custom = json!({"id":"custom", "origin":"custom", "tex":"styled", "parentID":"source"});
+        let p = json!({"cards":[source,custom], "sectionAssignments":{"source":"results"}, "extensions":{"future":1}});
+        let hidden = merge_scan(
+            p.clone(),
+            json!({"cards":[], "excludedCards":[{"id":"source","origin":"source","tex":"x"}],"outline":[],"files":[],"warnings":[]}),
+        );
+        assert_eq!(hidden["cards"], json!([custom]));
+        assert_eq!(hidden["extractionHiddenCards"], json!([source]));
+        let restored = merge_scan(
+            hidden,
+            json!({"cards":[{"id":"source","origin":"source","tex":"x"}],"outline":[],"files":[],"warnings":[]}),
+        );
+        assert_eq!(restored["cards"][0]["name"], source["name"]);
+        assert_eq!(
+            restored["cards"][0]["exportFontSize"],
+            source["exportFontSize"]
+        );
+        assert_eq!(restored["cards"][1], custom);
+        assert_eq!(restored["sectionAssignments"], p["sectionAssignments"]);
+        assert_eq!(restored["extensions"], p["extensions"]);
+    }
     #[test]
     fn corrupt_metadata_is_reported_without_blocking_other_projects() {
         let temp = tempfile::tempdir().unwrap();

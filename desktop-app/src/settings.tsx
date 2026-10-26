@@ -8,6 +8,7 @@ import { Modal } from "./ui";
 import { CodeEditor } from "./editor";
 import { OutputSizeControl } from "./OutputSizeControl";
 import { CompilerTools } from "./CompilerTools";
+import { ExtractionSettings } from "./ExtractionSettings";
 import type { Keybindings, Preferences, Theme } from "./types";
 import {
   commands,
@@ -28,6 +29,7 @@ export function Settings({
   onReload,
   onError,
   defaultProjectDirectory,
+  onExtractionApplied,
 }: {
   settings: Preferences;
   themes: Theme[];
@@ -40,6 +42,7 @@ export function Settings({
   onReload: (file: string) => Promise<void>;
   onError: (e: string) => void;
   defaultProjectDirectory: string;
+  onExtractionApplied: (revision: string) => Promise<void>;
 }) {
   const [tab, setTab] = useState("Appearance");
   const [record, setRecord] = useState("");
@@ -96,7 +99,14 @@ export function Settings({
   return (
     <Modal title="Settings" onClose={onClose} wide>
       <div className="settings-tabs">
-        {["Appearance", "Projects", "Editor", "Shortcuts", "Tools"].map((t) => (
+        {[
+          "Appearance",
+          "Projects",
+          "Editor",
+          "Shortcuts",
+          "Extraction",
+          "Tools",
+        ].map((t) => (
           <button
             key={t}
             className={tab === t ? "active" : ""}
@@ -373,6 +383,9 @@ export function Settings({
                 })}
             </div>
           </>
+        )}
+        {tab === "Extraction" && (
+          <ExtractionSettings onApplied={onExtractionApplied} />
         )}
         {tab === "Tools" && (
           <>

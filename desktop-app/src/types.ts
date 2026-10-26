@@ -43,6 +43,7 @@ export interface Project {
   cards: Card[];
   outline: Heading[];
   customOrder: string[];
+  extractionHiddenCards?: Card[];
   sections: { id: string; name: string }[];
   sectionAssignments: Record<string, string>;
   candidates: string[];
