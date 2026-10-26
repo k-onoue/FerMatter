@@ -2,7 +2,12 @@ import type { Project } from "./types";
 
 /** Scan owns extracted source structure only; all editable metadata belongs to current. */
 export function mergeScan(current: Project, scanned: Project): Project {
-  const old = new Map(current.cards.map((card) => [card.id, card]));
+  const old = new Map(
+    [...(current.extractionHiddenCards || []), ...current.cards].map((card) => [
+      card.id,
+      card,
+    ]),
+  );
   const cards = scanned.cards
     .filter((card) => card.origin !== "custom")
     .map((card) => {
@@ -17,6 +22,10 @@ export function mergeScan(current: Project, scanned: Project): Project {
     });
   return {
     ...current,
+    extractionRevision: scanned.extractionRevision,
+    extractionHiddenCards: (scanned.extractionHiddenCards || []).map(
+      (card) => old.get(card.id) || card,
+    ),
     cards: [
       ...cards,
       ...current.cards.filter((card) => card.origin === "custom"),

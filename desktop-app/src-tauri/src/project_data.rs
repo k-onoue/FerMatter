@@ -154,6 +154,17 @@ pub fn normalize(mut value: Value) -> Result<Value> {
             return Err("Project card IDs must be unique.".into());
         }
     }
+    if let Some(hidden) = value.get_mut("extractionHiddenCards") {
+        let hidden = hidden
+            .as_array_mut()
+            .ok_or("Hidden extraction cards must be an array.")?;
+        for (index, card) in hidden.iter_mut().enumerate() {
+            normalize_card(card, index)?;
+            if string(card, "origin") != "source" || !ids.insert(string(card, "id").to_owned()) {
+                return Err("Hidden extraction cards must be unique source cards.".into());
+            }
+        }
+    }
     if let Some(draft) = value
         .get_mut("libraryDraft")
         .filter(|draft| !draft.is_null())

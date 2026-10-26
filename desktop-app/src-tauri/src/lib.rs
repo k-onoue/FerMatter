@@ -3,6 +3,7 @@ mod cache;
 mod color_sampler;
 mod compiler;
 mod export;
+mod extraction;
 mod files;
 mod formatting;
 mod instant;
@@ -357,7 +358,7 @@ fn dispatch(
                 store.recent()?
             };
             Ok(
-                json!({"setupRequired":setup_required,"projects":projects,"projectProblems":store.project_problems()?,"settings":runtime.settings.snapshot("preferences.json", false)?,"defaultProjectDirectory":project_location::default_directory()?,"theme":runtime.settings.snapshot("theme.json", false)?,"keybindings":runtime.settings.snapshot("keybindings.json", false)?,"themes":themes,"templates":json_read(&store.home.join("templates.json")).unwrap_or(json!({})),"storage":store.home}),
+                json!({"setupRequired":setup_required,"projects":projects,"projectProblems":store.project_problems()?,"settings":runtime.settings.snapshot("preferences.json", false)?,"extraction":runtime.settings.snapshot("extraction.json", false)?,"defaultProjectDirectory":project_location::default_directory()?,"theme":runtime.settings.snapshot("theme.json", false)?,"keybindings":runtime.settings.snapshot("keybindings.json", false)?,"themes":themes,"templates":json_read(&store.home.join("templates.json")).unwrap_or(json!({})),"storage":store.home}),
             )
         }
         "automation_projects" => Ok(json!(store
@@ -439,6 +440,7 @@ fn dispatch(
             drop(_guard);
             Ok(json!(revision))
         }
+        "extraction_settings" => runtime.settings.snapshot("extraction.json", false),
         "reload_settings" => {
             let _guard = store.writes.lock().unwrap();
             let snapshot = runtime.settings.snapshot(string(&v, "file"), true)?;
@@ -554,9 +556,23 @@ fn dispatch(
             let cache = store.project_dir(ident)?.join("Cache");
             let result = (|| match op {
                 "scan" => {
-                    let scan = scan::extract_checked(&root, main, None, &|| c.check())?;
+                    let configuration = runtime.settings.snapshot("extraction.json", false)?;
+                    if let Some(expected) = v["extractionRevision"].as_str() {
+                        if expected != string(&configuration, "revision") {
+                            return Err(
+                                "Extraction settings changed. Reload before rescanning.".into()
+                            );
+                        }
+                    }
+                    let options = extraction::Options::from_value(&configuration["value"])?;
+                    let scan =
+                        scan::extract_with_options_checked(&root, main, None, &options, &|| {
+                            c.check()
+                        })?;
                     c.check()?;
-                    Ok(storage::merge_scan(p.clone(), scan))
+                    let mut merged = storage::merge_scan(p.clone(), scan);
+                    merged["extractionRevision"] = configuration["revision"].clone();
+                    Ok(merged)
                 }
                 "render" => {
                     let cards = v["cards"].as_array().ok_or("Missing equations")?;

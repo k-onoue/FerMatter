@@ -203,6 +203,9 @@ export default function App() {
   const projectTransition = useRef(0);
   const jobs = useRef(new Map<string, string>());
   const editJob = useRef(0);
+  const extractionRevision = useRef("");
+  const extractionGeneration = useRef(0);
+  const extractionFlight = useRef<Promise<void> | null>(null);
   const selectedAnchor = useRef<string | undefined>(undefined);
   const grid = useRef<HTMLDivElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
@@ -328,12 +331,14 @@ export default function App() {
       setupRequired: boolean;
       defaultProjectDirectory: string;
       settings: SettingsSnapshot<Preferences>;
+      extraction: SettingsSnapshot<object>;
       themes: Theme[];
       theme: SettingsSnapshot<Theme>;
       keybindings: SettingsSnapshot<Keybindings>;
       templates: TemplateConfiguration;
     }>("startup")
       .then((data) => {
+        extractionRevision.current = data.extraction.revision;
         setProjects(data.projects);
         setProjectProblems(data.projectProblems);
         setSetupRequired(data.setupRequired);
@@ -561,7 +566,12 @@ export default function App() {
       restoreWorkspace(next);
       setProjects((all) => [next.project, ...all.filter((x) => x.id !== p.id)]);
       await registerWorkspaces();
-      if (!existing && !p.cards?.length && !importing) void rescan(p);
+      if (
+        !importing &&
+        ((!existing && !p.cards?.length) ||
+          next.project.extractionRevision !== extractionRevision.current)
+      )
+        void rescan(next.project);
       return true;
     } finally {
       release();
@@ -851,6 +861,97 @@ export default function App() {
       }
     }
   }
+  useEffect(
+    () =>
+      registerWindowFlush("extraction-rescan", async () => {
+        await extractionFlight.current;
+      }),
+    [],
+  );
+  function refreshExtraction(revision: string) {
+    const generation = ++extractionGeneration.current;
+    extractionRevision.current = revision;
+    const operation = (async () => {
+      const release = lockWindowInteraction();
+      try {
+        await cancelJobs();
+        for (const workspace of workspacesRef.current)
+          void rpc("cancel", { key: workspace.project.id + ":scan" });
+        await flushWindow(["extraction-rescan"]);
+        captureWorkspace();
+        const ids = workspacesRef.current.map(
+          (workspace) => workspace.project.id,
+        );
+        for (const id of ids) {
+          if (generation !== extractionGeneration.current) return;
+          const current = workspacesRef.current.find(
+            (workspace) => workspace.project.id === id,
+          );
+          if (!current) continue;
+          const ticket = uid();
+          jobs.current.set("extraction", ticket);
+          const scanned = await rpc<Project>("scan", {
+            project: id,
+            key: id + ":scan",
+            ticket,
+            extractionRevision: revision,
+          });
+          if (
+            generation !== extractionGeneration.current ||
+            jobs.current.get("extraction") !== ticket
+          )
+            return;
+          const latest = workspacesRef.current.find(
+            (workspace) => workspace.project.id === id,
+          );
+          if (!latest) continue;
+          const merged = mergeScan(latest.project, scanned);
+          await persist(merged);
+          const visible = new Set(merged.cards.map((card) => card.id));
+          if (projectRef.current?.id === id) {
+            setSelected(
+              (old) => new Set([...old].filter((key) => visible.has(key))),
+            );
+            if (selectedAnchor.current && !visible.has(selectedAnchor.current))
+              selectedAnchor.current = undefined;
+          }
+          setWorkspaces(
+            workspacesRef.current.map((workspace) =>
+              workspace.project.id === id
+                ? {
+                    ...workspace,
+                    libraryStale: false,
+                    selected: new Set(
+                      [...workspace.selected].filter((key) => visible.has(key)),
+                    ),
+                    selectedAnchor:
+                      workspace.selectedAnchor &&
+                      visible.has(workspace.selectedAnchor)
+                        ? workspace.selectedAnchor
+                        : undefined,
+                  }
+                : workspace,
+            ),
+          );
+        }
+        setLibraryStale(false);
+      } finally {
+        if (generation === extractionGeneration.current)
+          jobs.current.delete("extraction");
+        release();
+      }
+      if (generation === extractionGeneration.current && projectRef.current)
+        void renderCards(projectRef.current);
+    })();
+    extractionFlight.current = operation;
+    void operation
+      .finally(() => {
+        if (extractionFlight.current === operation)
+          extractionFlight.current = null;
+      })
+      .catch(() => {});
+    return operation;
+  }
   async function rescan(p = projectRef.current) {
     if (!p) return;
     await cancelJobs();
@@ -881,6 +982,7 @@ export default function App() {
         void rescan(projectRef.current);
         return;
       }
+      extractionRevision.current = String(next.extractionRevision || "");
       const merged = mergeScan(projectRef.current, next);
       await persist(merged);
       await renderCards(merged);
@@ -2017,6 +2119,7 @@ export default function App() {
           themes={themes}
           theme={theme}
           keys={keys}
+          onExtractionApplied={refreshExtraction}
           onSettings={(s) => void updateSettings(s)}
           onTheme={(t) => void updateTheme(t)}
           onKeys={(k) => void updateKeys(k)}

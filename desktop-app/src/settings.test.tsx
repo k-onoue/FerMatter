@@ -34,6 +34,7 @@ it("sorts theme choices without mutating shared themes and forwards appearance s
       onKeys={vi.fn()}
       onClose={vi.fn()}
       onReload={vi.fn()}
+      onExtractionApplied={vi.fn()}
       onError={vi.fn()}
       defaultProjectDirectory="/synthetic/projects"
     />,
