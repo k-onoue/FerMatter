@@ -1,0 +1,447 @@
+[
+  {
+    "name": "allows a letter with Command",
+    "command": "open",
+    "binding": {
+      "key": "j",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": true
+  },
+  {
+    "name": "allows a digit with Command",
+    "command": "open",
+    "binding": {
+      "key": "7",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": true
+  },
+  {
+    "name": "allows a symbol with Command",
+    "command": "open",
+    "binding": {
+      "key": ";",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": true
+  },
+  {
+    "name": "allows an arrow key with Command",
+    "command": "open",
+    "binding": {
+      "key": "\uF700",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": true
+  },
+  {
+    "name": "allows Control alone",
+    "command": "open",
+    "binding": {
+      "key": "j",
+      "command": false,
+      "control": true,
+      "shift": false,
+      "option": false
+    },
+    "valid": true
+  },
+  {
+    "name": "allows Control and Option with Tab",
+    "command": "open",
+    "binding": {
+      "key": "\t",
+      "command": false,
+      "control": true,
+      "shift": false,
+      "option": true
+    },
+    "valid": true
+  },
+  {
+    "name": "allows an empty key to clear the shortcut",
+    "command": "open",
+    "binding": {
+      "key": "",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": true
+  },
+  {
+    "name": "rejects a non-ASCII letter",
+    "command": "open",
+    "binding": {
+      "key": "é",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects an uppercase letter",
+    "command": "open",
+    "binding": {
+      "key": "J",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects a multi-character key",
+    "command": "open",
+    "binding": {
+      "key": "jk",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects Shift alone",
+    "command": "open",
+    "binding": {
+      "key": "j",
+      "command": false,
+      "control": false,
+      "shift": true,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects Option alone",
+    "command": "open",
+    "binding": {
+      "key": "j",
+      "command": false,
+      "control": false,
+      "shift": false,
+      "option": true
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects no modifier",
+    "command": "open",
+    "binding": {
+      "key": "j",
+      "command": false,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects reserved Command+q",
+    "command": "open",
+    "binding": {
+      "key": "q",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects reserved Command+w",
+    "command": "open",
+    "binding": {
+      "key": "w",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects reserved Command+m",
+    "command": "open",
+    "binding": {
+      "key": "m",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects reserved Command+h",
+    "command": "open",
+    "binding": {
+      "key": "h",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects reserved Command+comma",
+    "command": "open",
+    "binding": {
+      "key": ",",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects reserved Command+c",
+    "command": "open",
+    "binding": {
+      "key": "c",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects reserved Command+v",
+    "command": "open",
+    "binding": {
+      "key": "v",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects reserved Command+x",
+    "command": "open",
+    "binding": {
+      "key": "x",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects reserved Command+a",
+    "command": "open",
+    "binding": {
+      "key": "a",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects reserved Command+z",
+    "command": "open",
+    "binding": {
+      "key": "z",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects reserved Command+P",
+    "command": "open",
+    "binding": {
+      "key": "p",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects reserved Command+Space",
+    "command": "open",
+    "binding": {
+      "key": " ",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects Command+S on another command",
+    "command": "open",
+    "cleared": ["saveEquation"],
+    "binding": {
+      "key": "s",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "allows Command+S on saveEquation",
+    "command": "saveEquation",
+    "binding": {
+      "key": "s",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": false
+    },
+    "valid": true
+  },
+  {
+    "name": "rejects Command+Shift+Z",
+    "command": "open",
+    "binding": {
+      "key": "z",
+      "command": true,
+      "control": false,
+      "shift": true,
+      "option": false
+    },
+    "valid": false
+  },
+  {
+    "name": "rejects Command+Option+H",
+    "command": "open",
+    "binding": {
+      "key": "h",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": true
+    },
+    "valid": false
+  },
+  {
+    "name": "allows Command+Shift+Q",
+    "command": "open",
+    "binding": {
+      "key": "q",
+      "command": true,
+      "control": false,
+      "shift": true,
+      "option": false
+    },
+    "valid": true
+  },
+  {
+    "name": "allows Command+Option+W",
+    "command": "open",
+    "binding": {
+      "key": "w",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": true
+    },
+    "valid": true
+  },
+  {
+    "name": "allows Command+Control+M",
+    "command": "open",
+    "binding": {
+      "key": "m",
+      "command": true,
+      "control": true,
+      "shift": false,
+      "option": false
+    },
+    "valid": true
+  },
+  {
+    "name": "allows Command+Control+S on another command",
+    "command": "open",
+    "binding": {
+      "key": "s",
+      "command": true,
+      "control": true,
+      "shift": false,
+      "option": false
+    },
+    "valid": true
+  },
+  {
+    "name": "allows Command+Option+Z",
+    "command": "open",
+    "binding": {
+      "key": "z",
+      "command": true,
+      "control": false,
+      "shift": false,
+      "option": true
+    },
+    "valid": true
+  },
+  {
+    "name": "allows Command+Shift+H",
+    "command": "open",
+    "binding": {
+      "key": "h",
+      "command": true,
+      "control": false,
+      "shift": true,
+      "option": false
+    },
+    "valid": true
+  },
+  {
+    "name": "allows Command+Option+Shift+H",
+    "command": "open",
+    "binding": {
+      "key": "h",
+      "command": true,
+      "control": false,
+      "shift": true,
+      "option": true
+    },
+    "valid": true
+  },
+  {
+    "name": "allows Control+S on saveEquation",
+    "command": "saveEquation",
+    "binding": {
+      "key": "s",
+      "command": false,
+      "control": true,
+      "shift": false,
+      "option": false
+    },
+    "valid": true
+  }
+]

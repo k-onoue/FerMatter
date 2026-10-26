@@ -659,6 +659,28 @@ mod tests {
             json!({"key":"o","command":true,"control":false,"option":false,"shift":false});
         assert!(keybindings(&v).is_ok());
     }
+    // The same fixture drives the frontend validator in src/shortcuts.test.ts.
+    #[test]
+    fn shortcut_rules_fixture_matches_the_frontend_validator() {
+        let cases: Vec<Value> =
+            serde_json::from_str(include_str!("../../tests/fixtures/shortcut-rules.json")).unwrap();
+        assert!(!cases.is_empty());
+        for case in cases {
+            let mut value = default_document("keybindings.json");
+            // `cleared` empties a default so the case cannot fail as a duplicate of it.
+            for id in case["cleared"].as_array().into_iter().flatten() {
+                value["bindings"][id.as_str().unwrap()] =
+                    json!({"key":"","command":false,"control":false,"option":false,"shift":false});
+            }
+            value["bindings"][case["command"].as_str().unwrap()] = case["binding"].clone();
+            assert_eq!(
+                keybindings(&value).is_ok(),
+                case["valid"] == true,
+                "{}",
+                case["name"]
+            );
+        }
+    }
     #[cfg(windows)]
     #[test]
     fn windows_source_tab_defaults_use_control_without_the_windows_key() {

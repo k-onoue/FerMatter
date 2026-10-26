@@ -5,6 +5,7 @@ import {
   validateBindings,
 } from "./shortcuts";
 import type { Binding, Keybindings } from "./types";
+import shortcutRules from "../tests/fixtures/shortcut-rules.json";
 import { isWindows } from "./platform";
 
 const keys = (bindings: Record<string, Binding> = {}): Keybindings => ({
@@ -106,3 +107,22 @@ it("does not let the plus alias steal an explicitly assigned shifted shortcut", 
     "open",
   );
 });
+
+// The same fixture drives the Rust validator in src-tauri/src/settings.rs.
+// `cleared` lists commands whose default is emptied so the case cannot fail as
+// a duplicate of that default.
+it.each(shortcutRules)(
+  "validates shortcuts like the Rust validator: $name",
+  ({ command, binding: candidate, valid, ...rest }) => {
+    const cleared = (rest as { cleared?: string[] }).cleared ?? [];
+    const validate = () =>
+      validateBindings(
+        keys({
+          ...Object.fromEntries(cleared.map((id) => [id, binding("")])),
+          [command]: candidate as Binding,
+        }),
+      );
+    if (valid) expect(validate).not.toThrow();
+    else expect(validate).toThrow();
+  },
+);
