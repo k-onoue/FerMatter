@@ -1,3 +1,4 @@
+import { FILE_MANAGER } from "./platform";
 import { defaults, palette } from "./appearance";
 import { useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
@@ -380,7 +381,7 @@ export function Settings({
               <span>Settings folder</span>
               <button onClick={() => void rpc("reveal")}>
                 <FolderOpen size={16} />
-                Reveal in Finder
+                Reveal in {FILE_MANAGER}
               </button>
             </div>
             <div className="muted">FerMatter</div>

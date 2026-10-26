@@ -1,3 +1,4 @@
+import { FILE_MANAGER } from "./platform";
 import { mergeAutomationVariants } from "./automation";
 import { dropSVG } from "./svgImport";
 import { LibraryNavigation } from "./LibraryNavigation";
@@ -2079,7 +2080,7 @@ export default function App() {
             )}
             <button onClick={() => void rpc("reveal", { project: project.id })}>
               <FolderOpen size={16} />
-              Reveal Project in Finder
+              Reveal Project in {FILE_MANAGER}
             </button>
             {!!project.warnings?.length && (
               <details>

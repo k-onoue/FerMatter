@@ -1,3 +1,4 @@
+import { FILE_MANAGER } from "./platform";
 import { OutputSizeControl } from "./OutputSizeControl";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -1238,7 +1239,7 @@ export function SourceWorkspace({
               action: () => void operation("paste", menu.path, menu.directory),
             },
             {
-              label: "Reveal in Finder",
+              label: `Reveal in ${FILE_MANAGER}`,
               action: () => void operation("reveal", menu.path, menu.directory),
             },
             {

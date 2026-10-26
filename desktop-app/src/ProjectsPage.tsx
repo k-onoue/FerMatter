@@ -1,3 +1,4 @@
+import { FILE_MANAGER } from "./platform";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
@@ -589,7 +590,7 @@ export function ProjectsPage({
                       }).catch((e) => onError(String(e))),
                   },
                   {
-                    label: "Reveal in Finder",
+                    label: `Reveal in ${FILE_MANAGER}`,
                     action: () => {
                       for (const id of menu.ids || [])
                         void rpc("reveal", { project: id }).catch((e) =>
