@@ -1,18 +1,8 @@
 ---
-import { getCollection } from "astro:content";
+import { getNews, newsDate, newsDateLabel } from "../../data/news";
 import Product from "../../layouts/Product.astro";
 import { href } from "../../data/links";
-const news = (await getCollection("news")).sort(
-  (a, b) =>
-    b.data.date.valueOf() - a.data.date.valueOf() || a.id.localeCompare(b.id),
-);
-const dateLabel = (date: Date) =>
-  new Intl.DateTimeFormat("en", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+const news = await getNews();
 ---
 
 <Product
@@ -28,9 +18,7 @@ const dateLabel = (date: Date) =>
     {news.map(({ id, data }) => (
       <li>
         <p class="news-meta">
-          <time datetime={data.date.toISOString().slice(0, 10)}>
-            {dateLabel(data.date)}
-          </time>
+          <time datetime={newsDate(data.date)}>{newsDateLabel(data.date)}</time>
           <span>
             {data.status === "upcoming" ? "Next release" : "Available"}
           </span>

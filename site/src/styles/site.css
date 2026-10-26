@@ -164,6 +164,12 @@ button:focus-visible {
   outline: 2px solid var(--fm-ink);
   outline-offset: 4px;
 }
+html:has(.product-page) {
+  --fm-content-width: 48rem;
+}
+html:has(.product-page) .main-frame {
+  padding-inline-start: 0;
+}
 html:has(.product-page) .content-panel:first-child {
   padding: 0;
   border: 0;
@@ -232,6 +238,35 @@ html:has(.product-page) .main-pane > main > .content-panel > .sl-container {
 .home-drag p {
   margin-top: 0.4rem;
   font-size: 0.9375rem;
+}
+.home-news {
+  padding-block: 2rem;
+  border-top: 1px solid var(--fm-rule);
+}
+.home-news-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.home-news ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.home-news li {
+  display: grid;
+  grid-template-columns: 11ch minmax(0, 1fr);
+  gap: 1.25rem;
+  padding-block: 0.4rem;
+  font-size: 0.9375rem;
+}
+.home-news time {
+  color: var(--fm-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .product-page:has(.home-intro) {
   min-height: calc(100svh - 16rem);
@@ -556,14 +591,6 @@ html:has(.product-page) .main-pane > main > .content-panel > .sl-container {
     display: inline-flex;
     align-items: center;
     min-height: 2.75rem;
-  }
-}
-@media (min-width: 50rem) and (max-width: 71.999rem) {
-  html:has(.product-page) .main-frame {
-    padding-inline-start: var(--sl-sidebar-width);
-  }
-  html:has(.product-page) .main-pane > main > .content-panel > .sl-container {
-    margin-inline: 0;
   }
 }
 @media (min-width: 72rem) {

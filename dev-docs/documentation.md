@@ -56,7 +56,7 @@ node scripts/preview-site.mjs
 - **Guides:** edit `user-docs/*.md`; add new pages to `user-docs/pages.json`. The same Markdown renders on GitHub and the website; do not maintain a second HTML copy.
 - **Download:** edit `site/src/content/download/*.md` (macOS, Windows, Windows installer notes and Ubuntu). Markdown owns headings, instructions, tables and shell commands. Fenced `sh` blocks get the same copy controls as guides. Keep Ubuntu last and preserve the explicit legacy anchors.
 - `site/src/pages/download.astro` owns the dynamic release button/name and availability gates from `site.json`. Update those values through the release process; Markdown edits do not publish app binaries.
-- **News:** add a dated `.md` file to `site/src/content/news/`. It appears in `/news/`, linked from every footer, and gets its own `/news/<filename>/` route.
+- **News:** add a dated `.md` file to `site/src/content/news/`. The homepage automatically lists the five newest dates and titles. Each article appears in `/news/`, linked from every footer, and gets its own `/news/<filename>/` route.
 
 ```yaml
 ---
@@ -74,7 +74,7 @@ status: upcoming
 
 - Product design reference: [Ollama](https://ollama.com/), reviewed 2026-10-21. Use plain monochrome surfaces, left-aligned content, restrained type sizes, generous whitespace and a compact navigation bar.
 - Keep product copy functional: feature names, supported formats, requirements and release status. Avoid repeated slogans and decorative section labels.
-- Product pages and guides share the reading-column width and position in `site/src/styles/site.css`. Guide pagination uses small text links between published guides.
+- Product pages use a centered reading column; guides reserve space for visible navigation. Intermediate widths must not reserve a guide sidebar on product pages. Shared styles live in `site/src/styles/site.css`. Guide pagination uses small text links between published guides.
 - All content pages use the shared product footer, including downloads, guides, and 404. Guide pagination stays above the footer.
 - Keep Features, Guide, and Download in the header. The footer links to News, Declaration and Issues; GitHub appears there only when hidden in the header.
 - Website appearance initially follows the OS. The sun/moon button toggles light/dark and remembers the choice in `starlight-theme`; clearing that preference restores automatic detection.

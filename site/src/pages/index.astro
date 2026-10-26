@@ -1,9 +1,11 @@
 ---
+import { getNews, newsDate } from "../data/news";
 import Product from "../layouts/Product.astro";
 import { href, guide } from "../data/links";
 import config from "../data/site.json";
 import { Image } from "astro:assets";
 import dragFromPdf from "../../public/assets/demos/drag-from-pdf.webp";
+const news = (await getNews()).slice(0, 5);
 const title = "The Ultimate Drag-and-Drop Equations Workspace.";
 const description =
   "Easily paste equations from your LaTeX paper source into PowerPoint (.pptx) as SVG.";
@@ -58,4 +60,20 @@ const description =
       </p>
     </figcaption>
   </figure>
+  {news.length > 0 && (
+    <section class="home-news" aria-labelledby="home-news-title">
+      <div class="home-news-heading">
+        <h2 id="home-news-title">News</h2>
+        <a href={href("news/")}>All news →</a>
+      </div>
+      <ul role="list">
+        {news.map(({ id, data }) => (
+          <li>
+            <time datetime={newsDate(data.date)}>{newsDate(data.date)}</time>
+            <a href={href(`news/${id}/`)}>{data.title}</a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
 </Product>
