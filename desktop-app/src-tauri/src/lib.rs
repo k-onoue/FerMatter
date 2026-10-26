@@ -65,6 +65,26 @@ fn close_jobs(runtime: &Runtime, label: &str) {
         }
     });
 }
+fn reveal_command(path: &Path) -> std::process::Command {
+    #[cfg(target_os = "macos")]
+    {
+        let mut command = std::process::Command::new("/usr/bin/open");
+        command.arg("-R").arg(path);
+        command
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        // xdg-open cannot select an item, so open the folder that holds it.
+        let folder = if path.is_dir() {
+            path
+        } else {
+            path.parent().unwrap_or(path)
+        };
+        let mut command = std::process::Command::new("xdg-open");
+        command.arg(folder);
+        command
+    }
+}
 #[tauri::command]
 async fn request(
     app: tauri::AppHandle,
@@ -250,9 +270,7 @@ fn dispatch(
             runtime.settings.snapshot("instant.json", false)
         }
         "reveal_instant_configuration" => {
-            std::process::Command::new("/usr/bin/open")
-                .arg("-R")
-                .arg(store.home.join("Settings/instant.json"))
+            reveal_command(&store.home.join("Settings/instant.json"))
                 .spawn()
                 .map_err(err)?;
             Ok(Value::Null)
@@ -387,11 +405,7 @@ fn dispatch(
                     safe(&root, string(&v, "path"))?
                 }
             };
-            std::process::Command::new("/usr/bin/open")
-                .arg("-R")
-                .arg(path)
-                .spawn()
-                .map_err(err)?;
+            reveal_command(&path).spawn().map_err(err)?;
             Ok(Value::Null)
         }
         "settings" => {
@@ -955,5 +969,27 @@ mod request_tests {
         assert!(instant.check().is_err());
         assert!(main.check().is_ok());
         assert_eq!(runtime.jobs.lock().unwrap().len(), 1);
+    }
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn reveal_selects_the_item_in_finder_on_macos() {
+        let temp = tempfile::tempdir().unwrap();
+        let file = temp.path().join("instant.json");
+        let command = reveal_command(&file);
+        assert_eq!(command.get_program(), "/usr/bin/open");
+        let args: Vec<_> = command.get_args().collect();
+        assert_eq!(args, [std::ffi::OsStr::new("-R"), file.as_os_str()]);
+    }
+    #[cfg(not(target_os = "macos"))]
+    #[test]
+    fn reveal_opens_the_containing_folder_elsewhere() {
+        let temp = tempfile::tempdir().unwrap();
+        let file = temp.path().join("instant.json");
+        fs::write(&file, "{}").unwrap();
+        let for_file = reveal_command(&file);
+        let for_folder = reveal_command(temp.path());
+        assert_eq!(for_file.get_program(), "xdg-open");
+        assert_eq!(for_file.get_args().collect::<Vec<_>>(), [temp.path()]);
+        assert_eq!(for_folder.get_args().collect::<Vec<_>>(), [temp.path()]);
     }
 }

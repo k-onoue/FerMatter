@@ -1,3 +1,4 @@
+import { FILE_MANAGER } from "./platform";
 import { registerWindowFlush } from "./persistence";
 import { installWindowPersistence } from "./windowPersistence";
 import { WindowControls } from "./WindowControls";
@@ -838,7 +839,7 @@ export default function InstantWindow() {
                         </button>
                         <span className="spacer" />
                         <button
-                          title="Show instant.json in Finder"
+                          title={`Show instant.json in ${FILE_MANAGER}`}
                           aria-label="Show settings file"
                           onClick={() =>
                             void rpc("reveal_instant_configuration").catch(
