@@ -30,6 +30,7 @@ mod toolchain;
 pub mod verification;
 #[cfg(target_os = "macos")]
 mod wallpaper;
+mod window_appearance;
 #[cfg(windows)]
 mod windows_native;
 use files::*;
@@ -113,6 +114,20 @@ async fn request(
             payload["token"].as_u64().unwrap_or(0),
             string(&payload, "error"),
         )?;
+        return Ok(Value::Null);
+    }
+    if operation == "apply_window_appearance" {
+        let label = window.label().to_owned();
+        return tauri::async_runtime::spawn_blocking(move || {
+            window_appearance::apply(&app, &label, &payload)?;
+            Ok(Value::Null)
+        })
+        .await
+        .map_err(err)?;
+    }
+    if operation == "projects_open" {
+        resident::show_projects(&app);
+        app.emit_to("main", "projects-open", ()).map_err(err)?;
         return Ok(Value::Null);
     }
     let runtime = state.inner().clone();

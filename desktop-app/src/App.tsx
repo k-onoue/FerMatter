@@ -1,5 +1,6 @@
 import {
   FILE_MANAGER,
+  isMacOS,
   isMacUserAgent,
   primaryModifier,
   shortcutHint,
@@ -611,6 +612,24 @@ export default function App() {
       release();
     }
   }
+  const showProjectsCommand = useRef(showProjects);
+  showProjectsCommand.current = showProjects;
+  useEffect(() => {
+    let stopped = false;
+    let unlisten: (() => void) | undefined;
+    void listen("projects-open", () => {
+      if (!stopped) void showProjectsCommand.current().catch(report);
+    })
+      .then((stop) => {
+        if (stopped) stop();
+        else unlisten = stop;
+      })
+      .catch(report);
+    return () => {
+      stopped = true;
+      unlisten?.();
+    };
+  }, []);
   async function selectWorkspace(id: string | null) {
     if (id === projectRef.current?.id || (!id && !projectRef.current)) return;
     if (!id) return showProjects();
@@ -1525,7 +1544,7 @@ export default function App() {
           style={{ backgroundImage: `url(${desktopBackground})` }}
         />
       )}
-      <div className="titlebar" data-tauri-drag-region />
+      {isMacOS() && <div className="titlebar" data-tauri-drag-region />}
       {ready && !setupRequired && (
         <div className="workspace-bar">
           <WorkspaceTabs

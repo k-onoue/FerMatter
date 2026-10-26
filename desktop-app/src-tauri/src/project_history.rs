@@ -111,9 +111,104 @@ fn identity(path: &Path) -> Result<String> {
         use std::os::unix::fs::MetadataExt;
         Ok(format!("{}:{}", metadata.dev(), metadata.ino()))
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    {
+        windows_identity::read(path)
+    }
+    #[cfg(not(any(unix, windows)))]
     {
         Ok(format!("{:?}", metadata.created().map_err(err)?))
+    }
+}
+#[cfg(windows)]
+mod windows_identity {
+    use super::*;
+    use std::{ffi::c_void, os::windows::fs::OpenOptionsExt, os::windows::io::AsRawHandle};
+
+    #[repr(C)]
+    #[derive(Default)]
+    struct FileTime {
+        low: u32,
+        high: u32,
+    }
+    #[repr(C)]
+    #[derive(Default)]
+    struct FileInformation {
+        attributes: u32,
+        created: FileTime,
+        accessed: FileTime,
+        written: FileTime,
+        volume: u32,
+        size_high: u32,
+        size_low: u32,
+        links: u32,
+        index_high: u32,
+        index_low: u32,
+    }
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetFileInformationByHandle(
+            handle: *mut c_void,
+            information: *mut FileInformation,
+        ) -> i32;
+        #[cfg(test)]
+        fn SetFileTime(
+            handle: *mut c_void,
+            created: *const FileTime,
+            accessed: *const FileTime,
+            written: *const FileTime,
+        ) -> i32;
+    }
+    fn open(path: &Path, access: u32) -> Result<fs::File> {
+        fs::OpenOptions::new()
+            .access_mode(access)
+            .share_mode(1 | 2 | 4) // FILE_SHARE_READ | WRITE | DELETE
+            .custom_flags(0x0200_0000 | 0x0020_0000) // BACKUP_SEMANTICS | OPEN_REPARSE_POINT
+            .open(path)
+            .map_err(err)
+    }
+    pub(super) fn read(path: &Path) -> Result<String> {
+        let directory = open(path, 0)?;
+        let mut information = FileInformation::default();
+        if unsafe { GetFileInformationByHandle(directory.as_raw_handle(), &mut information) } == 0 {
+            return Err(err(std::io::Error::last_os_error()));
+        }
+        if information.attributes & 0x10 == 0 || information.attributes & 0x400 != 0 {
+            return Err("The project folder was replaced or moved.".into());
+        }
+        let file_id = (u64::from(information.index_high) << 32) | u64::from(information.index_low);
+        if file_id == 0 {
+            return Err("Windows could not identify this project folder safely.".into());
+        }
+        let created =
+            (u64::from(information.created.high) << 32) | u64::from(information.created.low);
+        // Creation times can be inherited by replacements through NTFS tunneling.
+        // Timestamp-only history from older Windows previews fails closed against
+        // this explicit handle-identity format instead of authorizing a move.
+        Ok(format!(
+            "windows:{}:{file_id}:{created}",
+            information.volume
+        ))
+    }
+    #[cfg(test)]
+    pub(super) fn set_creation_time(path: &Path, ticks: u64) -> Result<()> {
+        let directory = open(path, 0x100)?; // FILE_WRITE_ATTRIBUTES
+        let created = FileTime {
+            low: ticks as u32,
+            high: (ticks >> 32) as u32,
+        };
+        if unsafe {
+            SetFileTime(
+                directory.as_raw_handle(),
+                &created,
+                std::ptr::null(),
+                std::ptr::null(),
+            )
+        } == 0
+        {
+            return Err(err(std::io::Error::last_os_error()));
+        }
+        Ok(())
     }
 }
 impl History {
@@ -546,5 +641,72 @@ mod tests {
         let mut reloaded = History::load(&store).unwrap();
         reloaded.travel(&store, false, trash).unwrap();
         assert!(root.is_dir() && second.is_dir());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_undo_rejects_a_replacement_with_the_exact_original_creation_time() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Storage::new(temp.path().join("Data"), temp.path().join("Legacy")).unwrap();
+        let root = temp.path().join("Created");
+        fs::create_dir(&root).unwrap();
+        let mut history = History::default();
+        history
+            .record_created(&store, vec![root.clone()], "New Project")
+            .unwrap();
+        let original_identity = identity(&root).unwrap();
+        assert!(original_identity.starts_with("windows:"));
+        let created = fs::metadata(&root).unwrap().created().unwrap();
+        let moved = temp.path().join("Moved");
+        fs::rename(&root, &moved).unwrap();
+        assert_eq!(identity(&moved).unwrap(), original_identity);
+        fs::create_dir(&root).unwrap();
+
+        // Reproduce the timestamp collision deterministically, even when NTFS
+        // tunneling does not happen on this particular runner or volume.
+        let ticks = created
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+            / 100
+            + 116_444_736_000_000_000;
+        windows_identity::set_creation_time(&root, ticks as u64).unwrap();
+        assert_eq!(fs::metadata(&root).unwrap().created().unwrap(), created);
+        assert_ne!(identity(&root).unwrap(), original_identity);
+        assert!(history
+            .travel(&store, false, |_| panic!("must not touch replacement"))
+            .unwrap_err()
+            .contains("replaced"));
+        assert!(root.is_dir() && moved.is_dir());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_timestamp_only_history_is_preserved_and_refused() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Storage::new(temp.path().join("Data"), temp.path().join("Legacy")).unwrap();
+        let root = temp.path().join("Created");
+        fs::create_dir(&root).unwrap();
+        let mut history = History::default();
+        history
+            .record_created(&store, vec![root.clone()], "New Project")
+            .unwrap();
+        let path = store.home.join("ProjectHistory.json");
+        let mut saved = json_read(&path).unwrap();
+        saved["undo"][0]["items"][0]["identity"] = json!(format!(
+            "{:?}",
+            fs::metadata(&root).unwrap().created().unwrap()
+        ));
+        json_write(&path, &saved).unwrap();
+        let bytes = fs::read(&path).unwrap();
+        let mut restored = History::load(&store).unwrap();
+        assert!(restored
+            .travel(&store, false, |_| panic!(
+                "legacy timestamp must not authorize a move"
+            ))
+            .unwrap_err()
+            .contains("replaced"));
+        assert!(root.is_dir());
+        assert_eq!(fs::read(&path).unwrap(), bytes);
     }
 }

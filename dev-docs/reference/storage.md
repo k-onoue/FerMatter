@@ -38,6 +38,7 @@
 - New projects, Finder drops, ZIP imports and duplication use `preferences.json.projectDirectory`; missing/empty values use `~/Documents/Mathlidelux/`. New Project can override the parent folder once.
 - Folder drops copy originals, including hidden/Git files. Existing direct children are opened in place. Reject links/special files, destination-inside-source, oversize inputs and invalid projects before publication; stage copies and publish without replacing names.
 - `ProjectHistory.json` preserves undo/redo groups across launches. Deletion uses Finder Trash and records resulting paths; source folder identity checks and no-replace moves protect external replacements. `ProjectHistoryData/` retains metadata, variants, Source drafts and Instant sessions for restoration, including when a new project reuses a deleted project’s path.
+- Windows history now checks the directory's volume/file ID. Timestamp-only history from early Windows previews is preserved but refused by Undo/Redo; folders and recovery data remain untouched.
 - Duplicates retain independent project JSON and saved drafts/Instant history; rendered artifacts can be reused from the retained original metadata cache.
 - Existing legacy `Sources/` and `Imports/` folders remain valid and are not moved/deleted.
 

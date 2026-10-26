@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import {
   fileManagerName,
+  isMacOS,
   isMacUserAgent,
   primaryModifier,
   shortcutHint,
@@ -10,6 +11,23 @@ import type { Keybindings } from "./types";
 afterEach(() => {
   vi.restoreAllMocks();
   vi.resetModules();
+});
+
+it("reserves the overlay titlebar only for macOS", () => {
+  vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+  expect(isMacOS()).toBe(true);
+  vi.spyOn(navigator, "platform", "get").mockReturnValue("Win32");
+  expect(isMacOS()).toBe(false);
+  vi.spyOn(navigator, "platform", "get").mockReturnValue("Linux x86_64");
+  expect(isMacOS()).toBe(false);
+});
+
+it("recognizes macOS from the user agent when the platform is unavailable", () => {
+  vi.spyOn(navigator, "platform", "get").mockReturnValue("");
+  vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+  );
+  expect(isMacOS()).toBe(true);
 });
 
 it("names Finder on macOS and a generic file manager on Windows and Linux", () => {

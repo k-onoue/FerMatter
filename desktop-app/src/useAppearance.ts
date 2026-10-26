@@ -1,9 +1,13 @@
 import { useEffect } from "react";
 import { palette } from "./appearance";
 import { configureTheme } from "./editor";
+import { rpc } from "./api";
+import { logError } from "./log";
+import { isMacOS } from "./platform";
 import type { Theme } from "./types";
 
 export function useAppearance(theme: Theme, dark: boolean, opacity: number) {
+  const background = palette(theme, dark).windowBackground;
   useEffect(() => {
     const colors = palette(theme, dark);
     configureTheme(colors, dark);
@@ -14,4 +18,11 @@ export function useAppearance(theme: Theme, dark: boolean, opacity: number) {
     // Keep WebKit's canvas transparent: root color-scheme would paint an opaque
     // background. Only surfaces use opacity; text remains fully opaque.
   }, [theme, dark, opacity]);
+
+  useEffect(() => {
+    if (isMacOS()) return;
+    void rpc("apply_window_appearance", { dark, background }).catch((error) =>
+      logError("window.appearance", error),
+    );
+  }, [dark, background]);
 }
