@@ -583,6 +583,7 @@ mod tests {
             assert_eq!(store.artifact_dir(&source).unwrap(), source);
         }
     }
+    #[cfg(unix)]
     #[test]
     fn artifact_file_rejects_symlink_escaping_a_managed_folder() {
         let (temp, store) = managed_store("data", "legacy");
@@ -685,9 +686,12 @@ mod tests {
             let outside = temp.path().join("project");
             fs::create_dir_all(&outside).unwrap();
             assert!(store.register(&outside).is_ok());
-            let link = temp.path().join("settings-link");
-            std::os::unix::fs::symlink(store.home.join("Settings"), &link).unwrap();
-            assert!(store.register(&link).is_err());
+            #[cfg(unix)]
+            {
+                let link = temp.path().join("settings-link");
+                std::os::unix::fs::symlink(store.home.join("Settings"), &link).unwrap();
+                assert!(store.register(&link).is_err());
+            }
         }
         // Identical bases are current storage, without the legacy exception.
         let (_temp, store) = managed_store("data", "data");
