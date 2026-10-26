@@ -5,6 +5,16 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[cfg(windows)]
+pub fn default_directory() -> Result<PathBuf> {
+    // Documents may be redirected into OneDrive. Keep new Windows workspaces
+    // directly under the local user profile instead.
+    Ok(dirs::home_dir()
+        .ok_or("User profile folder is unavailable")?
+        .join("FerMatter"))
+}
+
+#[cfg(not(windows))]
 pub fn default_directory() -> Result<PathBuf> {
     let documents = dirs::document_dir();
     // Minimal Linux installations may not define XDG_DOCUMENTS_DIR.
@@ -171,6 +181,17 @@ pub fn copy_folder(source: &Path, parent: &Path, name: &str) -> Result<PathBuf> 
 
 #[cfg(test)]
 mod tests {
+    #[cfg(windows)]
+    #[test]
+    fn windows_default_uses_the_local_profile_without_replacing_saved_paths() {
+        let profile = dirs::home_dir().unwrap();
+        assert_eq!(default_directory().unwrap(), profile.join("FerMatter"));
+        let saved = profile.join("OneDrive/Documents/Mathlidelux");
+        assert_eq!(
+            directory(&serde_json::json!({"projectDirectory":saved}), "").unwrap(),
+            saved
+        );
+    }
     #[cfg(windows)]
     #[test]
     fn windows_project_creation_rejects_parent_paths_and_device_aliases() {

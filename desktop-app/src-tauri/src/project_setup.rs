@@ -177,10 +177,27 @@ fn prepare(store: &Storage, directory: &Path) -> Result<Setup> {
     rename_no_replace(stage.path(), &setup.demos)?;
     Ok(setup)
 }
+#[cfg(windows)]
+fn create_default_directory(store: &Storage, chosen: &Path, default: &Path) -> Result<()> {
+    if chosen != default || chosen.exists() {
+        return Ok(());
+    }
+    if load(store)?.is_some_and(|setup| setup.complete) {
+        return Err("Project setup is already complete. Change the folder in Settings.".into());
+    }
+    // Validate before creating the default folder. Application storage must
+    // never become a project root.
+    store.check_project_parent(chosen)?;
+    fs::create_dir_all(chosen).map_err(err)
+}
 pub fn finish(store: &Storage, settings: &SettingsFiles, chosen: &str) -> Result<Value> {
     project_location::validate_path(chosen)?;
     if chosen.is_empty() {
         return Err("Choose a project folder to continue.".into());
+    }
+    #[cfg(windows)]
+    if let Ok(default) = project_location::default_directory() {
+        create_default_directory(store, Path::new(chosen), &default)?;
     }
     let directory = Path::new(chosen).canonicalize().map_err(err)?;
     if !directory.is_dir() {
@@ -266,6 +283,30 @@ mod tests {
         fs::create_dir_all(base).unwrap();
         fs::write(&zip, bytes).unwrap();
         storage::import_zip(&zip, base).unwrap()
+    }
+    #[cfg(windows)]
+    #[test]
+    fn windows_default_is_created_on_setup_without_moving_existing_work() {
+        let temp = tempfile::tempdir().unwrap();
+        let (store, settings) = store(temp.path());
+        let default = temp.path().join("Profile/FerMatter");
+        let manual = temp.path().join("Missing manual folder");
+        create_default_directory(&store, &manual, &default).unwrap();
+        assert!(!manual.exists());
+        let inside = store.home.join("FerMatter");
+        assert!(create_default_directory(&store, &inside, &inside).is_err());
+        assert!(!inside.exists());
+        let old = temp.path().join("OneDrive/Documents/Mathlidelux");
+        fs::create_dir_all(&old).unwrap();
+        fs::write(old.join("keep.typ"), "$x$").unwrap();
+        create_default_directory(&store, &default, &default).unwrap();
+        let result = finish(&store, &settings, default.to_str().unwrap()).unwrap();
+        assert_eq!(result["projects"].as_array().unwrap().len(), 4);
+        assert_eq!(fs::read(old.join("keep.typ")).unwrap(), b"$x$");
+        assert!(default.join("Demos/demo-typst/main.typ").is_file());
+        let other_default = temp.path().join("Another default");
+        assert!(create_default_directory(&store, &other_default, &other_default).is_err());
+        assert!(!other_default.exists());
     }
     #[test]
     fn first_launch_requires_a_folder_and_installs_all_demos_once() {

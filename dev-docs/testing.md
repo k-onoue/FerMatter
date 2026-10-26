@@ -29,7 +29,7 @@
 ```powershell
 ./desktop-app/scripts/check-windows.ps1
 ./desktop-app/scripts/build-windows.ps1
-./desktop-app/scripts/verify-windows-install.ps1 -Installer ./desktop-app/build/windows/FerMatter_0.11.0_windows_x64_preview.3_unsigned_setup.exe -CheckCompilers
+./desktop-app/scripts/verify-windows-install.ps1 -Installer ./desktop-app/build/windows/FerMatter_0.11.0_windows_x64_preview.4_unsigned_setup.exe -CheckCompilers
 ```
 
 - `check-windows.ps1` builds/tests the frontend, runs Rust tests and clippy, and verifies all four synthetic compiler projects. `-SkipCompilers` is an explicit development-only skip; it is not release evidence.

@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Default new Windows workspaces to the local user profile's FerMatter folder, outside OneDrive, and create it when initial setup finishes; preserve existing saved locations.
+
 - Apply native titlebar spacing and appearance synchronization in Linux source builds.
 
 - Share a compact footer across all pages, with guide pagination above it and GitHub shown there only when absent from the header.
