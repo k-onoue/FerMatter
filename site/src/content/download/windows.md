@@ -1,6 +1,6 @@
 ---
-title: "Windows (preview)"
-description: "Windows preview installation and rendering tools."
+title: "Windows"
+description: "Windows installation and rendering tools."
 platform: "Windows 11 · x64"
 availability: "The Windows installer is being validated. Downloads will appear here when ready."
 ---
@@ -42,5 +42,3 @@ tlmgr install latexmk pdfcrop preview pgf mathtools tools cm-super standalone xc
 <h3 id="windows-update">Update</h3>
 
 Quit FerMatter from its tray menu and run the newer installer. Projects and settings are preserved.
-
-This preview has no recoverable project deletion, screen eyedropper or MCP/CLI.

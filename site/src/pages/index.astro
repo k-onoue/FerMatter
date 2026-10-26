@@ -30,11 +30,12 @@ const description =
       </a>
     </div>
     <p class="availability">
-      macOS · Apple Silicon
-      <br />
-      {config.windowsReleaseAvailable
-        ? "Windows 11 · x64 preview"
-        : "Windows version in development."}
+      <span>macOS · Apple Silicon</span>
+      <span>
+        {config.windowsReleaseAvailable
+          ? "Windows 11 · x64"
+          : "Windows version in development."}
+      </span>
     </p>
   </section>
   <figure class="home-drag">
