@@ -5,7 +5,7 @@ date: 2026-10-26
 status: upcoming
 ---
 
-These changes are planned for the next release. The current download, **0.11.0 Preview 4**, does not include them yet.
+The Library extraction controls below are planned for the next app release and are not included in **0.11.0 Preview 4**. See [Download](https://fermatter.github.io/download/) for current platform-specific installers.
 
 ## Choose what appears in your Library
 
@@ -17,11 +17,11 @@ See the [Card extraction guide](https://fermatter.github.io/guide/extraction/) f
 
 ## Windows preview preparation
 
-Windows 11 x64 support and EXE packaging have been merged in [PR #109](https://github.com/k-onoue/FerMatter/pull/109). The unsigned installer is being validated; the Download page will show it when ready. ARM64 and 32-bit installers are not included.
+Windows 11 x64 support and EXE packaging have been merged in [PR #109](https://github.com/k-onoue/FerMatter/pull/109). ARM64 and 32-bit installers are not included.
 
 Library and Source also share consistent toolbar icon alignment across desktop platforms.
 
-See [Windows installation and rendering tools](https://fermatter.github.io/download/#windows) for setup and current limitations.
+See [Windows installation and rendering tools](https://fermatter.github.io/download/#windows) for installer availability, setup and current limitations.
 
 ## Reveal files on Linux
 
