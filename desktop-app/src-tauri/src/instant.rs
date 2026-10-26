@@ -178,7 +178,8 @@ pub fn source(draft: &Value) -> Result<(String, String, Value)> {
     Ok((main.into(), format!("{prefix}\n{body}\n{after}"), card))
 }
 
-pub fn render(home: &Path, draft: &Value, cancel: &compiler::Cancellation) -> Result<Value> {
+pub fn render(store: &Storage, draft: &Value, cancel: &compiler::Cancellation) -> Result<Value> {
+    let home = &store.home;
     if draft["requiresRender"] == true {
         return Err("Press Render to compile imported source.".into());
     }
@@ -207,6 +208,7 @@ pub fn render(home: &Path, draft: &Value, cancel: &compiler::Cancellation) -> Re
     }
     card["restoreMetadata"] = crate::roundtrip::recipe(draft, draft["restorationProject"].clone());
     let path = export::image_file(
+        store,
         &card,
         string(draft, "exportFormat"),
         draft["fontSize"].as_f64().unwrap(),
@@ -326,6 +328,7 @@ pub fn render_project(
     card["restoreMetadata"] =
         crate::roundtrip::recipe(&portable, crate::roundtrip::reference(store, &p)?);
     let path = export::image_file(
+        store,
         &card,
         string(draft, "exportFormat"),
         draft["fontSize"].as_f64().unwrap(),

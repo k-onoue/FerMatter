@@ -186,6 +186,7 @@ pub fn finish(store: &Storage, settings: &SettingsFiles, chosen: &str) -> Result
     if !directory.is_dir() {
         return Err("Choose a project folder to continue.".into());
     }
+    store.check_project_parent(&directory)?;
     let previous = load(store)?;
     if previous.as_ref().is_some_and(|p| p.complete) {
         return Err("Project setup is already complete. Change the folder in Settings.".into());
@@ -295,6 +296,20 @@ mod tests {
         let restarted = Storage::new(store.home.clone(), store.legacy.clone()).unwrap();
         assert!(!required(&restarted).unwrap());
         assert_eq!(restarted.recent().unwrap().len(), 4);
+    }
+    #[test]
+    fn setup_refuses_a_folder_inside_application_storage_before_publishing_demos() {
+        let temp = tempfile::tempdir().unwrap();
+        let (store, settings) = store(temp.path());
+        let inside = store.home.join("Chosen");
+        fs::create_dir(&inside).unwrap();
+        assert!(finish(&store, &settings, inside.to_str().unwrap()).is_err());
+        assert!(fs::read_dir(&inside).unwrap().next().is_none());
+        assert!(!store.home.join("Setup.json").exists());
+        assert!(required(&store).unwrap());
+        let outside = temp.path().join("Chosen");
+        fs::create_dir(&outside).unwrap();
+        assert!(finish(&store, &settings, outside.to_str().unwrap()).is_ok());
     }
     #[test]
     fn existing_demos_folder_is_not_overwritten() {

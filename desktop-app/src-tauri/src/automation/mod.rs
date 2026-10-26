@@ -167,7 +167,7 @@ impl Service<'_> {
                 let result = if let Some(p) = &p {
                     instant::render_project(self.store, string(p, "id"), &draft, cancel)
                 } else {
-                    instant::render(&self.store.home, &draft, cancel)
+                    instant::render(self.store, &draft, cancel)
                 }
                 .map_err(|e| {
                     if cancel.check().is_err() {
@@ -542,6 +542,7 @@ impl Service<'_> {
                 card["restoreMetadata"]["draft"]["fontSize"] = json!(size);
             }
             let source = export::image_file(
+                self.store,
                 &card,
                 format,
                 size,
@@ -555,8 +556,14 @@ impl Service<'_> {
             ));
             fs::copy(&source, &dest).map_err(err)?;
             let preview = output.path().join(format!("{:03}-preview.png", index + 1));
-            fs::copy(string(&card, "pngPath"), &preview).map_err(err)?;
-            let svg = read_bounded(Path::new(string(&card, "svgPath")), ARTIFACT_LIMIT)?;
+            let png = self
+                .store
+                .artifact_file(Path::new(string(&card, "pngPath")))?;
+            fs::copy(png, &preview).map_err(err)?;
+            let svg = self
+                .store
+                .artifact_file(Path::new(string(&card, "svgPath")))?;
+            let svg = read_bounded(&svg, ARTIFACT_LIMIT)?;
             let tree = resvg::usvg::Tree::from_data(&svg, &resvg::usvg::Options::default())
                 .map_err(err)?;
             let scale = size / card["sourceFontSize"].as_f64().unwrap_or(11.);

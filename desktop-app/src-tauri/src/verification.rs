@@ -91,12 +91,14 @@ pub fn verify_installed_instant(output: &Path) -> Result<Value> {
             .unwrap();
         let home = workspace.join(id);
         let _cache = crate::cache::Cache::new(&home);
+        let store = crate::storage::Storage::new(home.clone(), home.join("Legacy"))?;
         let cancellation = compiler::Cancellation::with_tools(tools.clone());
         let draft = json!({"source":source,"kind":"block","fontSize":24,"color":"#000000","exportFormat":"svg","template":template});
-        let rendered = crate::instant::render(&home, &draft, &cancellation)?;
+        let rendered = crate::instant::render(&store, &draft, &cancellation)?;
         let mut artifacts = serde_json::Map::new();
         for format in ["svg", "png", "pdf"] {
             let path = crate::export::image_file(
+                &store,
                 &rendered["card"],
                 format,
                 24.,
@@ -186,6 +188,8 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
     // older fixture or render cache. Failures retain their workspace as evidence.
     let output = fresh_workspace(&report_folder)?;
     let _cache = crate::cache::Cache::new(&output);
+    // Exports accept only artifacts under managed storage folders.
+    let store = crate::storage::Storage::new(output.clone(), output.join("Legacy"))?;
     let expected: Value =
         serde_json::from_str(include_str!("../../tests/fixtures/extraction.json")).map_err(err)?;
     let mut results = vec![];
@@ -309,12 +313,17 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
             return Err("PDF drag did not preserve its compiled source".into());
         }
         for format in ["svg", "png", "jpeg", "pdf"] {
-            crate::export::image_file(&artwork, format, 24., &project_dir.join("Exports"))?;
+            crate::export::image_file(&store, &artwork, format, 24., &project_dir.join("Exports"))?;
         }
         for card in &cards {
             for format in ["svg", "png", "jpeg", "pdf"] {
-                let path =
-                    crate::export::image_file(card, format, 0., &project_dir.join("Exports"))?;
+                let path = crate::export::image_file(
+                    &store,
+                    card,
+                    format,
+                    0.,
+                    &project_dir.join("Exports"),
+                )?;
                 if fs::metadata(path).map_err(err)?.len() == 0 {
                     return Err("Empty export".into());
                 }
@@ -380,7 +389,7 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
         }
         // Verify resized vector PDF output independently of the UI.
         let scaled =
-            crate::export::image_file(&cards[0], "pdf", 24., &project_dir.join("Exports"))?;
+            crate::export::image_file(&store, &cards[0], "pdf", 24., &project_dir.join("Exports"))?;
         let scaled_pdf = lopdf::Document::load(scaled).map_err(err)?;
         if scaled_pdf.get_pages().len() != 1 {
             return Err("Scaled PDF must contain one page".into());
@@ -393,7 +402,7 @@ pub fn verify_examples(repository: &Path, output: &Path) -> Result<Value> {
         json_write(&project_dir.join("verification-document.json"), &document)?;
         results.push(json!({"project":name,"cards":cards.len(),"headings":scanned["outline"].as_array().unwrap().len(),"anchors":document["anchors"].as_array().unwrap().len(),"pdf":document["pdfPath"]}));
     }
-    verify_instant(&output)?;
+    verify_instant(&store)?;
     verify_project_instant(&output)?;
     verify_zip_compiler_defaults(&output)?;
     crate::automation::verification::run(&output)?;
@@ -648,8 +657,9 @@ fn verify_project_instant(output: &Path) -> Result<()> {
         &json!(reports),
     )
 }
-fn verify_instant(output: &Path) -> Result<()> {
+fn verify_instant(store: &crate::storage::Storage) -> Result<()> {
     use crate::{export, instant};
+    let output = store.home.as_path();
     let latex = "\\documentclass[12pt]{article}\n\\usepackage{amsmath,amssymb}\n\\newcommand{\\vect}[1]{\\mathbf{#1}}\n\\begin{document}\n{{content}}\n\\end{document}";
     let typst = "#set text(size: 12pt)\n#let square(x) = $x^2$\n{{content}}\n";
     let tikz = latex.replace("\\begin{document}", "\\usepackage{tikz}\n\\begin{document}");
@@ -689,13 +699,14 @@ fn verify_instant(output: &Path) -> Result<()> {
     ] {
         let mut draft = json!({"source":source,"kind":kind,"fontSize":24,"color":"#2356ab","exportFormat":"svg","template":{"id":name,"name":name,"format":format,"source":template,"compiler":"pdflatex"}});
         let c = compiler::Cancellation::default();
-        let result = instant::render(output, &draft, &c)?;
+        let result = instant::render(store, &draft, &c)?;
         let card = &result["card"];
         if card["status"] != "ready" || card["sourceFontSize"].as_f64().unwrap_or(0.) <= 0. {
             return Err(format!("Instant {name}: no measured artwork"));
         }
         for format in ["svg", "pdf", "png", "jpeg"] {
-            let file = export::image_file(card, format, 36., &output.join("Instant/Exports"))?;
+            let file =
+                export::image_file(store, card, format, 36., &output.join("Instant/Exports"))?;
             if file.metadata().map_err(err)?.len() == 0 {
                 return Err(format!("Instant {name}: empty {format}"));
             }
@@ -703,12 +714,13 @@ fn verify_instant(output: &Path) -> Result<()> {
         if name == "latex" || name == "typst-display" {
             let mut colored = draft.clone();
             colored["color"] = json!("#dc2626");
-            let red = instant::render(output, &colored, &c)?;
+            let red = instant::render(store, &colored, &c)?;
             if red["path"] == result["path"] || red["card"]["svgPath"] == card["svgPath"] {
                 return Err(format!("Instant {name}: color reused old artwork"));
             }
             for (image, expected) in [(&result, [35u8, 86, 171]), (&red, [220u8, 38, 38])] {
                 let png = export::image_file(
+                    store,
                     &image["card"],
                     "png",
                     36.,
@@ -727,15 +739,15 @@ fn verify_instant(output: &Path) -> Result<()> {
             let svg = crate::roundtrip::read_svg(Path::new(string(&red, "path")))?;
             let recipe = crate::roundtrip::decode(&svg)?;
             let temp = tempfile::tempdir().map_err(err)?;
-            let store =
+            let scratch =
                 crate::storage::Storage::new(temp.path().join("data"), temp.path().join("legacy"))?;
-            let (_, restored) = crate::roundtrip::resolve(&store, &recipe)?;
+            let (_, restored) = crate::roundtrip::resolve(&scratch, &recipe)?;
             if restored["color"] != colored["color"] || restored["requiresRender"] != false {
                 return Err(format!(
                     "Instant {name}: restored draft is not ready to preview"
                 ));
             }
-            instant::render(output, &restored, &c)?;
+            instant::render(store, &restored, &c)?;
         }
         // A failed render must not return the previous successful image.
         draft["source"] = json!(if format == "latex" {
@@ -743,15 +755,15 @@ fn verify_instant(output: &Path) -> Result<()> {
         } else {
             "#unknown-instant-command("
         });
-        if instant::render(output, &draft, &c).is_ok() {
+        if instant::render(store, &draft, &c).is_ok() {
             return Err(format!(
                 "Instant {name}: invalid input unexpectedly rendered"
             ));
         }
         draft["source"] = json!(source);
-        instant::render(output, &draft, &c)?;
+        instant::render(store, &draft, &c)?;
         c.cancel();
-        if instant::render(output, &draft, &c).is_ok() {
+        if instant::render(store, &draft, &c).is_ok() {
             return Err("Instant: cancelled work returned an image".into());
         }
         reports.push(json!({"name":name,"card":card,"path":result["path"]}));

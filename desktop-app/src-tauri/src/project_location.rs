@@ -118,7 +118,7 @@ pub fn import(path: &Path, parent: &Path) -> Result<PathBuf> {
     )
 }
 
-fn resolve_destination(path: &Path) -> Result<PathBuf> {
+pub(crate) fn resolve_destination(path: &Path) -> Result<PathBuf> {
     if path.exists() {
         return path.canonicalize().map_err(err);
     }
