@@ -144,6 +144,21 @@ export function commandForEvent(event: KeyboardEvent, keys: Keybindings) {
     );
   }
 }
+// Mirror `keybindings` in src-tauri/src/settings.rs; the shared fixture
+// tests/fixtures/shortcut-rules.json keeps both validators in agreement.
+const ALLOWED_KEYS =
+  "abcdefghijklmnopqrstuvwxyz0123456789`-=[]\\;',./\t\uF700\uF701\uF702\uF703";
+const reservedKeys = () => (isWindows() ? "qwmh,cvxazsp " : "qwmh,cvxazsp \t");
+function isReserved(id: string, b: Binding) {
+  if (!b.command || b.control) return false;
+  if (!b.option && !b.shift)
+    return (
+      reservedKeys().includes(b.key) &&
+      !(id === "saveEquation" && b.key === "s")
+    );
+  if (b.shift && !b.option) return b.key === "z";
+  return b.option && !b.shift && b.key === "h";
+}
 export function validateBindings(value: Keybindings) {
   if (
     value.schemaVersion !== 1 ||
@@ -165,16 +180,15 @@ export function validateBindings(value: Keybindings) {
     )
       throw new Error("Shortcut modifiers must be true or false.");
     if (!b.key) continue;
-    if (b.key.length !== 1 || (!b.command && !b.control))
-      throw new Error("Use Command or Control with one key.");
     if (
-      (b.command &&
-        !b.control &&
-        !b.option &&
-        !b.shift &&
-        (isWindows() ? "qwmh,cvxazp " : "qwmh,cvxazp \t").includes(b.key)) ||
-      (b.command && b.shift && !b.control && !b.option && b.key === "z")
+      [...b.key].length !== 1 ||
+      !ALLOWED_KEYS.includes(b.key) ||
+      (!b.command && !b.control)
     )
+      throw new Error(
+        "Use Command or Control with a letter, number, symbol, or arrow.",
+      );
+    if (isReserved(command.id, b))
       throw new Error("Reserved for the system or text editing.");
     if (seen.some((a) => bindingEqual(a, b)))
       throw new Error(`Duplicate shortcut: ${command.name}`);
