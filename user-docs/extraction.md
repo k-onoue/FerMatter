@@ -3,7 +3,7 @@ title: "Card extraction"
 description: "Exclude tables or custom source environments from your Library."
 ---
 
-**Coming in the next release.** These settings are not included in 0.11.0 Preview 4.
+These settings are included in the [Windows download](https://fermatter.github.io/download/#windows). The current macOS and Linux downloads do not include them yet.
 
 ## Ignore tables
 

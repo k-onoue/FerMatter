@@ -12,9 +12,9 @@
   "homebrewCask": "fermatter/tap/fermatter",
   "ubuntuAptAvailable": true,
   "windowsReleaseAvailable": true,
-  "windowsReleaseTag": "v0.11.0-windows-preview.1",
-  "windowsReleaseName": "0.11.0 Windows Preview 1",
-  "windowsAssetName": "FerMatter_0.11.0_windows_x64_preview.1_unsigned_setup.exe",
+  "windowsReleaseTag": "v0.11.0-windows-preview.2",
+  "windowsReleaseName": "0.11.0",
+  "windowsAssetName": "FerMatter_0.11.0_windows_x64_preview.2_unsigned_setup.exe",
   "version": "0.11.0",
   "assetName": "FerMatter.dmg"
 }

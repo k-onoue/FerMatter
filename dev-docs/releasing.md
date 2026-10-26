@@ -3,10 +3,10 @@
 ## Current boundary
 
 - Development prototype: Apple Silicon; macOS 14+ deployment target, verified on macOS 26. Only compiler tools remain external; no Python runtime.
-- Public previews may be distributed with ad hoc signing and an explicit unnotarized label, as requested by the owner. Stable downloads still require Developer ID signing and notarization.
+- Public prereleases may be distributed with ad hoc signing as approved by the owner. Record signature/notarization state in release metadata and maintainer validation; stable downloads still require Developer ID signing and notarization.
 - [Packaging](reference/packaging.md) keeps ad hoc prototypes separate from an explicit Developer ID/notarization path. Production credentials and clean-Mac final-artifact validation are still required; no public release is implied. In-app update transport is not yet implemented.
 - Repository is private as of 2026-09-28; Pages is public. Test release access without authentication before advertising downloads.
-- Keep stable downloads disabled until all public-release checks pass. A preview download must identify its prerelease tag and unnotarized status; verify anonymous access and its checksum before enabling it.
+- Keep stable downloads disabled until all public-release checks pass. Preserve prerelease tags and signing/notarization provenance with release artifacts; verify anonymous access and checksums before enabling downloads. Product pages follow the concise [website presentation rules](documentation.md#publish).
 
 ## Windows public preview
 
@@ -14,7 +14,7 @@
 - Run [Windows checks and packaging](reference/packaging.md#windows-preview) on the reviewed candidate; install and launch the exact final setup EXE with isolated synthetic data.
 - Publish an **unsigned prerelease** and checksum manifest to `FerMatter/fermatter.github.io`. Verify anonymous access and the downloaded bytes before enabling `windowsReleaseAvailable` in a separate reviewed site change.
 - Keep macOS `releaseTag`/`assetName` unchanged. Windows download fields are independent so a Windows release cannot break the existing DMG/Homebrew channel.
-- Clearly identify SmartScreen/unknown-publisher warnings and unverified native/clean-machine checks. A Windows preview does not establish a signed stable release or macOS notarization.
+- Record signature state, OS first-launch prompts and unverified native/clean-machine checks with the release metadata and maintainer validation. Product pages follow the concise [website presentation rules](documentation.md#publish). Keep Windows security features enabled. A Windows prerelease does not establish a signed stable release or macOS notarization.
 
 ## Unnotarized public preview
 
