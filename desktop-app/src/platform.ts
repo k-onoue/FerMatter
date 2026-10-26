@@ -1,6 +1,10 @@
+export function isMacUserAgent(userAgent: string): boolean {
+  return /Macintosh|Mac OS X/.test(userAgent);
+}
+
 // Name the system file manager from the webview's platform signal.
 export function fileManagerName(userAgent: string): string {
-  return /Macintosh|Mac OS X/.test(userAgent) ? "Finder" : "File Manager";
+  return isMacUserAgent(userAgent) ? "Finder" : "File Manager";
 }
 
 export const FILE_MANAGER = fileManagerName(navigator.userAgent);

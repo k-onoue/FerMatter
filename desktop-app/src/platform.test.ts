@@ -1,5 +1,10 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { fileManagerName, primaryModifier, shortcutHint } from "./platform";
+import {
+  fileManagerName,
+  isMacUserAgent,
+  primaryModifier,
+  shortcutHint,
+} from "./platform";
 import type { Keybindings } from "./types";
 
 afterEach(() => {
@@ -23,6 +28,18 @@ it("names Finder on macOS and a generic file manager on Windows and Linux", () =
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
     ),
   ).toBe("File Manager");
+});
+
+it("recognises only macOS user agents", () => {
+  expect(
+    isMacUserAgent(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+    ),
+  ).toBe(true);
+  expect(isMacUserAgent("Mozilla/5.0 (X11; Linux x86_64)")).toBe(false);
+  expect(isMacUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")).toBe(
+    false,
+  );
 });
 
 it("uses Ctrl for Windows shortcuts while preserving the extra modifier", async () => {

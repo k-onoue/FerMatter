@@ -1,4 +1,9 @@
-import { FILE_MANAGER, primaryModifier, shortcutHint } from "./platform";
+import {
+  FILE_MANAGER,
+  isMacUserAgent,
+  primaryModifier,
+  shortcutHint,
+} from "./platform";
 import { mergeAutomationVariants } from "./automation";
 import { dropSVG } from "./svgImport";
 import { LibraryNavigation } from "./LibraryNavigation";
@@ -1181,20 +1186,30 @@ export default function App() {
       report(e);
     }
   }
-  async function exportImage() {
+  async function exportImage(cardID?: string) {
     if (!project) return;
+    const id =
+      cardID ??
+      [...selected].find((selectedID) =>
+        project.cards.some((c) => c.id === selectedID),
+      );
+    const card = project.cards.find((c) => c.id === id);
+    if (!card) {
+      setError("Select an equation or figure.");
+      return;
+    }
     try {
       const ext =
         project.exportFormat === "jpeg" ? "jpg" : project.exportFormat || "svg";
       const dest = await save({
-        defaultPath: `${project.cards.find((c) => selected.has(c.id))?.name || "Equation"}.${ext}`,
+        defaultPath: `${card.name || "Equation"}.${ext}`,
         filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
       });
       if (!dest) return;
       await Promise.all([writer.current.flush(), preferencesDocument.flush()]);
       await rpc("export", {
         project: project.id,
-        ids: [[...selected][0]],
+        ids: [card.id],
         format: project.exportFormat || "svg",
         destination: dest,
       });
@@ -1220,6 +1235,9 @@ export default function App() {
     [project, kind, filter, search],
   );
   function choose(card: Card, e: React.MouseEvent) {
+    // On macOS Ctrl+click is the context-menu gesture; WebKit still delivers
+    // its click, which must not toggle the selection the menu acts on.
+    if (isMacUserAgent(navigator.userAgent) && e.ctrlKey && !e.metaKey) return;
     if (e.shiftKey && selectedAnchor.current) {
       const a = visible.findIndex((c) => c.id === selectedAnchor.current),
         b = visible.findIndex((c) => c.id === card.id);
@@ -2281,7 +2299,7 @@ export default function App() {
             { label: "Copy Image", action: () => void copyImages() },
             {
               label: "Export Image…",
-              action: () => void exportImage(),
+              action: () => void exportImage(context.card.id),
             },
             ...(project?.sections?.map((section) => ({
               label: "Label: " + section.name,
