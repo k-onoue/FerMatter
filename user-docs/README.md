@@ -13,7 +13,7 @@ sidebar:
 
 ## First launch
 
-1. Choose a default project folder. New projects and imports will be saved there.
+1. Choose a default project folder. Windows preselects **FerMatter** in your local user folder and creates it when setup finishes. New projects and imports will be saved there.
 2. Review **Compiler tools** using the [tool discovery guide](requirements.md#tool-discovery).
 3. Open one of the four editable projects under **Demos**: LaTeX, Typst, TikZ or CeTZ. Follow [From your paper to a slide](paper-to-slides.md) to try it.
 
