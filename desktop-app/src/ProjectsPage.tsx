@@ -1,4 +1,4 @@
-import { FILE_MANAGER } from "./platform";
+import { FILE_MANAGER, isWindows, shortcutHint } from "./platform";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
@@ -148,6 +148,12 @@ export function ProjectsPage({
   }
   function request(action: string, ids = chosen.map((p) => p.id)) {
     if (busy || blocked || confirmation) return;
+    if (action === "delete" && isWindows()) {
+      onNotice(
+        "Manage project deletion in File Explorer on this Windows preview.",
+      );
+      return;
+    }
     const roots =
       action === "delete"
         ? projects.filter((p) => ids.includes(p.id)).map((p) => p.root)
@@ -294,7 +300,11 @@ export function ProjectsPage({
       </div>
       <header className="projects-heading">
         <h1>Projects</h1>
-        <button className="soft" title="New Instant (⇧⌘K)" onClick={onInstant}>
+        <button
+          className="soft"
+          title={shortcutHint("New Instant (⇧⌘K)")}
+          onClick={onInstant}
+        >
           <Zap size={17} />
           Instant
         </button>
@@ -357,28 +367,36 @@ export function ProjectsPage({
         <span className="spacer" />
         <button
           disabled={busy || !history.undo}
-          title={history.undo ? `Undo ${history.undo} (⌘Z)` : "Undo (⌘Z)"}
+          title={shortcutHint(
+            history.undo ? `Undo ${history.undo} (⌘Z)` : "Undo (⌘Z)",
+          )}
           onClick={() => request("undo")}
         >
           <Undo2 size={17} />
         </button>
         <button
           disabled={busy || !history.redo}
-          title={history.redo ? `Redo ${history.redo} (⇧⌘Z)` : "Redo (⇧⌘Z)"}
+          title={shortcutHint(
+            history.redo ? `Redo ${history.redo} (⇧⌘Z)` : "Redo (⇧⌘Z)",
+          )}
           onClick={() => request("redo")}
         >
           <Redo2 size={17} />
         </button>
         <button
           disabled={busy || !chosen.length}
-          title="Duplicate projects (⌘D)"
+          title={shortcutHint("Duplicate projects (⌘D)")}
           onClick={() => request("duplicate")}
         >
           <Copy size={17} />
         </button>
         <button
-          disabled={busy || !chosen.length}
-          title="Delete projects (⌘⌫)"
+          disabled={busy || !chosen.length || isWindows()}
+          title={
+            isWindows()
+              ? "Manage project deletion in File Explorer"
+              : shortcutHint("Delete projects (⌘⌫)")
+          }
           onClick={() => request("delete")}
         >
           <Trash2 size={17} />

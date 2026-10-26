@@ -10,6 +10,7 @@
 - Bring equations from a LaTeX or Typst paper into your presentation.
 - Browse equations and TikZ/CeTZ drawings; edit slide-specific variants; copy/export SVG, PDF, PNG, or JPEG.
 - Unnotarized public preview for **Apple Silicon Mac (macOS 14+)**.
+- Unsigned **Windows 11 x64** preview; separate LaTeX/Typst installation required.
 
 ![FerMatter Source and PDF views, dragging an equation from a synthetic paper](site/public/assets/demos/drag-from-pdf.webp)
 
@@ -17,7 +18,7 @@
 
 | Task | Read |
 | --- | --- |
-| Install | [DMG or Homebrew](https://fermatter.github.io/download/) |
+| Install | [macOS DMG/Homebrew or Windows EXE](https://fermatter.github.io/download/) |
 | Use the app | [Guide](user-docs/README.md) · [Features](https://fermatter.github.io/features/) |
 | Project commitments | [Declaration](DECLARATION.md) |
 | Install rendering tools | [LaTeX and Typst requirements](user-docs/requirements.md) |

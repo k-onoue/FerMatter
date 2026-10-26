@@ -8,6 +8,7 @@
 - Keep the same resident lock identity so launching an older app copy cannot create a second resident.
 - Preserve `~/Library/Application Support/Slide Math` and existing absolute source/cache paths.
 - Current metadata directory: `~/Library/Application Support/Slide Math/Rust Preview/`.
+- Windows metadata directory: `%APPDATA%\Slide Math\Rust Preview\`. Platform support retains the same `Slide Math`/`Rust Preview` names and version-1 schemas; installing or upgrading does not relocate saved projects or drafts.
 - The internal preview directory name stays unchanged to preserve already-saved work after promotion.
 - Sources: [storage.rs](../../desktop-app/src-tauri/src/storage.rs), [files.rs](../../desktop-app/src-tauri/src/files.rs), [settings.rs](../../desktop-app/src-tauri/src/settings.rs).
 
@@ -107,3 +108,10 @@
 - Projects shows **Review recovery** while healthy projects remain usable. **Restore last valid backup** checks the original revision, keeps rejected bytes separately, and restores metadata only; source files and Source/Instant drafts remain untouched.
 - Without a valid backup, retain the file for manual recovery. Legacy originals are never rewritten by recovery.
 - Parsing errors identify the metadata file and structural field, not its source contents. A root render boundary offers **Reload view** for unexpected display failures.
+
+## Temporarily excluded source cards
+
+- `project.json.extractionHiddenCards` archives source-card metadata hidden by extraction rules; custom presentation variants stay in `cards`.
+- Extraction still counts excluded occurrences when computing IDs, keeping identical equations outside tables stable. Restoring a rule recovers saved source names and font sizes.
+- Visible and hidden IDs must be unique; the normal card validator also validates archived cards. Cache-reference traversal includes the archive.
+- Removing source text follows normal rescan behavior; the archive is for configurable exclusions, not a source-file backup.

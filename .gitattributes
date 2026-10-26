@@ -1,0 +1,2 @@
+# Demo bytes must match the bundled ZIPs on every development platform.
+* text=auto eol=lf

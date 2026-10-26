@@ -275,7 +275,11 @@ mod tests {
         }
     }
 }
-#[cfg(not(target_os = "macos"))]
+#[cfg(windows)]
+pub fn clipboard(paths: &[PathBuf]) -> Result<()> {
+    crate::windows_native::clipboard(paths)
+}
+#[cfg(not(any(target_os = "macos", windows)))]
 pub fn clipboard(_: &[PathBuf]) -> Result<()> {
     Err("Native image clipboard is currently supported on macOS.".into())
 }

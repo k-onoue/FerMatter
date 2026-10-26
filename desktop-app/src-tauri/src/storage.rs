@@ -354,7 +354,13 @@ fn path_string(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
 pub fn merge_scan(mut p: Value, scan: Value) -> Value {
-    let old = p["cards"].as_array().cloned().unwrap_or_default();
+    let mut old = p["cards"].as_array().cloned().unwrap_or_default();
+    old.extend(
+        p["extractionHiddenCards"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default(),
+    );
     let mut cards = scan["cards"].as_array().cloned().unwrap_or_default();
     for card in &mut cards {
         if let Some(previous) = old.iter().find(|o| o["id"] == card["id"]) {
@@ -365,8 +371,21 @@ pub fn merge_scan(mut p: Value, scan: Value) -> Value {
             }
         }
     }
+    let hidden = scan["excludedCards"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|card| {
+            old.iter()
+                .find(|previous| previous["id"] == card["id"])
+                .cloned()
+                .unwrap_or(card)
+        })
+        .collect::<Vec<_>>();
     cards.extend(old.into_iter().filter(|v| string(v, "origin") == "custom"));
     p["cards"] = json!(cards);
+    p["extractionHiddenCards"] = json!(hidden);
     p["outline"] = scan["outline"].clone();
     p["warnings"] = scan["warnings"].clone();
     p["files"] = scan["files"].clone();
@@ -440,6 +459,20 @@ pub fn import_zip(archive: &Path, parent: &Path) -> Result<PathBuf> {
 }
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn artifact_access_compares_canonical_storage_roots() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Storage::new(temp.path().join("support"), temp.path().join("legacy")).unwrap();
+        let image = store.home.join("Instant/Exports/sample.svg");
+        atomic(&image, b"<svg/>").unwrap();
+        assert_eq!(
+            store.artifact_file(&image).unwrap(),
+            image.canonicalize().unwrap()
+        );
+        let outside = temp.path().join("outside.svg");
+        atomic(&outside, b"<svg/>").unwrap();
+        assert!(store.artifact_file(&outside).is_err());
+    }
     use super::*;
     use base64::{engine::general_purpose::STANDARD, Engine};
     const PROJECT: &str = "0123456789abcdef01234567";
@@ -692,6 +725,30 @@ mod tests {
         }
     }
     #[test]
+    fn extraction_exclusions_preserve_source_names_variants_and_recovery_metadata() {
+        let source = json!({"id":"source", "origin":"source", "tex":"x", "name":"My score", "exportFontSize":36, "extensions":{"keep":true}});
+        let custom = json!({"id":"custom", "origin":"custom", "tex":"styled", "parentID":"source"});
+        let p = json!({"cards":[source,custom], "sectionAssignments":{"source":"results"}, "extensions":{"future":1}});
+        let hidden = merge_scan(
+            p.clone(),
+            json!({"cards":[], "excludedCards":[{"id":"source","origin":"source","tex":"x"}],"outline":[],"files":[],"warnings":[]}),
+        );
+        assert_eq!(hidden["cards"], json!([custom]));
+        assert_eq!(hidden["extractionHiddenCards"], json!([source]));
+        let restored = merge_scan(
+            hidden,
+            json!({"cards":[{"id":"source","origin":"source","tex":"x"}],"outline":[],"files":[],"warnings":[]}),
+        );
+        assert_eq!(restored["cards"][0]["name"], source["name"]);
+        assert_eq!(
+            restored["cards"][0]["exportFontSize"],
+            source["exportFontSize"]
+        );
+        assert_eq!(restored["cards"][1], custom);
+        assert_eq!(restored["sectionAssignments"], p["sectionAssignments"]);
+        assert_eq!(restored["extensions"], p["extensions"]);
+    }
+    #[test]
     fn corrupt_metadata_is_reported_without_blocking_other_projects() {
         let temp = tempfile::tempdir().unwrap();
         let store = Storage::new(temp.path().join("data"), temp.path().join("legacy")).unwrap();
@@ -840,6 +897,7 @@ mod tests {
         store.save(&ident, &p).unwrap();
         assert_eq!(fs::read(old).unwrap(), before);
     }
+    #[cfg(unix)]
     #[test]
     fn legacy_alias_keeps_variants() {
         let d = tempfile::tempdir().unwrap();

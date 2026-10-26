@@ -142,7 +142,22 @@ fn read_document(path: &Path) -> std::io::Result<Vec<u8>> {
         use std::os::unix::fs::OpenOptionsExt;
         options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
     }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        options.custom_flags(0x0020_0000);
+    }
     let file = options.open(path)?;
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        if file.metadata()?.file_attributes() & 0x400 != 0 {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "Settings cannot be symbolic links or reparse points.",
+            ));
+        }
+    }
     if !file.metadata()?.is_file() {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
@@ -167,6 +182,7 @@ fn valid_name(name: &str) -> Result<()> {
         "keybindings.json",
         "instant.json",
         "tools.json",
+        "extraction.json",
     ]
     .contains(&name)
     {
@@ -178,6 +194,7 @@ fn valid_name(name: &str) -> Result<()> {
 fn default_document(name: &str) -> Value {
     match name {
         "tools.json" => crate::toolchain::defaults(),
+        "extraction.json" => crate::extraction::defaults(),
         "instant.json" => crate::instant_settings::defaults(),
         "theme.json" => {
             json!({"schemaVersion":1,"kind":"mathlidelux.theme","id":"org.mathlidelux.default","name":"Default","light":{},"dark":{}})
@@ -196,6 +213,7 @@ pub fn validate(name: &str, v: &Value) -> Result<()> {
     }
     match name {
         "tools.json" => crate::toolchain::validate(v),
+        "extraction.json" => crate::extraction::Options::from_value(v).map(|_| ()),
         "instant.json" => crate::instant_settings::validate(v),
         "theme.json" => theme(v),
         "keybindings.json" => keybindings(v),
@@ -322,6 +340,12 @@ fn default_bindings() -> HashMap<&'static str, Value> {
         ("splitSource", "\\", false, false, false, true),
         ("splitSourceDown", "\\", false, true, false, true),
     ] {
+        let (control, command) =
+            if cfg!(windows) && matches!(id, "nextSourceTab" | "previousSourceTab") {
+                (false, true)
+            } else {
+                (control, command)
+            };
         map.insert(
             id,
             json!({"key":key,"command":command,"control":control,"shift":shift,"option":option}),
@@ -391,7 +415,12 @@ fn keybindings(v: &Value) -> Result<()> {
             && !control
             && !option
             && !shift
-            && "qwmh,cvxazsp \t".contains(key)
+            && (if cfg!(windows) {
+                "qwmh,cvxazsp "
+            } else {
+                "qwmh,cvxazsp \t"
+            })
+            .contains(key)
             && !(id == "saveEquation" && key == "s")
             || command && !control && !option && shift && key == "z"
             || command && !control && option && !shift && key == "h"
@@ -629,6 +658,18 @@ mod tests {
         v["bindings"]["rescan"] =
             json!({"key":"o","command":true,"control":false,"option":false,"shift":false});
         assert!(keybindings(&v).is_ok());
+    }
+    #[cfg(windows)]
+    #[test]
+    fn windows_source_tab_defaults_use_control_without_the_windows_key() {
+        let defaults = default_bindings();
+        for id in ["nextSourceTab", "previousSourceTab"] {
+            assert_eq!(defaults[id]["command"], true);
+            assert_eq!(defaults[id]["control"], false);
+        }
+        let mut value = default_document("keybindings.json");
+        value["bindings"]["nextSourceTab"] = defaults["nextSourceTab"].clone();
+        assert!(keybindings(&value).is_ok());
     }
     #[test]
     fn preserves_legacy_zoom_overrides_and_rejects_explicit_duplicates() {

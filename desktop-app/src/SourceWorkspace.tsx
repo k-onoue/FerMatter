@@ -1,4 +1,4 @@
-import { FILE_MANAGER } from "./platform";
+import { FILE_MANAGER, shortcutHint } from "./platform";
 import { OutputSizeControl } from "./OutputSizeControl";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -1065,13 +1065,13 @@ export function SourceWorkspace({
                 ))}
                 <span className="spacer" />
                 <button
-                  title="Split right (⌘\)"
+                  title={shortcutHint("Split right (⌘\\)")}
                   onClick={() => split(p.id, "row")}
                 >
                   <Columns2 size={15} />
                 </button>
                 <button
-                  title="Split down (⌥⌘\)"
+                  title={shortcutHint("Split down (⌥⌘\\)")}
                   onClick={() => split(p.id, "column")}
                 >
                   <Rows2 size={15} />

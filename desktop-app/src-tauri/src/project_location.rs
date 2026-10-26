@@ -41,6 +41,9 @@ pub fn create(preferences: &Value, input: &Value) -> Result<PathBuf> {
     if name.is_empty() || name.contains(['/', ':', '\0']) || name == "." || name == ".." {
         return Err("Choose a valid project name.".into());
     }
+    if relative(name)?.components().count() != 1 {
+        return Err("Choose one project folder name inside the selected directory.".into());
+    }
     let parent = directory(preferences, string(input, "directory"))?;
     fs::create_dir_all(&parent).map_err(err)?;
     let target = parent.join(name);
@@ -64,6 +67,9 @@ pub fn create(preferences: &Value, input: &Value) -> Result<PathBuf> {
 
 // Stage the whole import before publishing it; never merge into an existing folder.
 pub fn publish(source: &Path, parent: &Path, name: &str) -> Result<PathBuf> {
+    if relative(name)?.components().count() != 1 {
+        return Err("Choose one project folder name inside the selected directory.".into());
+    }
     for suffix in 0..10_000 {
         let name = if suffix == 0 {
             name.to_owned()
@@ -165,6 +171,20 @@ pub fn copy_folder(source: &Path, parent: &Path, name: &str) -> Result<PathBuf> 
 
 #[cfg(test)]
 mod tests {
+    #[cfg(windows)]
+    #[test]
+    fn windows_project_creation_rejects_parent_paths_and_device_aliases() {
+        let temp = tempfile::tempdir().unwrap();
+        let parent = temp.path().join("Projects");
+        for name in [r"..\outside", r"nested\project", "NUL", "trailing."] {
+            assert!(create(
+                &serde_json::json!({"projectDirectory":parent}),
+                &serde_json::json!({"name":name,"format":"typst","text":"$ x $"})
+            )
+            .is_err());
+        }
+        assert!(!temp.path().join("outside").exists());
+    }
     use super::*;
     use serde_json::json;
 
@@ -220,6 +240,7 @@ mod tests {
         assert!(import(&source, &source.join("inside")).is_err());
     }
 
+    #[cfg(unix)]
     #[test]
     fn failed_folder_import_leaves_no_partial_project() {
         let temp = tempfile::tempdir().unwrap();

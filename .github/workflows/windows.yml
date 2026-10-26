@@ -1,0 +1,118 @@
+name: Windows experimental
+
+on:
+  pull_request:
+    paths:
+      - "desktop-app/**"
+      - ".github/workflows/windows.yml"
+      - ".node-version"
+      - "LICENSE"
+      - "NOTICE"
+  push:
+    branches: [main]
+    paths:
+      - "desktop-app/**"
+      - ".github/workflows/windows.yml"
+      - ".node-version"
+      - "LICENSE"
+      - "NOTICE"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: "2"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: desktop-app/package-lock.json
+      - run: rustup toolchain install stable --profile minimal --component clippy
+      - run: rustup default stable
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop-app/src-tauri/target
+          key: windows-2022-rust-${{ hashFiles('desktop-app/src-tauri/Cargo.lock') }}
+      - name: Install real rendering tools
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          choco install -y ghostscript --version=10.8.0 --no-progress
+          if ($LASTEXITCODE -ne 0) { throw 'Ghostscript installation failed.' }
+          choco install -y poppler --version=26.9.0 --no-progress
+          if ($LASTEXITCODE -ne 0) { throw 'Poppler installation failed.' }
+          # Preserve setup-node's selected Node version while importing new tool paths.
+          $existingPaths = $env:PATH -split ';'
+          $registeredPaths = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')
+          $newPaths = @($registeredPaths -split ';' | Where-Object { $_ -and $_ -notin $existingPaths })
+          $env:PATH = ($existingPaths + $newPaths) -join ';'
+          $newPaths | Add-Content $env:GITHUB_PATH
+          $texArchive = Join-Path $env:RUNNER_TEMP 'TinyTeX-1-windows-v2026.10.exe'
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/rstudio/tinytex-releases/releases/download/v2026.10/TinyTeX-1-windows-v2026.10.exe' -OutFile $texArchive
+          if ((Get-FileHash -LiteralPath $texArchive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '36c329c644683d981a668419d13c8804696e2816ae4d287ad755788fee231a31') { throw 'TinyTeX checksum mismatch.' }
+          $texStage = Join-Path $env:RUNNER_TEMP 'fermatter-tex'
+          & 7z.exe x $texArchive "-o$texStage" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'TinyTeX extraction failed.' }
+          $texBin = Join-Path $texStage 'TinyTeX\bin\windows'
+          $env:PATH = "$texBin;$env:PATH"
+          $texBin | Add-Content $env:GITHUB_PATH
+          # tlmgr accepts packages already in the base bundle; bm.sty belongs to tools.
+          & "$texBin\tlmgr.bat" option repository https://mirror.ctan.org/systems/texlive/tlnet
+          if ($LASTEXITCODE -ne 0) { throw 'TeX Live repository configuration failed.' }
+          & "$texBin\tlmgr.bat" update --self
+          if ($LASTEXITCODE -ne 0) { throw 'TeX Live manager update failed.' }
+          & "$texBin\tlmgr.bat" install latexmk pdfcrop preview pgf mathtools tools cm-super synctex standalone amsmath amsfonts geometry xcolor grfext
+          if ($LASTEXITCODE -ne 0) { throw 'TeX Live package installation failed.' }
+          $archive = Join-Path $env:RUNNER_TEMP 'typst.zip'
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-pc-windows-msvc.zip' -OutFile $archive
+          if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '19ce3551153c2fe7ee9fa2f95208310c8f4d3209fedb699e0333faf8913f6736') { throw 'Typst checksum mismatch.' }
+          Expand-Archive -LiteralPath $archive -DestinationPath (Join-Path $env:RUNNER_TEMP 'typst')
+          $typstBin = Join-Path $env:RUNNER_TEMP 'typst\typst-x86_64-pc-windows-msvc'
+          $typstBin | Add-Content $env:GITHUB_PATH
+          # The installed-app check deliberately clears inherited PATH to emulate
+          # an Explorer process that predates tool installation. Persist these
+          # paths only on this disposable CI account so discovery is exercised.
+          $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+          [Environment]::SetEnvironmentVariable('PATH', "$texBin;$typstBin;$userPath", 'User')
+      - name: Frontend, Rust, clippy and real compiler checks
+        shell: powershell
+        run: ./desktop-app/scripts/check-windows.ps1
+      - name: Audit production dependencies
+        shell: powershell
+        run: ./desktop-app/scripts/audit-windows.ps1
+      - name: Build unsigned NSIS preview with offline WebView2
+        shell: powershell
+        run: ./desktop-app/scripts/build-windows.ps1
+      - name: Install, replace, launch and uninstall synthetic preview
+        shell: powershell
+        run: |
+          $installer = @(Get-ChildItem desktop-app/build/windows/*_setup.exe)
+          if ($installer.Count -ne 1) { throw 'Expected one packaged installer.' }
+          ./desktop-app/scripts/verify-windows-install.ps1 -Installer $installer.FullName -CheckCompilers
+      - name: Retain installer and evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-x64-${{ github.sha }}
+          path: |
+            desktop-app/build/windows/
+            desktop-app/build/windows-qa/
+            desktop-app/build/windows-audit/
+            desktop-app/build/windows-install-*/verification.json
+            desktop-app/build/windows-install-*/installed-compilers/
+          if-no-files-found: ignore
+          retention-days: 30

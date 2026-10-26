@@ -2,6 +2,8 @@
 
 ## Setup
 
+### macOS
+
 - Apple Silicon Mac; Rust stable (1.92+), Node.js 24.22.1+ LTS (see `.node-version`), Xcode command-line tools.
 - macOS 14+ deployment target; verified on macOS 26.
 - Install the tools for the selected format: [requirements](../user-docs/requirements.md).
@@ -15,6 +17,22 @@ open desktop-app/src-tauri/target/release/bundle/macos/FerMatter.app
 - Output defaults to an ad hoc signed local app; no notarization. For remembered folder consent across rebuilds, configure [local signing](reference/signing.md).
 - Scripts install locked npm dependencies when missing; an optional project-local Rust toolchain is supported. See [desktop setup](../desktop-app/README.md#build-and-run).
 - App icon provenance: [AppIcon.md](../desktop-app/resources/AppIcon.md).
+
+### Windows
+
+- Preview target: Windows 11 x64; MSVC Rust stable (1.92+), Node.js 24.22.1+ LTS, Microsoft C++ Build Tools with **Desktop development with C++** and a Windows SDK. See [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/#windows).
+- Runtime: Microsoft Edge WebView2. The NSIS installer includes its offline installer. TeX/Typst and PDF converters remain external; see [Windows installation](https://fermatter.github.io/download/#windows).
+- Run PowerShell from the repository root:
+
+```powershell
+./desktop-app/scripts/check-windows.ps1
+./desktop-app/scripts/build-windows.ps1
+./desktop-app/src-tauri/target/release/FerMatter.exe
+```
+
+- `build-windows.ps1 -DebugBuild` builds a debug app. Release builds create the NSIS setup EXE and [package/checksum metadata](reference/packaging.md#windows-preview).
+- App/build identity and `Slide Math` storage names are retained. Never move legacy data into a new directory as a side effect of adding a platform.
+- Windows previews are unsigned; Authenticode signing and clean-machine validation remain distinct release checks.
 
 ## Formatting
 

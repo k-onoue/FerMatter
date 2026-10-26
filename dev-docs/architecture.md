@@ -28,6 +28,7 @@
 | IPC and request ownership | `src-tauri/src/lib.rs` |
 | Fixed macOS Dock artwork and menu-bar presentation | `src-tauri/src/native.rs`; bundled assets from `scripts/build-icons.mjs` |
 | LaTeX/Typst extraction, includes and outline | `src-tauri/src/scan.rs` |
+| Global Library exclusion settings | `src-tauri/src/extraction.rs`, `src/ExtractionSettings.tsx` |
 | Compiler snapshots, cancellation and SyncTeX | `src-tauri/src/compiler.rs` |
 | Safe paths, atomic writes and conflict checks | `src-tauri/src/files.rs` |
 | Project metadata and legacy draft import | `src-tauri/src/storage.rs` |

@@ -4,7 +4,7 @@
 
 | Change | Required evidence |
 | --- | --- |
-| App, frontend, compiler backend | `./desktop-app/scripts/check.sh`; `./desktop-app/scripts/build.sh` |
+| App, frontend, compiler backend | macOS: `./desktop-app/scripts/check.sh`; `./desktop-app/scripts/build.sh`. Windows: `./desktop-app/scripts/check-windows.ps1`; `./desktop-app/scripts/build-windows.ps1` |
 | User docs, site, site generator | Build guides; freshness check; publication check; browser preview |
 | Developer docs only | Publication/link check; review commands and referenced behavior |
 | Synthetic samples | `node scripts/prepare-demo.mjs`; compiler checks; publication check |
@@ -23,6 +23,21 @@
 - Test storage/source changes with disposable copies and external-edit conflicts.
 - Test worker changes with cancellation and late results after switching projects.
 - Test exports by opening the result in the target app; do not infer drag support from copy support.
+
+### Windows checks
+
+```powershell
+./desktop-app/scripts/check-windows.ps1
+./desktop-app/scripts/build-windows.ps1
+./desktop-app/scripts/verify-windows-install.ps1 -Installer ./desktop-app/build/windows/FerMatter_0.11.0_windows_x64_preview.1_unsigned_setup.exe -CheckCompilers
+```
+
+- `check-windows.ps1` builds/tests the frontend, runs Rust tests and clippy, and verifies all four synthetic compiler projects. `-SkipCompilers` is an explicit development-only skip; it is not release evidence.
+- `./desktop-app/scripts/audit-windows.ps1` records production npm and Cargo dependency audits with a hash-pinned official cargo-audit binary. Release candidates require no reported vulnerabilities; retain informational warnings in the validation record.
+- Install the packaged EXE into a disposable directory; verify bundled resources/notices, app startup, project-folder setup, Library/Source/Instant, rendered SVG/PNG/JPEG/PDF, document navigation and cancellation.
+- `verify-windows-install.ps1 -CheckCompilers` requires an account/CI machine without an existing FerMatter installation. It tests the installed EXE's LaTeX align/equation and Typst paths with a minimal Windows system PATH, verifies SVG/PNG/PDF artifacts and unchanged synthetic sources, and retains compiler evidence beside the install report. Omission of the switch is recorded as a compiler-check skip.
+- Check Ctrl/Alt shortcuts, IME, clipboard and drag into a receiving app separately. A CLI compiler pass does not establish native UI behavior.
+- Run upgrade/uninstall checks with synthetic saved data and projects; record skipped clean-machine or receiving-app checks.
 
 ### Typst version compatibility
 

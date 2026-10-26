@@ -3,7 +3,9 @@ import App from "./App";
 import { RecoveryBoundary } from "./RecoveryBoundary";
 import InstantWindow from "./InstantWindow";
 import { logError } from "./log";
+import { isWindows } from "./platform";
 import "./style.css";
+if (isWindows()) document.documentElement.dataset.platform = "windows";
 window.addEventListener("error", (event) =>
   logError("window.error", event.error ?? event.message),
 );

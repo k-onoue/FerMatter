@@ -9,7 +9,7 @@ sidebar:
 
 ## Before you start
 
-[Install and open FerMatter](https://fermatter.github.io/download/#mac), then check the [LaTeX or Typst requirements](requirements.md) for your projects.
+[Install and open FerMatter](https://fermatter.github.io/download/), then check the [LaTeX or Typst requirements](requirements.md) for your projects.
 
 ## First launch
 
@@ -26,7 +26,7 @@ Change the default folder in **Settings → Projects → Default project folder*
 | **Open Project** (`⌘O`) | Opens an existing folder or main file in place |
 | **New Project** (`⇧⌘N`) | Creates a project from pasted source and a template; **Location** can override the default folder |
 | Drop a folder / import a ZIP | Copies into the default project folder; an existing direct child opens in place |
-| **Delete** (`⌘⌫`) | Moves the actual source folder to Finder Trash |
+| **Delete** (`⌘⌫`, macOS) | Moves the actual source folder to Finder Trash; unavailable in the Windows preview |
 
 Project tabs retain their Library/Source view, open source files and PDF view. Opening the same project selects its existing tab.
 
@@ -35,6 +35,7 @@ Project tabs retain their Library/Source view, open source files and PDF view. O
 | Task | Guide |
 | --- | --- |
 | Find or edit an equation or drawing | [From your paper to a slide](paper-to-slides.md) |
+| Exclude tables or custom environments from the Library | [Card extraction](extraction.md) |
 | Choose image format, size and color; reopen SVG | [Choose size and format](export.md) |
 | Change keyboard commands or display zoom | [Shortcuts](shortcuts.md) |
 | Choose a theme, transparency or window pinning | [Appearance](appearance.md) |

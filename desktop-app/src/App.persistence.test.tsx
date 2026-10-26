@@ -14,6 +14,7 @@ import App from "./App";
 import { flushWindow } from "./persistence";
 import { disposeProjectModels } from "./editor";
 import { initialInstant } from "./instant";
+import { isWindows } from "./platform";
 const { rpc, events } = vi.hoisted(() => ({
   rpc: vi.fn(),
   events: new Map<string, Set<() => void>>(),
@@ -129,6 +130,7 @@ beforeEach(() => {
   );
   project = {
     id: "p",
+    extractionRevision: "extraction",
     root: "/synthetic",
     main: "main.typ",
     format: "typst",
@@ -182,6 +184,10 @@ beforeEach(() => {
                 bindings: {},
               },
               revision: "keys",
+            },
+            extraction: {
+              value: { ignoreMathInTables: false },
+              revision: "extraction",
             },
             templates: { custom: [] },
           };
@@ -264,12 +270,20 @@ it("closing a project tab saves its draft and disposes only that project's model
   await openProject();
   edit("draft before tab close");
   failSave = true;
-  fireEvent.keyDown(document.body, { key: "w", metaKey: true });
+  fireEvent.keyDown(document.body, {
+    key: "w",
+    metaKey: !isWindows(),
+    ctrlKey: isWindows(),
+  });
   await screen.findByText(/disk full/);
   expect(screen.getAllByRole("tab")).toHaveLength(2);
   expect(disposeProjectModels).not.toHaveBeenCalled();
   failSave = false;
-  fireEvent.keyDown(document.body, { key: "w", metaKey: true });
+  fireEvent.keyDown(document.body, {
+    key: "w",
+    metaKey: !isWindows(),
+    ctrlKey: isWindows(),
+  });
   await screen.findByRole("button", { name: "Open synthetic" });
   expect((saved.at(-1)?.libraryDraft as Card).tex).toBe(
     "draft before tab close",
@@ -636,4 +650,94 @@ it("reopening a closed PDF rebuilds instead of reusing a released snapshot", asy
   await waitFor(() =>
     expect(rpc.mock.calls.filter(([op]) => op === "document")).toHaveLength(2),
   );
+});
+
+it("applying extraction settings refreshes every open Library and preserves variants", async () => {
+  const custom = {
+    ...project.cards[0],
+    id: "variant",
+    name: "Saved variant",
+    origin: "custom" as const,
+    parentID: "source",
+  };
+  const outside = {
+    ...project.cards[0],
+    id: "outside",
+    name: "Outside table",
+    tex: "y",
+  };
+  project.cards.push(outside, custom);
+  const other = { ...structuredClone(project), id: "other", root: "/other" };
+  availableProjects.push(other);
+  const base = rpc.getMockImplementation()!;
+  rpc.mockImplementation((operation, payload) => {
+    if (operation === "extraction_settings")
+      return Promise.resolve({
+        value: {
+          schemaVersion: 1,
+          kind: "mathlidelux.extraction",
+          ignoreMathInTables: false,
+          excludedLatexEnvironments: [],
+          excludedTypstFunctions: [],
+        },
+        revision: "extraction",
+      });
+    if (operation === "settings" && payload.file === "extraction.json")
+      return Promise.resolve("filtered");
+    if (operation === "scan") {
+      const current = availableProjects.find((p) => p.id === payload.project)!;
+      return Promise.resolve({
+        ...current,
+        cards: current.cards.filter((c) => c.id === "outside"),
+        extractionHiddenCards: current.cards.filter((c) => c.id === "source"),
+        extractionRevision: "filtered",
+      });
+    }
+    return base(operation, payload);
+  });
+  await openProject();
+  fireEvent.click(screen.getByRole("button", { name: "Projects" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Open other" }));
+  await screen.findByTitle("New equation");
+  await waitFor(() => expect(document.documentElement.inert).toBe(false));
+  fireEvent.click(screen.getByTitle("Settings"));
+  fireEvent.click(screen.getByRole("button", { name: "Extraction" }));
+  const toggle = await screen.findByRole("checkbox", {
+    name: "Ignore math in tables",
+  });
+  await waitFor(() =>
+    expect((toggle as HTMLInputElement).disabled).toBe(false),
+  );
+  fireEvent.click(toggle);
+  fireEvent.click(screen.getByRole("button", { name: "Apply and rescan" }));
+  await waitFor(() =>
+    expect(
+      availableProjects.every((p) => p.extractionRevision === "filtered"),
+    ).toBe(true),
+  );
+  await waitFor(() => expect(document.documentElement.inert).toBe(false));
+  for (const p of availableProjects) {
+    expect(p.cards).toEqual([outside, custom]);
+    expect(p.extractionHiddenCards?.[0].id).toBe("source");
+  }
+  expect(
+    rpc.mock.calls
+      .filter(([op]) => op === "scan")
+      .map(([, payload]) => payload.project),
+  ).toEqual(["p", "other"]);
+  expect(rpc.mock.calls.some(([op]) => op === "save_file")).toBe(false);
+  fireEvent.click(screen.getByRole("button", { name: "Close" }));
+  rpc.mockClear();
+  fireEvent.click(screen.getByTitle("/synthetic"));
+  await waitFor(() =>
+    expect(
+      rpc.mock.calls.some(
+        ([op, payload]) =>
+          op === "render" &&
+          payload.project === "p" &&
+          payload.cards.some((c: Card) => c.id === "outside"),
+      ),
+    ).toBe(true),
+  );
+  expect(rpc.mock.calls.some(([op]) => op === "scan")).toBe(false);
 });
