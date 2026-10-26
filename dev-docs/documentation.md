@@ -8,7 +8,9 @@
 | Development instructions | `dev-docs/`, `AGENTS.md` | Repository only |
 | User guides | `user-docs/*.md` | GitHub and Starlight `/guide/` |
 | Public guide allowlist | `user-docs/pages.json` | Content collection |
-| Homepage, features, downloads | `site/src/pages/` | Astro static pages |
+| Homepage, features, Download layout | `site/src/pages/` | Astro static pages |
+| Download instructions | `site/src/content/download/*.md` | `/download/` |
+| Announcements | `site/src/content/news/*.md` | `/news/` and individual articles |
 | Navigation, shared UI | `site/src/components/`, `site/src/styles/site.css` | Site and guide |
 | Demo descriptions and links | `site/src/data/demos.json` | Features page |
 | Reviewed screenshots/video | `site/public/assets/` | Public media |
@@ -19,7 +21,7 @@
 - Stack: [Astro](https://docs.astro.build/) + [Starlight](https://starlight.astro.build/); static HTML on GitHub Pages.
 - Search: [Pagefind](https://pagefind.app/), generated at build time; no search backend.
 - One canonical explanation per topic; short bullets, tables, commands, and primary-source links.
-- Guide ownership: overview/project folders in `README.md`; tools/compiler errors in `requirements.md`; editing modes/PDF refresh in `paper-to-slides.md`; image format/size/color/SVG restoration in `export.md`; keybindings/zoom in `shortcuts.md`; app appearance/theme files in `appearance.md`; agent setup/permissions in `automation.md`. Cross-link to the owner instead of repeating instructions.
+- Guide ownership: overview/project folders in `README.md`; tools/compiler errors in `requirements.md`; editing modes/PDF refresh in `paper-to-slides.md`; image format/size/color/SVG restoration in `export.md`; keybindings/zoom in `shortcuts.md`; app appearance/theme files in `appearance.md`; agent setup/permissions in `automation.md`; Library exclusions in `extraction.md`. Cross-link to the owner instead of repeating instructions.
 - Download owns app installation and updates; installer notes cover macOS first-launch approval. Guide setup begins with workspace selection after the app opens. Keep existing guide routes and section anchors when reorganizing content.
 - Release assets/counters use `releaseRepository`, separately from the application source `repository`. The download page owns the copyable full/BasicTeX/Typst install commands; requirements link there. Recheck installer and package-metadata sizes when changing the TeX release.
 - Publish only the allowlisted guides and reviewed assets; developer docs remain on GitHub.
@@ -49,13 +51,32 @@ node scripts/preview-site.mjs
 - Old `/guide/topic.html` URLs redirect to `/guide/topic/`; `/guide/index.html` still works.
 - UI checks: desktop/mobile, light/dark, keyboard navigation, search, old links, video controls/captions, sample downloads, no JavaScript for core reading/navigation.
 
+## Markdown content
+
+- **Guides:** edit `user-docs/*.md`; add new pages to `user-docs/pages.json`. The same Markdown renders on GitHub and the website; do not maintain a second HTML copy.
+- **Download:** edit `site/src/content/download/*.md` (macOS, Windows, Windows installer notes and Ubuntu). Markdown owns headings, instructions, tables and shell commands. Fenced `sh` blocks get the same copy controls as guides. Keep Ubuntu last and preserve the explicit legacy anchors.
+- `site/src/pages/download.astro` owns the dynamic release button/name and availability gates from `site.json`. Update those values through the release process; Markdown edits do not publish app binaries.
+- **News:** add a dated `.md` file to `site/src/content/news/`. It appears in `/news/`, linked from every footer, and gets its own `/news/<filename>/` route.
+
+```yaml
+---
+title: "A concise announcement"
+description: "What changes for the user."
+date: 2026-10-26
+status: upcoming
+---
+```
+
+- `status` is `upcoming` or `available`. Use `upcoming` for merged changes absent from the downloadable release, and state the current release explicitly. Change to `available` only after release verification; link its release notes.
+- Use Markdown headings and short paragraphs/bullets. Link to the owning guide instead of duplicating setup instructions.
+
 ## Product design
 
 - Product design reference: [Ollama](https://ollama.com/), reviewed 2026-10-21. Use plain monochrome surfaces, left-aligned content, restrained type sizes, generous whitespace and a compact navigation bar.
 - Keep product copy functional: feature names, supported formats, requirements and release status. Avoid repeated slogans and decorative section labels.
 - Product pages and guides share the reading-column width and position in `site/src/styles/site.css`. Guide pagination uses small text links between published guides.
 - All content pages use the shared product footer, including downloads, guides, and 404. Guide pagination stays above the footer.
-- Keep Features, Guide, and Download in the header. The footer links to Declaration and Issues; GitHub appears there only when hidden in the header.
+- Keep Features, Guide, and Download in the header. The footer links to News, Declaration and Issues; GitHub appears there only when hidden in the header.
 - Website appearance initially follows the OS. The sun/moon button toggles light/dark and remembers the choice in `starlight-theme`; clearing that preference restores automatic detection.
 - Use the transparent Fermat mark for headers; reserve its blue tile for the application icon. See [artwork sources and regeneration](../desktop-app/resources/AppIcon.md).
 - Link-preview image metadata lives in `site/astro.config.mjs`: use an absolute public URL for `site/public/assets/icon.png`, with its PNG type, dimensions and alt text. X cards use the square `summary` layout.

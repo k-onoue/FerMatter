@@ -1,0 +1,45 @@
+---
+import { getCollection } from "astro:content";
+import Product from "../../layouts/Product.astro";
+import { href } from "../../data/links";
+const news = (await getCollection("news")).sort(
+  (a, b) =>
+    b.data.date.valueOf() - a.data.date.valueOf() || a.id.localeCompare(b.id),
+);
+const dateLabel = (date: Date) =>
+  new Intl.DateTimeFormat("en", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+---
+
+<Product
+  markdown
+  title="News"
+  description="Release announcements and upcoming changes to FerMatter."
+>
+  <header class="page-intro not-content">
+    <h1>News</h1>
+    <p class="lead">Releases and upcoming changes.</p>
+  </header>
+  <ul class="news-list not-content" role="list">
+    {news.map(({ id, data }) => (
+      <li>
+        <p class="news-meta">
+          <time datetime={data.date.toISOString().slice(0, 10)}>
+            {dateLabel(data.date)}
+          </time>
+          <span>
+            {data.status === "upcoming" ? "Next release" : "Available"}
+          </span>
+        </p>
+        <h2>
+          <a href={href(`news/${id}/`)}>{data.title}</a>
+        </h2>
+        <p>{data.description}</p>
+      </li>
+    ))}
+  </ul>
+</Product>
