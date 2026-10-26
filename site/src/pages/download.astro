@@ -1,231 +1,78 @@
 ---
+import { getEntry, render } from "astro:content";
 import Product from "../layouts/Product.astro";
-import InstallCommand from "../components/InstallCommand.astro";
 import config from "../data/site.json";
-import { guide, download, windowsDownload, releases } from "../data/links";
-const app = `brew install --cask ${config.homebrewCask}`;
-const converters = "brew install pdf2svg poppler ghostscript";
-const full = `brew install --cask mactex-no-gui\n${converters}`;
-const minimal = `brew install --cask basictex\n${converters}\nsudo /Library/TeX/texbin/tlmgr update --self\nsudo /Library/TeX/texbin/tlmgr install latexmk preview pdfcrop pgf mathtools`;
-const aptSetup = `sudo apt update
-sudo apt install curl
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://fermatter.github.io/apt/fermatter.gpg | sudo tee /etc/apt/keyrings/fermatter.gpg > /dev/null
-curl -fsSL https://fermatter.github.io/apt/fermatter.sources | sudo tee /etc/apt/sources.list.d/fermatter.sources > /dev/null
-sudo apt update`;
-const ubuntuLatex =
-  "sudo apt install latexmk texlive-latex-extra texlive-extra-utils texlive-pictures ghostscript pdf2svg poppler-utils lmodern cm-super-minimal";
+import { download, windowsDownload, releases } from "../data/links";
+const macos = (await getEntry("download", "macos"))!;
+const windows = (await getEntry("download", "windows"))!;
+const { title, description, platform, requirements } = macos.data;
+const { Content: MacOS } = await render(macos);
+const { Content: Windows } = await render(windows);
+const { Content: WindowsInstaller } = await render(
+  (await getEntry("download", "windows-installer"))!,
+);
+const { Content: Ubuntu } = await render(
+  (await getEntry("download", "ubuntu"))!,
+);
 ---
 
-<Product
-  title="Download"
-  description="Download FerMatter for macOS or Windows, and install LaTeX or Typst."
->
-  <header class="page-intro">
-    <h1>Download</h1>
-    <p class="lead">macOS · Windows</p>
+<Product markdown title={title} description={description}>
+  <header class="page-intro not-content">
+    <h1>{title}</h1>
+    {platform && <p class="lead">{platform}</p>}
   </header>
-  <div class="download-layout">
-    <section class="download-section" id="mac">
-      <h2>
-        {config.releaseAvailable
-          ? `FerMatter ${config.releaseName}`
-          : "Development preview"}
-      </h2>
-      <p>Apple Silicon Mac · macOS 14 or later · unnotarized preview.</p>
-      <div class="actions">
-        {config.releaseAvailable && (
-          <a class="button primary" href={download}>
-            Download DMG ↓
-          </a>
-        )}
-      </div>
-    </section>
-    <section class="download-section" id="windows">
-      <h2>For Windows (preview)</h2>
-      <p>Windows 11 · x64. ARM64 and 32-bit installers are not included.</p>
-      {config.windowsReleaseAvailable ? (
-        <>
-          <p>{config.windowsReleaseName} · unsigned installer.</p>
-          <div class="actions">
-            <a class="button primary" href={windowsDownload}>
-              Download EXE ↓
-            </a>
-          </div>
-          <p>
-            Run the installer, then open FerMatter from the Start menu. It
-            installs for your Windows account and includes the WebView2 runtime
-            installer. LaTeX and Typst are installed separately.
-          </p>
-          <p>
-            Windows may show an unknown-publisher or SmartScreen warning. Check
-            the{" "}
-            <a href={`${releases}/tag/${config.windowsReleaseTag}`}>
-              release and SHA-256 checksum
-            </a>{" "}
-            before continuing. If you trust this preview and Windows permits it,
-            choose <strong>More info → Run anyway</strong>.{" "}
-            <a href="https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app#step-6-handle-smartscreen-for-new-apps">
-              Microsoft's SmartScreen guidance
-            </a>
-            .
-          </p>
-        </>
-      ) : (
-        <p>
-          The Windows installer is being validated. Downloads will appear here
-          when ready.
-        </p>
-      )}
-      <h3>Typst on Windows</h3>
-      <p>Run in PowerShell, then reopen FerMatter:</p>
-      <InstallCommand
-        label="Windows Typst"
-        command="winget install --exact --id Typst.Typst"
-      />
-      <p>
-        <a href="https://github.com/typst/typst#installation">
-          Typst installation instructions
-        </a>
-        .
-      </p>
-      <h3>LaTeX on Windows</h3>
-      <p>
-        Install <a href="https://tug.org/texlive/windows.html">TeX Live</a> or{" "}
-        <a href="https://yihui.org/tinytex/">TinyTeX</a>, then reopen PowerShell
-        and install the packages used by the included demos:
-      </p>
-      <InstallCommand
-        label="Windows LaTeX packages"
-        command={
-          "tlmgr update --self\ntlmgr install latexmk pdfcrop preview pgf mathtools tools cm-super standalone xcolor amsmath amsfonts grfext synctex"
-        }
-      />
-      <p>
-        TinyTeX and TeX Live include the Windows Perl and Ghostscript helpers
-        used by LaTeX rendering; separate installations are unnecessary for this
-        setup.
-      </p>
-      <p>
-        Install the{" "}
-        <a href="https://github.com/oschwartz10612/poppler-windows">
-          Windows Poppler package
-        </a>{" "}
-        in PowerShell:
-      </p>
-      <InstallCommand
-        label="Windows PDF tools"
-        command="winget install --exact --id oschwartz10612.Poppler"
-      />
-      <p>
-        Reopen FerMatter and check{" "}
-        <a href={guide("requirements", "tool-discovery")}>Settings → Tools</a>.
-        If a tool is missing, select its executable path there.
-      </p>
-      <p>
-        Recoverable project deletion, the screen color eyedropper and MCP/CLI
-        are unavailable in this Windows preview.
-      </p>
-      <h3>Update</h3>
-      <p>
-        Quit FerMatter from its tray menu and run the newer installer. Your
-        project files and saved settings are preserved.
-      </p>
-    </section>
+  <section class="download-section not-content" id="mac">
+    <h2>
+      {config.releaseAvailable
+        ? `FerMatter ${config.releaseName}`
+        : "Development preview"}
+    </h2>
+    {requirements && <p>{requirements}</p>}
     {config.releaseAvailable && (
-      <section class="download-section" id="homebrew">
-        <h2>Homebrew</h2>
-        <InstallCommand label="FerMatter" command={app} />
-      </section>
+      <div class="actions">
+        <a class="button primary" href={download}>
+          Download DMG ↓
+        </a>
+      </div>
     )}
-
-    <section class="download-section" id="updates">
-      <h2>Update</h2>
-      <InstallCommand
-        label="Homebrew update"
-        command={`brew upgrade --cask ${config.homebrewCask}`}
-      />
-    </section>
-    <section class="download-section" id="rendering-engines">
-      <h2>Math rendering engine</h2>
-      <p>
-        FerMatter requires LaTeX or Typst to render equations and drawings. The
-        commands below are for macOS.
-      </p>
-      {config.releaseAvailable && (
-        <section id="install">
-          <h3>LaTeX</h3>
-          <h4>Full TeX Live</h4>
-          <InstallCommand label="full TeX Live" command={full} />
-          <h4>BasicTeX</h4>
-          <InstallCommand label="BasicTeX" command={minimal} />
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">TeX option</th>
-                <th scope="col">Installer download</th>
-                <th scope="col">Installed TeX files</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row">Full MacTeX</th>
-                <td>6.4 GB</td>
-                <td>10 GB</td>
-              </tr>
-              <tr>
-                <th scope="row">BasicTeX + packages above</th>
-                <td>134 MB + extra packages</td>
-                <td>0.5–1.3 GB</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-      )}
-      {config.releaseAvailable && (
-        <section id="typst">
-          <h3>Typst</h3>
-          <InstallCommand label="Typst" command="brew install typst" />
-        </section>
-      )}
-    </section>
-    <section class="download-section" id="requirements">
-      <a href={guide("requirements")}>Requirements →</a>
-    </section>
-    {config.ubuntuAptAvailable && (
-      <section class="download-section" id="ubuntu">
-        <h2>For Ubuntu (experimental)</h2>
-        <p>
-          Ubuntu 24.04 · amd64. Limited testing; use file export for images.
-          Native image clipboard and recoverable project deletion are
-          unavailable.
-        </p>
-        <details>
-          <summary>First-time APT setup</summary>
-          <InstallCommand label="APT repository setup" command={aptSetup} />
-        </details>
-        <InstallCommand
-          label="FerMatter for Ubuntu"
-          command="sudo apt install fermatter"
-        />
-        <p>Install LaTeX or Typst separately:</p>
-        <details>
-          <summary>LaTeX tools for Ubuntu</summary>
-          <InstallCommand label="Ubuntu LaTeX tools" command={ubuntuLatex} />
-        </details>
-        <p>
-          For Typst, follow the{" "}
-          <a href="https://github.com/typst/typst#installation">
-            official installation instructions
+  </section>
+  {config.releaseAvailable && (
+    <div class="download-markdown product-markdown sl-markdown-content">
+      <MacOS />
+    </div>
+  )}
+  <section
+    id="windows"
+    class="download-markdown product-markdown sl-markdown-content"
+  >
+    <h2>{windows.data.title}</h2>
+    <p>{windows.data.platform}</p>
+    {config.windowsReleaseAvailable ? (
+      <>
+        <p>{config.windowsReleaseName} · unsigned installer.</p>
+        <div class="actions not-content">
+          <a class="button primary" href={windowsDownload}>
+            Download EXE ↓
           </a>
-          .
+        </div>
+        <p>
+          <a href={`${releases}/tag/${config.windowsReleaseTag}`}>
+            Release and SHA-256 checksum
+          </a>
         </p>
-        <h3>Update</h3>
-        <InstallCommand
-          label="Ubuntu update"
-          command={"sudo apt update\nsudo apt install --only-upgrade fermatter"}
-        />
-      </section>
+        <WindowsInstaller />
+      </>
+    ) : (
+      <p>{windows.data.availability}</p>
     )}
-  </div>
+    <Windows />
+  </section>
+  {config.ubuntuAptAvailable && (
+    <section
+      id="ubuntu"
+      class="download-markdown product-markdown sl-markdown-content"
+    >
+      <Ubuntu />
+    </section>
+  )}
 </Product>

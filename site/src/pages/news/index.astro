@@ -1,0 +1,33 @@
+---
+import { getNews, newsDate, newsDateLabel } from "../../data/news";
+import Product from "../../layouts/Product.astro";
+import { href } from "../../data/links";
+const news = await getNews();
+---
+
+<Product
+  markdown
+  title="News"
+  description="Release announcements and upcoming changes to FerMatter."
+>
+  <header class="page-intro not-content">
+    <h1>News</h1>
+    <p class="lead">Releases and upcoming changes.</p>
+  </header>
+  <ul class="news-list not-content" role="list">
+    {news.map(({ id, data }) => (
+      <li>
+        <p class="news-meta">
+          <time datetime={newsDate(data.date)}>{newsDateLabel(data.date)}</time>
+          <span>
+            {data.status === "upcoming" ? "Next release" : "Available"}
+          </span>
+        </p>
+        <h2>
+          <a href={href(`news/${id}/`)}>{data.title}</a>
+        </h2>
+        <p>{data.description}</p>
+      </li>
+    ))}
+  </ul>
+</Product>
