@@ -726,7 +726,7 @@ it("applying extraction settings refreshes every open Library and preserves vari
       .map(([, payload]) => payload.project),
   ).toEqual(["p", "other"]);
   expect(rpc.mock.calls.some(([op]) => op === "save_file")).toBe(false);
-  fireEvent.click(screen.getByRole("button", { name: "Close", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Close" }));
   rpc.mockClear();
   fireEvent.click(screen.getByTitle("/synthetic"));
   await waitFor(() =>
