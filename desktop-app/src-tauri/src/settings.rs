@@ -752,6 +752,41 @@ mod tests {
         value["bindings"]["nextSourceTab"] = defaults["nextSourceTab"].clone();
         assert!(keybindings(&value).is_ok());
     }
+    #[cfg(windows)]
+    #[test]
+    fn windows_tab_overrides_round_trip_and_rejected_edits_preserve_saved_keys() {
+        let home = tempfile::tempdir().unwrap();
+        let settings = SettingsFiles::new(home.path());
+        let snapshot = settings.snapshot("keybindings.json", false).unwrap();
+        let mut value = snapshot["value"].clone();
+        value["bindings"]["nextSourceTab"] =
+            json!({"key":"","command":true,"control":false,"option":false,"shift":false});
+        value["bindings"]["open"] = default_bindings()["nextSourceTab"].clone();
+        value["extensions"] = json!({"local.example":{"preserve":true}});
+        let revision = settings
+            .save("keybindings.json", &value, string(&snapshot, "revision"))
+            .unwrap();
+        let path = home.path().join("Settings/keybindings.json");
+        let bytes = fs::read(&path).unwrap();
+        assert_eq!(
+            SettingsFiles::new(home.path())
+                .load("keybindings.json")
+                .unwrap(),
+            value
+        );
+        for invalid in [
+            json!({"key":"s","command":true,"control":false,"option":false,"shift":false}),
+            default_bindings()["previousSourceTab"].clone(),
+        ] {
+            let mut changed = value.clone();
+            changed["bindings"]["open"] = invalid;
+            assert!(settings
+                .save("keybindings.json", &changed, &revision)
+                .is_err());
+            assert_eq!(fs::read(&path).unwrap(), bytes);
+            assert_eq!(settings.load("keybindings.json").unwrap(), value);
+        }
+    }
     #[test]
     fn preserves_legacy_zoom_overrides_and_rejects_explicit_duplicates() {
         let d = tempfile::tempdir().unwrap();
