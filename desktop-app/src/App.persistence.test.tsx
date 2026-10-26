@@ -15,8 +15,9 @@ import { flushWindow } from "./persistence";
 import { disposeProjectModels } from "./editor";
 import { initialInstant } from "./instant";
 import { isWindows } from "./platform";
-const { rpc, events } = vi.hoisted(() => ({
+const { rpc, save, events } = vi.hoisted(() => ({
   rpc: vi.fn(),
+  save: vi.fn(),
   events: new Map<string, Set<() => void>>(),
 }));
 vi.mock("./api", () => ({
@@ -33,6 +34,7 @@ vi.mock("./editor", () => ({
 vi.mock("./useAppearance", () => ({ useAppearance: () => {} }));
 vi.mock("./useDesktopBackground", () => ({ useDesktopBackground: () => null }));
 vi.mock("./PdfPane", () => ({ PdfPane: () => null }));
+vi.mock("@tauri-apps/plugin-dialog", () => ({ save, open: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: async (name: string, callback: () => void) => {
     if (!events.has(name)) events.set(name, new Set());
@@ -158,6 +160,7 @@ beforeEach(() => {
   availableProjects = [project];
   pendingImports = [];
   vi.mocked(disposeProjectModels).mockClear();
+  save.mockReset().mockResolvedValue("/synthetic/out.svg");
   failSave = false;
   delaySave = undefined;
   scanImpl = undefined;
@@ -740,4 +743,108 @@ it("applying extraction settings refreshes every open Library and preserves vari
     ).toBe(true),
   );
   expect(rpc.mock.calls.some(([op]) => op === "scan")).toBe(false);
+});
+
+const MAC_USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)";
+function addCards() {
+  for (const [id, name] of [
+    ["second", "Second"],
+    ["third", "Third"],
+  ])
+    project.cards.push({
+      id,
+      name,
+      tex: id,
+      kind: "block",
+      origin: "source",
+      sourceOrder: project.cards.length,
+      status: "pending",
+    } as Card);
+}
+function exportCalls() {
+  return rpc.mock.calls.filter(([operation]) => operation === "export");
+}
+
+it("exports the card whose context menu opened even when macOS delivers a Ctrl+click after the contextmenu", async () => {
+  const userAgent = vi
+    .spyOn(navigator, "userAgent", "get")
+    .mockReturnValue(MAC_USER_AGENT);
+  try {
+    addCards();
+    await openProject();
+    const card = screen.getByRole("button", { name: "Second" });
+    fireEvent.contextMenu(card);
+    fireEvent.click(card, { ctrlKey: true });
+    expect(card.getAttribute("aria-selected")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Export Image…" }));
+    await waitFor(() => expect(exportCalls()).toHaveLength(1));
+    expect(exportCalls()[0][1]).toMatchObject({ ids: ["second"] });
+  } finally {
+    userAgent.mockRestore();
+  }
+});
+
+it("keeps Ctrl as the selection toggle outside macOS", async () => {
+  addCards();
+  await openProject();
+  const second = screen.getByRole("button", { name: "Second" });
+  const third = screen.getByRole("button", { name: "Third" });
+  fireEvent.click(second);
+  fireEvent.click(third, { ctrlKey: true });
+  expect(second.getAttribute("aria-selected")).toBe("true");
+  expect(third.getAttribute("aria-selected")).toBe("true");
+  fireEvent.click(third, { ctrlKey: true });
+  expect(third.getAttribute("aria-selected")).toBe("false");
+});
+
+it("keeps Cmd as the selection toggle on macOS", async () => {
+  const userAgent = vi
+    .spyOn(navigator, "userAgent", "get")
+    .mockReturnValue(MAC_USER_AGENT);
+  try {
+    addCards();
+    await openProject();
+    const second = screen.getByRole("button", { name: "Second" });
+    const third = screen.getByRole("button", { name: "Third" });
+    fireEvent.click(second);
+    fireEvent.click(third, { metaKey: true });
+    expect(third.getAttribute("aria-selected")).toBe("true");
+    fireEvent.click(third, { metaKey: true });
+    expect(third.getAttribute("aria-selected")).toBe("false");
+  } finally {
+    userAgent.mockRestore();
+  }
+});
+
+it("exports the right-clicked card and names the file after it when several cards are selected", async () => {
+  addCards();
+  await openProject();
+  const second = screen.getByRole("button", { name: "Second" });
+  const third = screen.getByRole("button", { name: "Third" });
+  fireEvent.click(second);
+  fireEvent.click(third, { shiftKey: true });
+  expect(second.getAttribute("aria-selected")).toBe("true");
+  expect(third.getAttribute("aria-selected")).toBe("true");
+  fireEvent.contextMenu(third);
+  fireEvent.click(screen.getByRole("button", { name: "Export Image…" }));
+  await waitFor(() => expect(exportCalls()).toHaveLength(1));
+  expect(save).toHaveBeenCalledWith(
+    expect.objectContaining({ defaultPath: "Third.svg" }),
+  );
+  expect(exportCalls()[0][1]).toMatchObject({ ids: ["third"] });
+});
+
+it("reports an empty selection instead of opening the save dialog or calling export", async () => {
+  addCards();
+  await openProject();
+  fireEvent.keyDown(document.body, {
+    key: "s",
+    shiftKey: true,
+    metaKey: !isWindows(),
+    ctrlKey: isWindows(),
+  });
+  expect(await screen.findByText("Select an equation or figure.")).toBeTruthy();
+  expect(save).not.toHaveBeenCalled();
+  expect(exportCalls()).toHaveLength(0);
 });
