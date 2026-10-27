@@ -10,11 +10,12 @@ cargo install --locked cargo-audit --version 0.22.2 --root desktop-app/build/aud
 - Run on the exact committed candidate with all compiler tools installed.
 - `MATHLIDELUX_COMPILER_TESTS=0` is rejected. Missing tools, failed tests/builds/audits and publication failures fail the gate.
 - `--allow-dirty` permits a local rehearsal; its report cannot authorize public packaging.
+- The publication step rebuilds `site/dist` from the checkout before checking it (installing `scripts/` and `site/` dependencies with `npm ci` when missing), so a stale site build cannot pass.
 - Evidence: `desktop-app/build/release-validation/run.*/report.json`, step logs, audit JSON and real-compiler report.
 - Record commit, final commit, clean/dirty state, tool versions, architecture, OS, app file hashes, version and build number.
 - Compiler verification always copies current `examples/` into a unique `build/qa-data/verify-*` directory with empty caches; old QA artifacts cannot satisfy a new run.
 - Keep old verification directories only while needed for inspection; they are ignored test output, not user data.
-- [Release validation workflow](../../.github/workflows/release-validation.yml): manually dispatched macOS job installs the real tools and runs the same gate; no signing secrets, release creation or publication.
+- [Release validation workflow](../../.github/workflows/release-validation.yml): manually dispatched Apple Silicon job installs the real tools (BasicTeX with the Windows workflow TeX packages, Ghostscript, pdf2svg, Poppler and the pinned Typst 0.15.1) and runs the same gate; no signing secrets, release creation or publication.
 - `audit.sh` records npm production and Cargo lockfile advisories. Vulnerabilities fail; informational maintenance/platform warnings remain visible and need review. Never add blanket ignores to make the gate pass.
 
 ## Final artifact checklist
