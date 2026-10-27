@@ -20,14 +20,39 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
-          cache-dependency-path: desktop-app/package-lock.json
+          cache-dependency-path: |
+            desktop-app/package-lock.json
+            scripts/package-lock.json
+            site/package-lock.json
       - run: rustup toolchain install stable --profile minimal --component clippy
       - run: rustup default stable
       - name: Install real compiler toolchains
+        shell: bash
         run: |
-          brew install --cask mactex-no-gui
-          brew install typst ghostscript
+          set -euo pipefail
+          [[ "$(uname -m)" == arm64 ]] || { echo 'Release validation requires an Apple Silicon runner.' >&2; exit 1; }
+          # Full MacTeX (6.4 GB installer, 10 GB installed) does not fit the
+          # runner's 14 GB disk. Use the documented BasicTeX setup plus the TeX
+          # packages the Windows workflow installs for the same real-compiler checks.
+          brew install --cask basictex
+          sudo /Library/TeX/texbin/tlmgr update --self
+          sudo /Library/TeX/texbin/tlmgr install latexmk pdfcrop preview pgf mathtools tools cm-super synctex standalone amsmath amsfonts geometry xcolor grfext
+          # LaTeX rendering on macOS also needs pdf2svg and Poppler (pdftocairo, pdfinfo).
+          brew install ghostscript pdf2svg poppler
+          # Same Typst release as the Ubuntu and Windows workflows.
+          curl -fL --retry 3 -o "$RUNNER_TEMP/typst.tar.xz" \
+            https://github.com/typst/typst/releases/download/v0.15.1/typst-aarch64-apple-darwin.tar.xz
+          echo "48f62ed034aa3a7978309579ac6ca00045e2ef0da73114e8af27cfd8e74dc05a  $RUNNER_TEMP/typst.tar.xz" | shasum -a 256 --check
+          tar -xJf "$RUNNER_TEMP/typst.tar.xz" -C "$RUNNER_TEMP"
+          # release-check.sh and the app search these folders before PATH.
+          for shadow in /Library/TeX/texbin/typst /opt/homebrew/bin/typst /usr/local/bin/typst; do
+            [[ ! -e "$shadow" ]] || { echo "Unpinned Typst would shadow the pinned release: $shadow" >&2; exit 1; }
+          done
+          echo "$RUNNER_TEMP/typst-aarch64-apple-darwin" >> "$GITHUB_PATH"
           echo /Library/TeX/texbin >> "$GITHUB_PATH"
+          df -h "$GITHUB_WORKSPACE"
+      - name: Install locked JavaScript dependencies
+        run: npm --prefix desktop-app ci && npm --prefix scripts ci && npm --prefix site ci
       - name: Install the advisory auditor
         run: cargo install --locked cargo-audit --version 0.22.2 --root desktop-app/build/audit-tools
       - name: Require real compilers, tests, build and audits

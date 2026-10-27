@@ -31,11 +31,21 @@ step() {
     return 1
   fi
 }
+check_publication() {
+  local project
+  for project in scripts site; do
+    [[ -d "$root/$project/node_modules" ]] || npm --prefix "$root/$project" ci || return 1
+  done
+  # The publication check reads site/dist; rebuild it from this commit so a
+  # stale local build can never satisfy the gate.
+  node "$root/scripts/build-guides.mjs" || return 1
+  node "$root/scripts/check-publication.mjs"
+}
 step check env MATHLIDELUX_COMPILER_TESTS=1 "$DESKTOP_ROOT/scripts/check.sh"
 step clippy cargo clippy --manifest-path "$DESKTOP_ROOT/src-tauri/Cargo.toml" --lib -- -D warnings
 step build "$DESKTOP_ROOT/scripts/build.sh"
 step audit "$DESKTOP_ROOT/scripts/audit.sh" "$output/audit"
-step publication node "$root/scripts/check-publication.mjs"
+step publication check_publication
 cp "$DESKTOP_ROOT/build/qa-data/verification.json" "$output/compiler-verification.json"
 [[ "$(git -C "$root" rev-parse HEAD)" == "$commit" ]] || { echo 'Commit changed during validation.' >&2; exit 1; }
 [[ "$dirty" != clean || -z "$(git -C "$root" status --porcelain)" ]] || { echo 'Tracked inputs changed during validation.' >&2; exit 1; }
