@@ -96,21 +96,18 @@ jobs:
           # paths only on this disposable CI account so discovery is exercised.
           $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
           [Environment]::SetEnvironmentVariable('PATH', "$texBin;$typstBin;$userPath", 'User')
-      - name: Frontend, Rust, clippy and real compiler checks
+      - name: Validate and package unsigned stable candidate
         shell: powershell
-        run: ./desktop-app/scripts/check-windows.ps1
-      - name: Audit production dependencies
-        shell: powershell
-        run: ./desktop-app/scripts/audit-windows.ps1
-      - name: Build unsigned NSIS preview with offline WebView2
-        shell: powershell
-        run: ./desktop-app/scripts/build-windows.ps1
+        run: ./desktop-app/scripts/release-check-windows.ps1
       - name: Install, replace, launch and uninstall synthetic preview
         shell: powershell
         run: |
           $installer = @(Get-ChildItem desktop-app/build/windows/*_setup.exe)
           if ($installer.Count -ne 1) { throw 'Expected one packaged installer.' }
-          ./desktop-app/scripts/verify-windows-install.ps1 -Installer $installer.FullName -CheckCompilers
+          $previous = Join-Path $env:RUNNER_TEMP 'previous-preview.exe'
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/FerMatter/fermatter.github.io/releases/download/v0.11.0-windows-preview.4/FerMatter_0.11.0_windows_x64_preview.4_unsigned_setup.exe' -OutFile $previous
+          if ((Get-FileHash -LiteralPath $previous -Algorithm SHA256).Hash.ToLowerInvariant() -ne '2b942d0823caaa05f869718086a50e4f12f6bc5338b558ec0df51f60f1a1bba6') { throw 'Previous preview checksum mismatch.' }
+          ./desktop-app/scripts/verify-windows-install.ps1 -Installer $installer.FullName -PreviousInstaller $previous -CheckCompilers
       - name: Retain installer and evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -120,6 +117,7 @@ jobs:
             desktop-app/build/windows/
             desktop-app/build/windows-qa/
             desktop-app/build/windows-audit/
+            desktop-app/build/release-validation/
             desktop-app/build/windows-install-*/verification.json
             desktop-app/build/windows-install-*/installed-compilers/
           if-no-files-found: ignore

@@ -385,6 +385,12 @@ fn open_window(app: &tauri::AppHandle, project: Option<&Value>) -> tauri::Result
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         .hidden_title(true);
+    #[cfg(target_os = "macos")]
+    let builder = if let Some(id) = crate::identity::isolated_store_id() {
+        builder.data_store_identifier(id)
+    } else {
+        builder
+    };
     let _window = builder.build()?;
     #[cfg(target_os = "macos")]
     crate::project_drop::install(&_window)?;

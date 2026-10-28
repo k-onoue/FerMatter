@@ -6,6 +6,7 @@ mod export;
 mod extraction;
 mod files;
 mod formatting;
+mod identity;
 mod instant;
 mod instant_settings;
 mod lifecycle;
@@ -23,8 +24,11 @@ mod scan;
 mod settings;
 #[cfg(unix)]
 mod single_instance;
+#[cfg(windows)]
+mod single_instance_windows;
 mod source_commands;
 mod storage;
+#[cfg(any(target_os = "macos", windows, test))]
 mod svg_payload;
 mod toolchain;
 pub mod verification;
@@ -812,7 +816,7 @@ pub fn run() {
         }
     }
     #[cfg(unix)]
-    let guard = match single_instance::claim(&context.config().identifier) {
+    let guard = match single_instance::claim(identity::LEGACY_ID) {
         Ok(single_instance::Claim::Primary(guard)) => guard,
         Ok(single_instance::Claim::Secondary(socket)) => {
             single_instance::secondary(context, socket);
@@ -823,11 +827,17 @@ pub fn run() {
             return;
         }
     };
+    if let Err(error) = identity::configure(&mut context) {
+        eprintln!("Cannot prepare FerMatter storage: {error}");
+        return;
+    }
     let builder = tauri::Builder::default();
     #[cfg(windows)]
-    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, arguments, cwd| {
-        windows_arguments(app, arguments.into_iter().skip(1), Path::new(&cwd));
-    }));
+    let builder = builder.plugin(single_instance_windows::init(Box::new(
+        |app, arguments, cwd| {
+            windows_arguments(app, arguments.into_iter().skip(1), Path::new(&cwd));
+        },
+    )));
     #[cfg(unix)]
     let builder = builder.manage(guard);
     builder

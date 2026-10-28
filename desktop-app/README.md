@@ -1,7 +1,7 @@
 # FerMatter desktop
 
 - Desktop application: Tauri 2, Rust, React/TypeScript, Monaco, PDF.js.
-- App name: **FerMatter**. Bundle ID: `local.slidemath.prototype` (preserved from the Swift app).
+- App name: **FerMatter**. Permanent bundle ID: `io.github.fermatter.fermatter`; [migration](../dev-docs/reference/storage.md#app-identity-migration) preserves legacy data and resident coordination.
 - This is the maintained implementation. The retired Swift/Python source remains available in Git history.
 - Runtime: no Python, Node.js, Rust, Swift SDK, or Xcode installation required by app users.
 - Compilers remain external: Typst; or TeX/`latexmk`, `pdfcrop`, `pdftocairo`, `pdfinfo`, and `synctex`. macOS/Linux also use `pdf2svg`; Windows uses Poppler for SVG conversion. See [requirements](../user-docs/requirements.md).
@@ -79,7 +79,7 @@ open 'src-tauri/target/release/bundle/macos/FerMatter.app'
 - In-app release checks/downloads are not yet implemented in this app; install newer builds manually. Signed updates need a separate release feed/artifact setup.
 - Experimental Ubuntu 24.04 amd64 packages use a signed APT repository; see [packaging](../dev-docs/reference/packaging.md#experimental-ubuntu). CI checks rendering, clean APT installation, CLI tools and headless startup. Physical Linux desktops/Wayland and cross-application drag remain unverified; native image clipboard and recoverable project deletion are unavailable.
 - Intel macOS has not been built or tested. Windows 11 x64 has native test/build coverage; this is an unsigned preview, with the limitations above.
-- Public signing/notarization and installer/update verification remain release work.
+- Final installer/update verification remains release work. Stable candidates may be ad hoc signed on macOS and unsigned on Windows; signing/notarization status is separate from release channel.
 
 ## Validation
 

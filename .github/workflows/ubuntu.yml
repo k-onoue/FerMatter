@@ -46,7 +46,7 @@ jobs:
           node-version-file: .node-version
           cache: npm
           cache-dependency-path: desktop-app/package-lock.json
-      - run: rustup toolchain install stable --profile minimal
+      - run: rustup toolchain install stable --profile minimal --component clippy
       - run: rustup default stable
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -72,8 +72,16 @@ jobs:
       - run: npm --prefix desktop-app ci
       - run: python3 -m unittest discover -s scripts/tests -p 'test_apt_repository.py' -v
       - run: npm --prefix desktop-app test
+      - run: node --test desktop-app/scripts/*.check.mjs
+      - name: Audit production dependencies
+        run: |
+          cargo install --locked cargo-audit --version 0.22.2 --root desktop-app/build/audit-tools
+          bash desktop-app/scripts/audit.sh desktop-app/build/ubuntu/audit
       - name: Build Debian package
         run: bash desktop-app/scripts/build-ubuntu.sh
+      # The build prepares bundled license/PDF resources required by tauri-build.
+      - name: Clippy
+        run: cargo clippy --locked --manifest-path desktop-app/src-tauri/Cargo.toml --lib -- -D warnings
       - name: Rust tests
         run: cargo test --release --manifest-path desktop-app/src-tauri/Cargo.toml --lib
       - name: Real LaTeX, Typst, TikZ and CeTZ checks

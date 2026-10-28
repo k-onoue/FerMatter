@@ -11,6 +11,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { assertEvidence } from "./release-report.mjs";
 
 const desktop = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repository = dirname(desktop);
@@ -62,8 +63,14 @@ function command(executable, args) {
   }).trim();
 }
 
-export function packageWindows(outputDirectory) {
+export function packageWindows(
+  outputDirectory,
+  channel = "prototype",
+  validation,
+) {
   if (process.platform !== "win32") throw new Error("Package on Windows.");
+  if (!["prototype", "preview", "stable-candidate"].includes(channel))
+    throw new Error("Choose prototype, preview or stable-candidate.");
   const tauri = JSON.parse(
     readFileSync(join(desktop, "src-tauri/tauri.conf.json"), "utf8"),
   );
@@ -94,9 +101,22 @@ export function packageWindows(outputDirectory) {
   const installerBytes = readFileSync(source);
   if (![0x14c, 0x8664].includes(peMachine(installerBytes)))
     throw new Error("Unexpected installer architecture.");
+  const commit = command("git", ["rev-parse", "HEAD"]);
+  const dirty = command("git", ["status", "--porcelain"]).length > 0;
+  if (channel !== "prototype") {
+    if (!validation || dirty)
+      throw new Error(
+        "Distribution candidates require validation and a clean checkout.",
+      );
+    const report = JSON.parse(readFileSync(validation, "utf8"));
+    assertEvidence(report, commit, bundle);
+    if (report.version !== version)
+      throw new Error("Validation version differs from app.");
+  }
   const output = resolve(outputDirectory || join(desktop, "build/windows"));
   mkdirSync(output, { recursive: true });
-  const name = `FerMatter_${version}_windows_x64_preview.${metadata.preview}_unsigned_setup.exe`;
+  const label = channel === "preview" ? `preview.${metadata.preview}` : channel;
+  const name = `FerMatter_${version}_windows_x64_${label}_unsigned_setup.exe`;
   const target = join(output, name);
   if (existsSync(target)) {
     preserveFile(target, installerBytes);
@@ -112,8 +132,9 @@ export function packageWindows(outputDirectory) {
     version,
     ...metadata,
     identifier: tauri.identifier,
-    commit: command("git", ["rev-parse", "HEAD"]),
-    dirty: command("git", ["status", "--porcelain"]).length > 0,
+    channel,
+    commit,
+    dirty,
     file: name,
     sha256: checksum,
     applicationSha256: sha256(nsisApplicationBytes(executableBytes)),
@@ -127,6 +148,8 @@ export function packageWindows(outputDirectory) {
     Buffer.from(JSON.stringify(result, null, 2) + "\n"),
   );
   console.log(JSON.stringify({ file: target, sha256: checksum }, null, 2));
+  if (validation)
+    preserveFile(join(output, "validation.json"), readFileSync(validation));
   return result;
 }
 
@@ -134,4 +157,4 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(resolve(process.argv[1])).href
 )
-  packageWindows(process.argv[2]);
+  packageWindows(process.argv[2], process.argv[3], process.argv[4]);

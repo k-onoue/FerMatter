@@ -34,10 +34,11 @@ permission to replace an existing app.
 PKG: Open the installer and follow its steps. It installs only
 /Applications/FerMatter.app, and may request administrator authorization.
 It does not install runtimes, run installation scripts, or launch the app.
-It replaces an existing app of the same identity; newer versions are preserved.
+It replaces the existing FerMatter app at that path, including the old-ID preview; newer versions are preserved.
 
-The app retains the prototype bundle identifier local.slidemath.prototype so
-existing preferences remain available. New project source folders default to
+The permanent app identifier is io.github.fermatter.fermatter. Legacy
+preferences and WebView storage remain available through compatibility paths.
+macOS may request folder access again. New project source folders default to
 ~/Documents/Mathlidelux. Projects opened from an existing folder stay in that
 location. Project metadata and caches live in
 ~/Library/Application Support/Slide Math/Rust Preview (the existing internal

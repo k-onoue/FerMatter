@@ -32,6 +32,7 @@
 
 - [Local automation: CLI and MCP](reference/automation.md).
 - [Storage and compatibility](reference/storage.md).
+- [Platform validation record](reference/platform-validation.md), [unsigned stable preparation](reference/stable-readiness.md).
 - [SVG restoration and resident Instant](reference/svg-recipes.md).
 - [Settings-file schemas](reference/settings-files.md).
 - [Update contract](reference/updates.md).

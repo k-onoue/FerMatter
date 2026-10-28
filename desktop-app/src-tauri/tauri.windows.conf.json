@@ -20,11 +20,12 @@
     ]
   },
   "bundle": {
+    "publisher": "slidemath",
     "targets": ["nsis"],
     "icon": ["icons/icon.ico", "icons/icon.png"],
     "licenseFile": "../../LICENSE",
     "resources": {
-      "../packaging/WINDOWS-PREVIEW-README.txt": "WINDOWS-PREVIEW-README.txt"
+      "../packaging/WINDOWS-README.txt": "WINDOWS-README.txt"
     },
     "windows": {
       "allowDowngrades": false,

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { version as osVersion, release as osRelease } from "node:os";
 export function hashTree(root, prefix = "") {
   const entries = [];
   for (const name of readdirSync(join(root, prefix)).sort()) {
@@ -19,19 +20,24 @@ export function hashTree(root, prefix = "") {
   }
   return entries;
 }
-export function assertEvidence(report, commit, app) {
+export function assertCommitEvidence(report, commit) {
   if (
     report.status !== "passed" ||
-    report.dirty ||
+    report.dirty !== false ||
     report.commit !== commit ||
     report.endingCommit !== commit
   )
     throw new Error(
       "Public packaging requires successful validation of this exact clean commit.",
     );
-  for (const name of ["check", "clippy", "build", "audit", "publication"])
-    if (!report.checks.some((c) => c.name === name && c.status === "passed"))
+  for (const name of ["check", "clippy", "build", "audit", "publication"]) {
+    const checks = report.checks?.filter((c) => c.name === name);
+    if (checks?.length !== 1 || checks[0].status !== "passed")
       throw new Error(`Missing passing release check: ${name}`);
+  }
+}
+export function assertEvidence(report, commit, app) {
+  assertCommitEvidence(report, commit);
   if (JSON.stringify(report.appFiles) !== JSON.stringify(hashTree(app)))
     throw new Error("App differs from the validated bundle.");
 }
@@ -40,7 +46,10 @@ if (
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
   const [mode, ...args] = process.argv.slice(2);
-  if (mode === "verify") {
+  if (mode === "verify-commit") {
+    const [report, commit] = args;
+    assertCommitEvidence(JSON.parse(readFileSync(report, "utf8")), commit);
+  } else if (mode === "verify") {
     const [report, commit, app] = args;
     assertEvidence(JSON.parse(readFileSync(report, "utf8")), commit, app);
   } else if (mode === "write") {
@@ -80,7 +89,10 @@ if (
       generatedAt: new Date().toISOString(),
       version: config.version,
       build: config.bundle.macOS.bundleVersion,
-      platform: run("sw_vers", []),
+      platform:
+        process.platform === "darwin"
+          ? run("sw_vers", [])
+          : `${osVersion()} (${osRelease()})`,
       architecture: process.arch,
       checks,
       appFiles,
@@ -99,11 +111,11 @@ if (
         ].map(([tool, args]) => [tool, run(tool, args)]),
       ),
       manualValidation:
-        "pending: complete dev-docs/reference/release-validation.md on the final signed artifacts",
+        "pending: complete dev-docs/reference/release-validation.md on the final distribution artifacts",
     };
     writeFileSync(
       join(folder, "report.json"),
       JSON.stringify(report, null, 2) + "\n",
     );
-  } else throw new Error("Use write or verify.");
+  } else throw new Error("Use write, verify or verify-commit.");
 }

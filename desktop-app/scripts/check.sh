@@ -7,6 +7,9 @@ npm run build
 npm test
 node --test scripts/*.check.mjs
 cargo test --manifest-path src-tauri/Cargo.toml --lib
+if [[ "$(uname -s)" == Darwin ]]; then
+  python3 scripts/verify-webview-migration.py
+fi
 if [[ "${MATHLIDELUX_COMPILER_TESTS:-1}" == "1" ]]; then
   cargo run --manifest-path src-tauri/Cargo.toml --example verify -- "$DESKTOP_ROOT/.." "$DESKTOP_ROOT/build/qa-data"
 else

@@ -8,6 +8,7 @@ output_dir="$project_dir/build/distribution"
 overwrite=0
 public=0
 preview=0
+stable=0
 notary_profile=""
 installer_identity=""
 signing_identity=""
@@ -23,6 +24,8 @@ Without --app, build.sh first builds the app from the current checkout.
 --output DIR   Output directory; its parent must exist (default: build/distribution).
 --overwrite    Replace existing artifacts with the same version and build number.
 --preview      Label an existing ad hoc --app as a public, unnotarized preview.
+--stable       Prepare an unnotarized stable candidate from an ad hoc --app.
+--validation   Passing release-check.sh report; required for preview/stable/public.
 --help         Show this help.
 
 Public preparation: add --public --notary-profile NAME --signing-identity NAME
@@ -40,6 +43,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --public) public=1; shift ;;
         --preview) preview=1; shift ;;
+        --stable) stable=1; shift ;;
         --notary-profile|--installer-identity|--signing-identity|--validation)
             [[ $# -ge 2 && -n "$2" ]] || fail "$1 requires a value"
             case "$1" in
@@ -60,14 +64,17 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ "$(uname -s)" = Darwin ]] || fail "Packaging requires macOS."
-[[ "$public$preview" != 11 ]] || fail "Choose --public or --preview."
-[[ "$preview" != 1 || -n "$app_dir" ]] || fail "Preview mode requires an explicit --app."
+[[ $((public + preview + stable)) -le 1 ]] || fail "Choose --public, --preview or --stable."
+if [[ "$preview" = 1 || "$stable" = 1 ]]; then
+    [[ -n "$app_dir" && -n "$validation" ]] || fail "Preview/stable mode requires --app and --validation."
+fi
 if [[ "$public" = 1 ]]; then
     [[ -n "$app_dir" && -n "$notary_profile" && -n "$validation" ]] || fail "Public mode requires --app, --notary-profile and --validation."
     [[ "$signing_identity" = "Developer ID Application: "* ]] || fail "Use the exact Developer ID Application identity name."
     [[ "$installer_identity" = "Developer ID Installer: "* ]] || fail "Use the exact Developer ID Installer identity name."
 else
-    [[ -z "$notary_profile$installer_identity$signing_identity$validation" ]] || fail "Production options require --public."
+    [[ -z "$notary_profile$installer_identity$signing_identity" ]] || fail "Signing/notary options require --public."
+    [[ "$preview" = 1 || "$stable" = 1 || -z "$validation" ]] || fail "Validation requires --preview, --stable or --public."
 fi
 if [[ -z "$app_dir" ]]; then
     "$project_dir/scripts/build.sh"
@@ -77,7 +84,7 @@ fi
 app_dir="$(cd "$app_dir" && pwd -P)"
 plist="$app_dir/Contents/Info.plist"
 plist_value() { /usr/libexec/PlistBuddy -c "Print :$1" "$plist"; }
-[[ "$(plist_value CFBundleIdentifier)" = local.slidemath.prototype ]] || fail "Unexpected app bundle identifier."
+[[ "$(plist_value CFBundleIdentifier)" = io.github.fermatter.fermatter ]] || fail "Unexpected app bundle identifier."
 [[ "$(plist_value CFBundleExecutable)" = FerMatter ]] || fail "Unexpected app executable."
 version="$(plist_value CFBundleShortVersionString)"
 build="$(plist_value CFBundleVersion)"
@@ -91,13 +98,20 @@ minimum_os="$(plist_value LSMinimumSystemVersion)"
 signature="$(/usr/bin/codesign --display --verbose=2 "$app_dir" 2>&1)"
 if [[ "$public" = 1 ]]; then
     [[ "$signature" = *"Authority=$signing_identity"* && "$signature" = *"runtime"* && "$signature" = *"Timestamp="* ]] || fail "App must have the selected Developer ID signature, hardened runtime and secure timestamp."
-    [[ -z "$(git -C "$project_dir/.." status --porcelain)" ]] || fail "Public packaging requires a clean checkout."
-    node "$project_dir/scripts/release-report.mjs" verify "$validation" "$(git -C "$project_dir/.." rev-parse HEAD)" "$app_dir"
+else
+    [[ "$signature" = *$'\nSignature=adhoc'* ]] || fail "Expected an ad hoc signed development app; use --public for Developer ID packages."
+fi
+if [[ -n "$validation" ]]; then
+    [[ -z "$(git -C "$project_dir/.." status --porcelain)" ]] || fail "Distribution packaging requires a clean checkout."
+    verification_mode=verify
+    # Previews may be staged and re-signed from an Apple Development build.
+    # Stable candidates and notarized artifacts must match the tested bundle.
+    if [[ "$preview" = 1 ]]; then verification_mode=verify-commit; fi
+    node "$project_dir/scripts/release-report.mjs" "$verification_mode" "$validation" "$(git -C "$project_dir/.." rev-parse HEAD)" "$app_dir"
+    node -e 'const fs=require("node:fs"),r=JSON.parse(fs.readFileSync(process.argv[1]));if(r.version!==process.argv[2]||String(r.build)!==process.argv[3])throw new Error("Validation version/build differs from app.")' "$validation" "$version" "$build"
     for legal_file in JAVASCRIPT-LICENSES.txt RUST-LICENSES.txt; do
         [[ -s "$app_dir/Contents/Resources/licenses/$legal_file" ]] || fail "Missing bundled dependency notices: $legal_file"
     done
-else
-    [[ "$signature" = *$'\nSignature=adhoc'* ]] || fail "Expected an ad hoc signed development app; use --public for Developer ID packages."
 fi
 for legal_file in LICENSE NOTICE; do
     [[ -s "$app_dir/Contents/Resources/$legal_file" ]] || fail "The signed app is missing $legal_file; rebuild it first."
@@ -127,6 +141,10 @@ elif [[ "$preview" = 1 ]]; then
     label="Unnotarized Preview"
     suffix="preview-unnotarized"
     readme="$project_dir/packaging/PREVIEW-README.txt"
+elif [[ "$stable" = 1 ]]; then
+    label="Stable Candidate (Unnotarized)"
+    suffix="stable-candidate-unnotarized"
+    readme="$project_dir/packaging/UNNOTARIZED-README.txt"
 fi
 artifact="FerMatter-${version}-build${build}-macOS-arm64-${suffix}"
 for extension in dmg pkg sha256 validation.json notarization.json; do
@@ -190,7 +208,8 @@ cat > "$scratch/components.plist" <<'PLIST'
 <key>RootRelativeBundlePath</key><string>Applications/FerMatter.app</string>
 <key>BundleIsRelocatable</key><false/>
 <key>BundleIsVersionChecked</key><true/>
-<key>BundleHasStrictIdentifier</key><true/>
+<!-- Replace the old-ID preview at this exact path, without relocation. -->
+<key>BundleHasStrictIdentifier</key><false/>
 <key>BundleOverwriteAction</key><string>upgrade</string>
 </dict></array></plist>
 PLIST
@@ -265,8 +284,12 @@ if [[ "$public" = 1 ]]; then
 else
     if /usr/sbin/pkgutil --check-signature "$scratch/$artifact.pkg" > "$scratch/pkg-signature.txt" 2>&1; then fail "Expected an unsigned prototype installer."; fi
     /usr/bin/grep -q 'Status: no signature' "$scratch/pkg-signature.txt" || fail "Could not confirm unsigned PKG status."
-    printf '{"status":"%s"}\n' "$suffix" > "$scratch/$artifact.notarization.json"
-    printf '{"status":"not-a-release-validation"}\n' > "$scratch/$artifact.validation.json"
+    printf '{"status":"not-notarized","channel":"%s","appSigning":"ad-hoc","installerSigning":"unsigned"}\n' "$label" > "$scratch/$artifact.notarization.json"
+    if [[ -n "$validation" ]]; then
+        cp "$validation" "$scratch/$artifact.validation.json"
+    else
+        printf '{"status":"not-a-release-validation"}\n' > "$scratch/$artifact.validation.json"
+    fi
 fi
 cat "$scratch/pkg-signature.txt"
 (

@@ -92,7 +92,7 @@ mod local {
         }
     }
     pub fn start(app: &tauri::AppHandle) -> files::Result<Server> {
-        let path = crate::single_instance::automation_path(&app.config().identifier);
+        let path = crate::single_instance::automation_path(crate::identity::LEGACY_ID);
         if path.exists() {
             fs::remove_file(&path).map_err(files::err)?;
         }
