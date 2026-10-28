@@ -340,8 +340,16 @@ export function Settings({
                             setRecord("");
                             return;
                           }
+                          // AltGr arrives as its own "AltGraph" key on layouts
+                          // that use it (Windows, Linux); wait for the real key.
                           if (
-                            ["Meta", "Control", "Shift", "Alt"].includes(e.key)
+                            [
+                              "Meta",
+                              "Control",
+                              "Shift",
+                              "Alt",
+                              "AltGraph",
+                            ].includes(e.key)
                           )
                             return;
                           try {
