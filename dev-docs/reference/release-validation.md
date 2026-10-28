@@ -22,7 +22,7 @@ cargo install --locked cargo-audit --version 0.22.2 --root desktop-app/build/aud
 
 - Copy this table into the release issue; replace `Pending` with the date, environment and evidence.
 - Use synthetic `examples/` only. Do not reset real user storage or permissions.
-- Run against the **final signed DMG/PKG**, with Gatekeeper enabled, on a clean supported Mac or macOS VM.
+- Run against the **final DMG/PKG**, with Gatekeeper enabled, on a clean supported Mac or macOS VM. Record the ad hoc app signature and unsigned/unnotarized installer state.
 - Minimum deployment target is not evidence that the oldest supported OS passed.
 
 | Operation | Required evidence | Result |

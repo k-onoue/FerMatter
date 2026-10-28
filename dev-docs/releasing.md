@@ -75,8 +75,6 @@
 ## Tag and publish
 
 - This is step 6 of [stable preparation](reference/stable-readiness.md). Do not tag, publish or update Homebrew/APT/download metadata during steps 1–5.
-
-
 - Create an **annotated tag** on the exact tested commit in `main`; verify the commit before pushing.
 - Example placeholders below must be replaced with the chosen version and tested commit:
 

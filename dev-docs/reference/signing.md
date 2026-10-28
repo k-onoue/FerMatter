@@ -37,7 +37,7 @@ codesign -d -r- desktop-app/src-tauri/target/release/bundle/macos/FerMatter.app
 ```
 
 - A default ad hoc requirement shows `cdhash`; a certificate-backed requirement includes the signing identity/anchor.
-- Development signing is for local testing. Public downloads still require Developer ID signing and notarization; the [prototype packager](packaging.md) accepts only ad hoc bundles.
+- Development signing is for local testing. The [current release policy](../releasing.md#current-boundary) permits validated ad hoc, unnotarized downloads; Developer ID signing and notarization are optional. [Packaging](packaging.md) records signing state separately from the release channel.
 - Do not reset/edit TCC databases, remove file protection, or grant Full Disk Access to work around rebuild prompts.
 
 ## References
