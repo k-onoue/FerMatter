@@ -44,15 +44,12 @@ struct TargetWindowHandle(isize);
 struct UserData<R: Runtime> {
     app: AppHandle<R>,
     callback: Box<SingleInstanceCallback<R>>,
+    owned_by_window: bool,
 }
 
 impl<R: Runtime> UserData<R> {
     unsafe fn from_hwnd_raw(hwnd: HWND) -> *mut Self {
         unsafe { GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut Self }
-    }
-
-    unsafe fn from_hwnd<'a>(hwnd: HWND) -> &'a mut Self {
-        unsafe { &mut *Self::from_hwnd_raw(hwnd) }
     }
 
     fn run_callback(&mut self, args: Vec<String>, cwd: String) {
@@ -133,13 +130,18 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                 let userdata = UserData {
                     app: app.clone(),
                     callback,
+                    owned_by_window: false,
                 };
                 let userdata = Box::into_raw(Box::new(userdata));
                 let hwnd = create_event_target_window::<R>(&class_name, &window_name, userdata);
                 if hwnd.is_null() {
+                    let error = std::io::Error::last_os_error();
                     unsafe { drop(Box::from_raw(userdata)); ReleaseMutex(hmutex); CloseHandle(hmutex); }
-                    return Err(std::io::Error::last_os_error().into());
+                    return Err(error.into());
                 }
+                // CreateWindowExW can destroy a partially created window before failing.
+                // Transfer ownership only after success to avoid freeing the box twice.
+                unsafe { (*userdata).owned_by_window = true; }
                 app.manage(MutexHandle(hmutex as _));
                 app.manage(TargetWindowHandle(hwnd as _));
             }
@@ -181,6 +183,9 @@ unsafe extern "system" fn single_instance_window_proc<R: Runtime>(
         }
 
         WM_COPYDATA => {
+            if lparam == 0 {
+                return 0;
+            }
             let cds = unsafe { &*(lparam as *const COPYDATASTRUCT) };
             let separator = match cds.dwData {
                 WMCOPYDATA_SINGLE_INSTANCE_DATA_NUL => '\0',
@@ -209,14 +214,20 @@ unsafe extern "system" fn single_instance_window_proc<R: Runtime>(
             let cwd = s.next().unwrap_or_default().to_string();
             let args = s.map(|s| s.to_string()).collect();
 
-            let userdata = unsafe { UserData::<R>::from_hwnd(hwnd) };
-            userdata.run_callback(args, cwd);
+            let userdata = unsafe { UserData::<R>::from_hwnd_raw(hwnd) };
+            if userdata.is_null() {
+                return 0;
+            }
+            unsafe { (*userdata).run_callback(args, cwd) };
             1
         }
 
         WM_DESTROY => {
             let userdata = unsafe { UserData::<R>::from_hwnd_raw(hwnd) };
-            drop(unsafe { Box::from_raw(userdata) });
+            unsafe { SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0) };
+            if !userdata.is_null() && unsafe { (*userdata).owned_by_window } {
+                drop(unsafe { Box::from_raw(userdata) });
+            }
             0
         }
         _ => unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) },
@@ -270,14 +281,16 @@ fn create_event_target_window<R: Runtime>(
             GetModuleHandleW(std::ptr::null()),
             userdata as _,
         );
-        SetWindowLongPtrW(
-            hwnd,
-            GWL_STYLE,
-            // The window technically has to be visible to receive WM_PAINT messages (which are used
-            // for delivering events during resizes), but it isn't displayed to the user because of
-            // the LAYERED style.
-            (WS_VISIBLE | WS_POPUP) as isize,
-        );
+        if !hwnd.is_null() {
+            SetWindowLongPtrW(
+                hwnd,
+                GWL_STYLE,
+                // The window technically has to be visible to receive WM_PAINT messages (which are used
+                // for delivering events during resizes), but it isn't displayed to the user because of
+                // the LAYERED style.
+                (WS_VISIBLE | WS_POPUP) as isize,
+            );
+        }
         hwnd
     }
 }

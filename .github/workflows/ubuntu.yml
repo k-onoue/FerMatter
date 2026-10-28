@@ -77,10 +77,11 @@ jobs:
         run: |
           cargo install --locked cargo-audit --version 0.22.2 --root desktop-app/build/audit-tools
           bash desktop-app/scripts/audit.sh desktop-app/build/ubuntu/audit
-      - name: Clippy
-        run: cargo clippy --locked --manifest-path desktop-app/src-tauri/Cargo.toml --lib -- -D warnings
       - name: Build Debian package
         run: bash desktop-app/scripts/build-ubuntu.sh
+      # The build prepares bundled license/PDF resources required by tauri-build.
+      - name: Clippy
+        run: cargo clippy --locked --manifest-path desktop-app/src-tauri/Cargo.toml --lib -- -D warnings
       - name: Rust tests
         run: cargo test --release --manifest-path desktop-app/src-tauri/Cargo.toml --lib
       - name: Real LaTeX, Typst, TikZ and CeTZ checks
