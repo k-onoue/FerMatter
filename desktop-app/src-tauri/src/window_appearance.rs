@@ -1,6 +1,55 @@
 use crate::files::Result;
 use serde_json::Value;
 
+#[cfg(windows)]
+mod menu {
+    use crate::files::{err, Result};
+    use windows_sys::Win32::{
+        Foundation::{HWND, LPARAM, LRESULT, WPARAM},
+        UI::{
+            Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
+            WindowsAndMessaging::{
+                DrawMenuBar, WM_NCACTIVATE, WM_NCDESTROY, WM_SIZE, WM_THEMECHANGED,
+            },
+        },
+    };
+
+    const SUBCLASS_ID: usize = 0x464d4150;
+
+    unsafe extern "system" fn redraw_after_native_frame(
+        hwnd: HWND,
+        message: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+        subclass: usize,
+        _: usize,
+    ) -> LRESULT {
+        if message == WM_NCDESTROY {
+            unsafe { RemoveWindowSubclass(hwnd, Some(redraw_after_native_frame), subclass) };
+        }
+        let result = unsafe { DefSubclassProc(hwnd, message, wparam, lparam) };
+        if matches!(message, WM_NCACTIVATE | WM_SIZE | WM_THEMECHANGED) {
+            // Windows can repaint the bar with its system brush after muda has
+            // applied the app theme. Redraw the whole menu after that frame pass,
+            // so its existing themed renderer also handles focus/resize changes.
+            unsafe { DrawMenuBar(hwnd) };
+        }
+        result
+    }
+
+    pub fn install(window: &tauri::WebviewWindow) -> Result<()> {
+        let hwnd = window.hwnd().map_err(err)?.0;
+        // apply() runs on the window's UI thread. Reinstalling the same callback
+        // and ID updates one subclass; WM_NCDESTROY removes it before destruction.
+        if unsafe { SetWindowSubclass(hwnd, Some(redraw_after_native_frame), SUBCLASS_ID, 0) } == 0
+        {
+            return Err(std::io::Error::last_os_error().to_string());
+        }
+        unsafe { DrawMenuBar(hwnd) };
+        Ok(())
+    }
+}
+
 #[cfg(not(target_os = "macos"))]
 fn colors(value: &Value) -> Result<(bool, tauri::window::Color)> {
     let dark = value["dark"]
@@ -44,7 +93,10 @@ pub fn apply(app: &tauri::AppHandle, label: &str, value: &Value) -> Result<()> {
                 } else {
                     tauri::Theme::Light
                 }))
-                .map_err(err)
+                .map_err(err)?;
+            #[cfg(windows)]
+            menu::install(&window)?;
+            Ok(())
         })
     }
 }

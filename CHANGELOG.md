@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Repaint the Windows menu bar with the selected app theme after focus, resize and native theme changes.
+
 - Adopt permanent app ID `io.github.fermatter.fermatter` while retaining legacy data, WebView recovery storage, resident coordination and installer upgrade paths. macOS may ask for folder access again.
 
 - Prepare validated ad hoc macOS and unsigned Windows stable candidates, with exact-commit validation reports and artifact hashes. Keep Ubuntu experimental and retain APT signing; this does not publish a stable release.
