@@ -23,6 +23,19 @@ Snapshot: 2026-10-29. Dates below use Asia/Tokyo.
 
 ## Dated evidence
 
+### 2026-10-29 — unsigned macOS preparation candidate
+
+- Environment: macOS 26.5.2 (25F84), arm64, local development Mac.
+- Candidate: 0.11.0 build 15, commit `3b83fc82bcc8fff9520a6e30632f406320c3fc42`, [preparation PR #133](https://github.com/k-onoue/FerMatter/pull/133). This reuses the internal preview version for local validation only; it is not a new published asset.
+- Passed: clean-commit `release-check.sh` (255 frontend tests, 174 Rust tests, real LaTeX/Typst/TikZ/CeTZ verification, Clippy, ad hoc app build, dependency audits and publication checks). One compiler-dependent unit test remains covered by the standalone verifier.
+- Passed: native synthetic WKWebView LocalStorage read after switching bundle IDs and after rollback; the production alias/conflict behavior has separate Rust tests.
+- Passed: `package.sh --stable`; read-only DMG layout/signature inspection, expanded PKG payload equality, no installer scripts, notices and checksums. This does not test installation into `/Applications` or new-account security prompts.
+- DMG SHA-256: `56a9b510ad961cbf51152ebcacc8e4f61e69f64e2c3f41a717de1994b32bfe35`.
+- PKG SHA-256: `ed4279189b72498fa7238839a311d3becab6f79fb91adc0289e6169f2d62a496`.
+- Local ignored evidence: `desktop-app/build/release-validation/run.1EabwD/` and `desktop-app/build/stable-candidate-3b83fc8/`. Preserve these reports with the candidate, not in Git.
+- Audits: zero entries classified as vulnerabilities by npm/Cargo. Informational warnings remain for unmaintained `proc-macro-error`, `rustybuzz` and `ttf-parser`, and Linux GTK's `glib 0.18.5` [VariantStrIter unsoundness](https://rustsec.org/advisories/RUSTSEC-2024-0429.html). Do not describe this as “no advisories”; retain the reports. Linux stays experimental; a stable Linux claim requires resolving or establishing the affected dependency usage.
+- Signature: macOS app ad hoc; DMG/PKG unsigned, not notarized. Native Windows 11, older macOS, clean-account prompts and receiving-app clipboard/drag are still required before stable publication.
+
 ### 2026-10-28 — macOS local integration checks
 
 - Environment: macOS 26.5.2, build 25F84; arm64, local development Mac.

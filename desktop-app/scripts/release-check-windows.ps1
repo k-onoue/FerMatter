@@ -14,12 +14,18 @@ try {
     $bundle = Join-Path $DesktopRoot 'src-tauri\target\release\bundle\nsis'
     $status = 'failed'
     function Step([string]$Name, [scriptblock]$Command) {
+        # Windows PowerShell 5 turns redirected native stderr (even npm warnings)
+        # into terminating NativeCommandError records under Stop. Capture the
+        # host transcript instead; Invoke-Checked still enforces native exit codes.
+        Start-Transcript -Path (Join-Path $run "$Name.log") | Out-Null
         try {
-            & $Command *>&1 | Tee-Object -FilePath (Join-Path $run "$Name.log")
+            & $Command
             [IO.File]::AppendAllText($steps, "$Name`tpassed`n", $utf8)
         } catch {
             [IO.File]::AppendAllText($steps, "$Name`tfailed`n", $utf8)
             throw
+        } finally {
+            Stop-Transcript | Out-Null
         }
     }
     try {
