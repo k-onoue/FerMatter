@@ -77,6 +77,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'TeX Live manager update failed.' }
           & "$texBin\tlmgr.bat" install latexmk pdfcrop preview pgf mathtools tools cm-super synctex standalone amsmath amsfonts geometry xcolor grfext
           if ($LASTEXITCODE -ne 0) { throw 'TeX Live package installation failed.' }
+          # tlmgr.bat can exit 0 after tlmgr stops early (for example on a failing
+          # mirror), so confirm that every requested package actually landed.
+          foreach ($file in @('preview.sty', 'tikz.sty', 'mathtools.sty', 'bm.sty', 'sfrm1000.pfb', 'standalone.cls', 'amsmath.sty', 'amssymb.sty', 'geometry.sty', 'xcolor.sty', 'grfext.sty')) {
+            if (-not (& "$texBin\kpsewhich.exe" $file)) { throw "TeX Live package installation is incomplete: $file is missing." }
+          }
+          foreach ($tool in @('latexmk', 'pdfcrop', 'synctex')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $texBin "$tool.exe"))) { throw "TeX Live package installation is incomplete: $tool is missing." }
+          }
           $archive = Join-Path $env:RUNNER_TEMP 'typst.zip'
           Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-pc-windows-msvc.zip' -OutFile $archive
           if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '19ce3551153c2fe7ee9fa2f95208310c8f4d3209fedb699e0333faf8913f6736') { throw 'Typst checksum mismatch.' }
