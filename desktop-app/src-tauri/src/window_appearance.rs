@@ -4,21 +4,17 @@ use serde_json::Value;
 #[cfg(windows)]
 mod menu {
     use crate::files::{err, Result};
-    use std::cell::Cell;
     use windows_sys::Win32::{
         Foundation::{HWND, LPARAM, LRESULT, WPARAM},
         UI::{
             Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
             WindowsAndMessaging::{
-                DrawMenuBar, WM_NCACTIVATE, WM_NCDESTROY, WM_NCPAINT, WM_SIZE, WM_THEMECHANGED,
+                DrawMenuBar, WM_NCACTIVATE, WM_NCDESTROY, WM_SIZE, WM_THEMECHANGED,
             },
         },
     };
 
     const SUBCLASS_ID: usize = 0x464d4150;
-    thread_local! {
-        static REDRAWING: Cell<bool> = const { Cell::new(false) };
-    }
 
     unsafe extern "system" fn redraw_after_native_frame(
         hwnd: HWND,
@@ -32,21 +28,11 @@ mod menu {
             unsafe { RemoveWindowSubclass(hwnd, Some(redraw_after_native_frame), subclass) };
         }
         let result = unsafe { DefSubclassProc(hwnd, message, wparam, lparam) };
-        if matches!(
-            message,
-            WM_NCACTIVATE | WM_NCPAINT | WM_SIZE | WM_THEMECHANGED
-        ) {
+        if matches!(message, WM_NCACTIVATE | WM_SIZE | WM_THEMECHANGED) {
             // Windows can repaint the bar with its system brush after muda has
             // applied the app theme. Redraw the whole menu after that frame pass,
             // so its existing themed renderer also handles focus/resize changes.
-            // DrawMenuBar may synchronously repaint the non-client area again.
-            // Cover that final frame pass without recursively requesting redraws.
-            REDRAWING.with(|redrawing| {
-                if !redrawing.replace(true) {
-                    unsafe { DrawMenuBar(hwnd) };
-                    redrawing.set(false);
-                }
-            });
+            unsafe { DrawMenuBar(hwnd) };
         }
         result
     }
