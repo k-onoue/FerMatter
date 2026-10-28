@@ -235,15 +235,18 @@ mod unix {
         // create another resident, tray, shortcut registrar or storage runtime.
         context.config_mut().app.windows.clear();
         let paths = arguments();
+        #[cfg(target_os = "macos")]
         let callback_socket = socket.clone();
         let sent = Arc::new(AtomicBool::new(false));
+        #[cfg(target_os = "macos")]
         let sent_open = sent.clone();
-        let app = tauri::Builder::default()
-            .setup(|app| {
-                #[cfg(target_os = "macos")]
-                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-                Ok(())
-            })
+        let builder = tauri::Builder::default();
+        #[cfg(target_os = "macos")]
+        let builder = builder.setup(|app| {
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+            Ok(())
+        });
+        let app = builder
             .build(context)
             .expect("Unable to forward FerMatter launch");
         app.run(move |app, event| match event {

@@ -15,3 +15,4 @@ Decision date: 2026-10-29 (Asia/Tokyo). This preparation stops before public rel
 - Keep full validation reports and hashes beside each local candidate. A later code change invalidates earlier candidate results.
 - Public download and package-manager delivery checks happen during step 6; candidate packaging never creates a release, pushes a tag or modifies the tap/APT repository.
 - Track concrete native failures separately from unavailable checks; do not label all of step 5 complete while either remains.
+- Remaining native checks and the conditions for entering step 6: [issue #134](https://github.com/k-onoue/FerMatter/issues/134).

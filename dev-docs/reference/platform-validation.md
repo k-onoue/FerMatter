@@ -32,11 +32,12 @@ Snapshot: 2026-10-29. Dates below use Asia/Tokyo.
 - Passed: `package.sh --stable`; read-only DMG layout/signature inspection, expanded PKG payload equality, no installer scripts, notices and checksums. This does not test installation into `/Applications` or new-account security prompts.
 - Passed with the unmodified app copied from that DMG: isolated first setup, four demo projects, `demo-paper` extraction/rendering (27 cards), quit/reopen without repeated setup, and installed LaTeX/Typst SVG/PNG/PDF verification.
 - Passed with synthetic preview data: Library variants and settings retained, unsaved Source draft recovered, Source save/reopen and PDF rendering, Instant save and old-version readback, and old/new CLI plus resident launch forwarding in both directions. The old `bf58f94` test wrapper used a unique plist bundle ID to isolate its WebView from real user data; this is not a public-DMG installation/upgrade test.
+- Passed: single and two-card SVG copy/paste into PowerPoint 16.114.1 (16.114.26102031). The saved synthetic PPTX retains three separate picture objects referencing embedded SVGs. Native drag remains unverified.
 - DMG SHA-256: `56a9b510ad961cbf51152ebcacc8e4f61e69f64e2c3f41a717de1994b32bfe35`.
 - PKG SHA-256: `ed4279189b72498fa7238839a311d3becab6f79fb91adc0289e6169f2d62a496`.
 - Local ignored evidence: `desktop-app/build/release-validation/run.1EabwD/`, `desktop-app/build/stable-candidate-3b83fc8/` and `desktop-app/build/mac-install-check/manual-validation.json`. Preserve these reports with the candidate, not in Git.
 - Audits: zero entries classified as vulnerabilities by npm/Cargo. Informational warnings remain for unmaintained `proc-macro-error`, `rustybuzz` and `ttf-parser`, and Linux GTK's `glib 0.18.5` [VariantStrIter unsoundness](https://rustsec.org/advisories/RUSTSEC-2024-0429.html). Do not describe this as “no advisories”; retain the reports. Linux stays experimental; a stable Linux claim requires resolving or establishing the affected dependency usage.
-- Signature: macOS app ad hoc; DMG/PKG unsigned, not notarized. Native Windows 11, older macOS, clean-account prompts and receiving-app clipboard/drag are still required before stable publication.
+- Signature: macOS app ad hoc; DMG/PKG unsigned, not notarized. Native Windows 11, older macOS, clean-account prompts and receiving-app drag remain required before stable publication. Track remaining native checks in [issue #134](https://github.com/k-onoue/FerMatter/issues/134).
 
 ### 2026-10-28 — macOS local integration checks
 

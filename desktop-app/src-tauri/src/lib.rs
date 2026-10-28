@@ -28,6 +28,7 @@ mod single_instance;
 mod single_instance_windows;
 mod source_commands;
 mod storage;
+#[cfg(any(target_os = "macos", windows, test))]
 mod svg_payload;
 mod toolchain;
 pub mod verification;
