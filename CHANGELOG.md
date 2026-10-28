@@ -8,7 +8,7 @@
 
 ## [Unreleased]
 
-- Repaint the Windows menu bar with the selected app theme after focus, resize and native theme changes.
+- Preserve Windows menus and their selected theme when closing Instant windows.
 
 - Keep single SVG copies as vector artwork on Windows, including when pasting into LibreOffice Impress; choose PNG explicitly for bitmap-only receivers.
 

@@ -65,30 +65,3 @@ it("keeps macOS native translucency independent of the CSS palette", () => {
     "0.72",
   );
 });
-
-it("restores the current Windows palette on focus and removes obsolete listeners", () => {
-  vi.spyOn(navigator, "platform", "get").mockReturnValue("Win32");
-  const { rerender, unmount } = renderHook(
-    ({ dark }) => useAppearance(defaults, dark, 1),
-    { initialProps: { dark: true } },
-  );
-  rpc.mockClear();
-  window.dispatchEvent(new Event("focus"));
-  expect(rpc).toHaveBeenCalledExactlyOnceWith("apply_window_appearance", {
-    dark: true,
-    background: defaults.dark.windowBackground,
-  });
-
-  rerender({ dark: false });
-  rpc.mockClear();
-  window.dispatchEvent(new Event("focus"));
-  expect(rpc).toHaveBeenCalledExactlyOnceWith("apply_window_appearance", {
-    dark: false,
-    background: defaults.light.windowBackground,
-  });
-
-  unmount();
-  rpc.mockClear();
-  window.dispatchEvent(new Event("focus"));
-  expect(rpc).not.toHaveBeenCalled();
-});

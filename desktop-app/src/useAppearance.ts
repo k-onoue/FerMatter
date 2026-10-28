@@ -3,7 +3,7 @@ import { palette } from "./appearance";
 import { configureTheme } from "./editor";
 import { rpc } from "./api";
 import { logError } from "./log";
-import { isMacOS, isWindows } from "./platform";
+import { isMacOS } from "./platform";
 import type { Theme } from "./types";
 
 export function useAppearance(theme: Theme, dark: boolean, opacity: number) {
@@ -21,17 +21,8 @@ export function useAppearance(theme: Theme, dark: boolean, opacity: number) {
 
   useEffect(() => {
     if (isMacOS()) return;
-    const applyNative = () => {
-      void rpc("apply_window_appearance", { dark, background }).catch((error) =>
-        logError("window.appearance", error),
-      );
-    };
-    applyNative();
-    // Windows may restore its system menu colors when another native window
-    // closes or becomes inactive. Reapply this window's current app palette.
-    if (isWindows()) {
-      window.addEventListener("focus", applyNative);
-      return () => window.removeEventListener("focus", applyNative);
-    }
+    void rpc("apply_window_appearance", { dark, background }).catch((error) =>
+      logError("window.appearance", error),
+    );
   }, [dark, background]);
 }
