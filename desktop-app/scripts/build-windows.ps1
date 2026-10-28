@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$DebugBuild, [string]$OutputDirectory)
+param([switch]$DebugBuild, [string]$OutputDirectory, [switch]$SkipPackage)
 . "$PSScriptRoot\environment-windows.ps1"
 if ($OutputDirectory) { $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory) }
 Push-Location $DesktopRoot
@@ -10,7 +10,7 @@ try {
     $arguments = @('run', 'tauri', 'build', '--', '--bundles', 'nsis')
     if ($DebugBuild) { $arguments += '--debug' }
     Invoke-Checked npm.cmd $arguments
-    if (-not $DebugBuild) {
+    if (-not $DebugBuild -and -not $SkipPackage) {
         & "$PSScriptRoot\package-windows.ps1" -OutputDirectory $OutputDirectory
     }
 } finally {

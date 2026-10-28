@@ -75,6 +75,7 @@ git diff --check
 
 ## Record results
 
+- Record OS/build, CPU architecture, exact candidate, native/CI scope and unverified operations in the [platform validation record](reference/platform-validation.md).
 - PR: commands, outcomes, relevant environment, skips, and limitations.
 - Historical experiments: [history](history/validation-2026-09.md); do not copy old counts into a new validation claim.
 - User-facing changes: [CHANGELOG.md](../CHANGELOG.md), not the test log.

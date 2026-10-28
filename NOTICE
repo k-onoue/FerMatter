@@ -14,3 +14,8 @@ app's Contents/Resources/themes/ directory.
 Bundled source formatting uses Prettier and unified-latex (MIT), and Typstyle
 with typst-syntax (Apache-2.0). Dependency copyright and license texts are
 included in the app's generated vendor notices.
+
+Windows resident coordination is adapted from tauri-plugin-single-instance
+2.5.4, Copyright 2019-2023 Tauri Programme within The Commons Conservancy,
+used under the Apache License 2.0 (LICENSE). The adaptation retains the
+pre-migration mutex and forwarding-window names for upgrade compatibility.

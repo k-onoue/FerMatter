@@ -28,14 +28,14 @@ cargo install --locked cargo-audit --version 0.22.2 --root desktop-app/build/aud
 | Operation | Required evidence | Result |
 | --- | --- | --- |
 | Anonymous download | Unauthenticated asset download; checksum matches manifest | Pending |
-| DMG installation | Copy into Applications; launch without bypassing Gatekeeper | Pending |
+| DMG installation | Copy into Applications; record per-app opening approval and launch with Gatekeeper enabled | Pending |
 | PKG installation | Only Applications app payload installed; launch succeeds | Pending |
 | Missing compilers | First setup and Settings name missing tools and accept configured paths | Pending |
 | First setup | Choose parent once; all four demos land below it; no repeated setup on relaunch | Pending |
 | Rendering | LaTeX, Typst, TikZ, CeTZ preview/PDF/export after tools configured | Pending |
 | Finder import | Drop a synthetic folder and ZIP; copied below configured parent; originals unchanged | Pending |
 | PowerPoint output | Single/multiple SVG copy and drag; selected images pasted separately | Pending |
-| macOS permission | Same signing identity across two builds; authorized project parent remains usable | Pending |
+| macOS permission | Record any renewed folder consent after ID/ad hoc signature changes; chosen project parent remains usable | Pending |
 | Update | Replace older build; project roots, variants, labels, SourceDrafts, Instant history and legacy Slide Math data survive | Pending |
 | Close/save failure | Last typed characters retained; failed save offers recovery; reopen restores draft | Pending |
 | External edits | Conflict shown; existing source never silently overwritten | Pending |
@@ -43,4 +43,12 @@ cargo install --locked cargo-audit --version 0.22.2 --root desktop-app/build/aud
 
 - Automated functional checks do not mark these rows as passed.
 - In-app automatic updates are not supplied by this packaging work; document manual replacement.
-- Keep stable download links disabled until this checklist and [release conditions](../releasing.md#public-distribution-checklist) pass. The owner-approved [unnotarized preview](../releasing.md#unnotarized-public-preview) uses a separate prerelease path and does not mark these rows as passed.
+- Keep stable download links disabled until this checklist and [release conditions](../releasing.md#public-distribution-checklist) pass. Unsigned/unnotarized status is permitted but must be recorded. A preview does not mark these rows as passed.
+
+## Windows and Ubuntu
+
+- Windows automated gate: `./desktop-app/scripts/release-check-windows.ps1`; no skipped compilers or dirty candidates. Its report binds the NSIS bytes to the commit before packaging.
+- The Windows workflow also installs the hash-pinned published preview, upgrades to the candidate, checks old/new resident compatibility, runs installed compilers and uninstalls with synthetic data preserved. This is Windows Server CI, not Windows 11 native UI validation.
+- On a clean Windows 11 x64 account, repeat install/update, real Library/Source/Instant edits and recovery, PDF, IME/AltGr, clipboard/drag into a presentation app, and removal. Record OS build, candidate hash and SmartScreen/Smart App Control results.
+- Ubuntu stays experimental: CI covers real compilers, Clippy, audits, signed-APT installation and headless startup. Record native desktop/session and receiving-app behavior separately; do not infer Wayland coverage.
+- Anonymous download and public package-manager update checks belong to step 6. Before publication, validate local artifacts and preserve hashes; mark public delivery checks pending.

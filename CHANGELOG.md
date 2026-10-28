@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+- Adopt permanent app ID `io.github.fermatter.fermatter` while retaining legacy data, WebView recovery storage, resident coordination and installer upgrade paths. macOS may ask for folder access again.
+
+- Prepare validated ad hoc macOS and unsigned Windows stable candidates, with exact-commit validation reports and artifact hashes. Keep Ubuntu experimental and retain APT signing; this does not publish a stable release.
+
+- Clarify on the website that FerMatter is a standalone desktop app for LaTeX and Typst equations, exporting SVG for PowerPoint and other presentation tools.
+
 - Apply native titlebar spacing and appearance synchronization in Linux source builds.
 
 - Share a compact footer across all pages, with guide pagination above it and GitHub shown there only when absent from the header.

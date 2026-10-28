@@ -2,7 +2,7 @@
 
 ## Stable identity
 
-- Display/app/executable: `FerMatter` (formerly `Mathlidelux`); bundle ID: `local.slidemath.prototype`.
+- Display/app/executable: `FerMatter` (formerly `Mathlidelux`); permanent bundle ID: `io.github.fermatter.fermatter`.
 - Renaming does not migrate data. Keep saved project roots, `mathlidelux.*` schemas/keys, SVG namespace, project UUID files and `MATHLIDELUX_*` environment variables. New Windows setups default to `%USERPROFILE%\FerMatter`, outside OneDrive; saved locations and the macOS/Linux `Documents/Mathlidelux` default remain valid.
 - Bundled demo contents remain unchanged so first-launch migration can still recognize existing samples.
 - Keep the same resident lock identity so launching an older app copy cannot create a second resident.
@@ -11,6 +11,18 @@
 - Windows metadata directory: `%APPDATA%\Slide Math\Rust Preview\`. Platform support retains the same `Slide Math`/`Rust Preview` names and version-1 schemas; installing or upgrading does not relocate saved projects or drafts.
 - The internal preview directory name stays unchanged to preserve already-saved work after promotion.
 - Sources: [storage.rs](../../desktop-app/src-tauri/src/storage.rs), [files.rs](../../desktop-app/src-tauri/src/files.rs), [settings.rs](../../desktop-app/src-tauri/src/settings.rs).
+
+## App identity migration
+
+- The permanent ID is `io.github.fermatter.fermatter`; versions and release channels never change it. Previous ID: `local.slidemath.prototype`.
+- Rust metadata, source roots, schemas, settings, Swift preference import and all `Slide Math` paths remain unchanged. No user files are moved or deleted.
+- macOS: before any WebView opens, acquire the old resident lock, then create `~/Library/WebKit/io.github.fermatter.fermatter` as an alias (symbolic link) to the existing `local.slidemath.prototype` store. This preserves LocalStorage pending Instant drafts and colors, SQLite journals and rollback access without copying a live database. A conflicting directory/link stops startup and preserves both stores; resolve it manually rather than overwriting recovery data.
+- Windows/Linux: explicitly retain Tauri's previous app-local-data directory for every WebView, including dynamically created Instant windows. A new bundle ID must not create an empty browser profile.
+- macOS/Linux resident lock and CLI/MCP endpoint keep the old ID. Windows keeps the old mutex and forwarding-window names and accepts the old message format; launching an old copy forwards to the resident instead of creating another writer.
+- macOS PKG keeps receipt `local.slidemath.prototype.pkg`, disables relocation and permits replacement of the old bundle ID at `/Applications/FerMatter.app`. Windows keeps product/executable names and explicit legacy publisher `slidemath` for NSIS registry/upgrade identity. The permanent bundle/AUMID changes; pinned shortcuts may need re-pinning.
+- OS folder consent is not migrated or bypassed. Ad hoc signatures and the new bundle ID can require renewed per-app permission.
+- Isolated QA with absolute `MATHLIDELUX_DATA_DIR` uses a separate WebView store as well as separate Rust data. On macOS its named WKWebView store is shared by QA windows only.
+- Implementation: [identity.rs](../../desktop-app/src-tauri/src/identity.rs), [Windows resident](../../desktop-app/src-tauri/src/single_instance_windows.rs). Verify update/rollback on synthetic data before publishing; preserve old artifacts until validation finishes.
 
 ## Locations
 

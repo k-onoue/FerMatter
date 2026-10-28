@@ -1,11 +1,12 @@
 # Exercises the installer with synthetic storage. Refuses to replace an existing installation.
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$Installer, [switch]$CheckCompilers)
+param([Parameter(Mandatory)][string]$Installer, [string]$PreviousInstaller, [switch]$CheckCompilers)
 . "$PSScriptRoot\environment-windows.ps1"
 $Installer = (Resolve-Path -LiteralPath $Installer).Path
 $manifestPath = Join-Path (Split-Path -Parent $Installer) 'build-info.json'
 if (-not (Test-Path -LiteralPath $manifestPath)) { throw 'Missing build-info.json beside the installer.' }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+if ((Get-AuthenticodeSignature -LiteralPath $Installer).Status -ne 'NotSigned') { throw 'Expected an unsigned candidate installer.' }
 $installerHash = (Get-FileHash -LiteralPath $Installer -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($manifest.file -ne (Split-Path -Leaf $Installer) -or $manifest.sha256 -ne $installerHash) {
     throw 'The installer does not match its build manifest.'
@@ -40,10 +41,19 @@ $compilerReportPath = $null
 $app = $null
 try {
     $env:MATHLIDELUX_DATA_DIR = $dataDirectory
+    $previousHash = $null
+    if ($PreviousInstaller) {
+        $PreviousInstaller = (Resolve-Path -LiteralPath $PreviousInstaller).Path
+        $previousHash = (Get-FileHash -LiteralPath $PreviousInstaller -Algorithm SHA256).Hash.ToLowerInvariant()
+        $setup = Start-Process -FilePath $PreviousInstaller -ArgumentList @('/S', "/D=$installDirectory") -PassThru -Wait -WindowStyle Hidden
+        if ($setup.ExitCode -ne 0) { throw 'Previous preview installation failed.' }
+        # Retain the old executable/resources to exercise old/new resident compatibility.
+        Copy-Item -LiteralPath $installDirectory -Destination (Join-Path $qaRoot 'previous-application') -Recurse
+    }
     for ($round = 1; $round -le 2; $round++) {
         $setup = Start-Process -FilePath $Installer -ArgumentList @('/S', "/D=$installDirectory") -PassThru -Wait -WindowStyle Hidden
         if ($setup.ExitCode -ne 0) { throw "Installer failed with code $($setup.ExitCode)." }
-        foreach ($relative in @('FerMatter.exe', 'LICENSE', 'NOTICE', 'licenses\JAVASCRIPT-LICENSES.txt', 'licenses\RUST-LICENSES.txt', 'WINDOWS-PREVIEW-README.txt')) {
+        foreach ($relative in @('FerMatter.exe', 'LICENSE', 'NOTICE', 'licenses\JAVASCRIPT-LICENSES.txt', 'licenses\RUST-LICENSES.txt', 'WINDOWS-README.txt')) {
             if (-not (Test-Path -LiteralPath (Join-Path $installDirectory $relative) -PathType Leaf)) {
                 throw "Missing installed payload: $relative"
             }
@@ -117,9 +127,36 @@ try {
     Start-Sleep -Seconds 8
     $app.Refresh()
     if ($app.HasExited) { throw "Installed application exited during startup (code $($app.ExitCode))." }
+    if ($PreviousInstaller) {
+        $old = Start-Process -FilePath (Join-Path $qaRoot 'previous-application\FerMatter.exe') -PassThru -WindowStyle Hidden
+        $oldHandle = $old.Handle
+        if (-not $old.WaitForExit(15000)) {
+            & taskkill.exe /PID $old.Id /T /F | Out-Null
+            throw 'The old preview created a second resident after the ID migration.'
+        }
+        if ($old.ExitCode -ne 0) { throw 'The old preview could not forward its launch to the migrated resident.' }
+        $app.Refresh()
+        if ($app.HasExited) { throw 'The migrated resident exited during the compatibility check.' }
+    }
     & taskkill.exe /PID $app.Id /T /F | Out-Null
     $app.WaitForExit()
     $app = $null
+    if ($PreviousInstaller) {
+        $app = Start-Process -FilePath (Join-Path $qaRoot 'previous-application\FerMatter.exe') -PassThru -WindowStyle Hidden
+        Start-Sleep -Seconds 8
+        $app.Refresh()
+        if ($app.HasExited) { throw 'The old preview could not start for reverse compatibility verification.' }
+        $secondary = Start-Process -FilePath (Join-Path $installDirectory 'FerMatter.exe') -PassThru -WindowStyle Hidden
+        $secondaryHandle = $secondary.Handle
+        if (-not $secondary.WaitForExit(15000)) {
+            & taskkill.exe /PID $secondary.Id /T /F | Out-Null
+            throw 'The new candidate created a second resident beside the old preview.'
+        }
+        if ($secondary.ExitCode -ne 0) { throw 'The new candidate could not forward to the old preview.' }
+        & taskkill.exe /PID $app.Id /T /F | Out-Null
+        $app.WaitForExit()
+        $app = $null
+    }
     $uninstaller = Join-Path $installDirectory 'uninstall.exe'
     if (-not (Test-Path -LiteralPath $uninstaller)) { throw 'Missing uninstaller.' }
     $removal = Start-Process -FilePath $uninstaller -ArgumentList '/S' -PassThru -Wait -WindowStyle Hidden
@@ -136,7 +173,10 @@ try {
         sha256 = $installerHash
         installation = $true
         replacement = $true
+        previousInstallerSha256 = $previousHash
+        upgradeFromPrevious = $(if ($PreviousInstaller) { 'passed' } else { 'not checked' })
         installedStartup = $true
+        legacyResident = $(if ($PreviousInstaller) { 'passed' } else { 'not checked' })
         removal = $true
         userDataPreserved = $true
         compilerChecks = $(if ($CheckCompilers) { 'passed' } else { 'skipped (not requested)' })

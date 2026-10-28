@@ -11,11 +11,7 @@ pub fn entry() -> bool {
     if !matches!(args.first().map(String::as_str), Some("cli" | "mcp")) {
         return false;
     }
-    let identity = serde_json::from_str::<Value>(include_str!("../../tauri.conf.json")).unwrap()
-        ["identifier"]
-        .as_str()
-        .unwrap()
-        .to_owned();
+    let identity = crate::identity::LEGACY_ID.to_owned();
     let result = if args[0] == "mcp" {
         if args.len() != 1 {
             Err(ApiError::new("invalid_arguments", "Usage: FerMatter mcp"))
