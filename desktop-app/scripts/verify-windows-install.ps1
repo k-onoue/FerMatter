@@ -2,6 +2,19 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$Installer, [string]$PreviousInstaller, [switch]$CheckCompilers)
 . "$PSScriptRoot\environment-windows.ps1"
+
+function Stop-VerifiedApplication {
+    param([Parameter(Mandatory)][Diagnostics.Process]$Process)
+    $Process.Refresh()
+    if ($Process.HasExited) { return }
+    # A WebView child can exit while taskkill walks the tree. Start-Process keeps
+    # that race from leaking a nonzero LASTEXITCODE into an otherwise passed job.
+    # Still fail if the application itself cannot be stopped.
+    $termination = Start-Process -FilePath "$env:SystemRoot\System32\taskkill.exe" -ArgumentList @('/PID', $Process.Id, '/T', '/F') -PassThru -Wait -NoNewWindow
+    if (-not $Process.WaitForExit(15000)) {
+        throw "Application process $($Process.Id) survived cleanup (taskkill code $($termination.ExitCode))."
+    }
+}
 $Installer = (Resolve-Path -LiteralPath $Installer).Path
 $manifestPath = Join-Path (Split-Path -Parent $Installer) 'build-info.json'
 if (-not (Test-Path -LiteralPath $manifestPath)) { throw 'Missing build-info.json beside the installer.' }
@@ -95,7 +108,7 @@ try {
             # to reliably expose ExitCode after a redirected process exits.
             $verificationHandle = $verification.Handle
             if (-not $verification.WaitForExit(420000)) {
-                & "$env:SystemRoot\System32\taskkill.exe" /PID $verification.Id /T /F | Out-Null
+                Stop-VerifiedApplication $verification
                 throw 'Installed Instant compiler verification timed out.'
             }
             $verification.WaitForExit()
@@ -131,14 +144,14 @@ try {
         $old = Start-Process -FilePath (Join-Path $qaRoot 'previous-application\FerMatter.exe') -PassThru -WindowStyle Hidden
         $oldHandle = $old.Handle
         if (-not $old.WaitForExit(15000)) {
-            & taskkill.exe /PID $old.Id /T /F | Out-Null
+            Stop-VerifiedApplication $old
             throw 'The old preview created a second resident after the ID migration.'
         }
         if ($old.ExitCode -ne 0) { throw 'The old preview could not forward its launch to the migrated resident.' }
         $app.Refresh()
         if ($app.HasExited) { throw 'The migrated resident exited during the compatibility check.' }
     }
-    & taskkill.exe /PID $app.Id /T /F | Out-Null
+    Stop-VerifiedApplication $app
     $app.WaitForExit()
     $app = $null
     if ($PreviousInstaller) {
@@ -149,11 +162,11 @@ try {
         $secondary = Start-Process -FilePath (Join-Path $installDirectory 'FerMatter.exe') -PassThru -WindowStyle Hidden
         $secondaryHandle = $secondary.Handle
         if (-not $secondary.WaitForExit(15000)) {
-            & taskkill.exe /PID $secondary.Id /T /F | Out-Null
+            Stop-VerifiedApplication $secondary
             throw 'The new candidate created a second resident beside the old preview.'
         }
         if ($secondary.ExitCode -ne 0) { throw 'The new candidate could not forward to the old preview.' }
-        & taskkill.exe /PID $app.Id /T /F | Out-Null
+        Stop-VerifiedApplication $app
         $app.WaitForExit()
         $app = $null
     }
@@ -187,8 +200,8 @@ try {
     $report | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $qaRoot 'verification.json') -Encoding utf8
     Write-Output "PASS: installer, replacement, bundled notices, installed startup, uninstall and synthetic data preservation. Evidence: $qaRoot"
 } finally {
-    if ($app -and -not $app.HasExited) {
-        & taskkill.exe /PID $app.Id /T /F | Out-Null
+    if ($app) {
+        Stop-VerifiedApplication $app
     }
     $env:MATHLIDELUX_DATA_DIR = $previousDataDirectory
 }
