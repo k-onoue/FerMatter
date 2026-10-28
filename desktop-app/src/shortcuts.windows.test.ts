@@ -85,6 +85,19 @@ it("dispatches physical Ctrl/Alt and distinguishes the Windows modifier", () => 
   ]);
 });
 
+it("leaves AltGr characters to text input and keeps physical Ctrl+Alt shortcuts", () => {
+  // Chromium (WebView2) on an AltGr layout reports AltGr, and Ctrl+Alt that
+  // produces a character, as AltGraph with ctrlKey and altKey cleared.
+  const altGr = (key: string) =>
+    event(key, { ctrlKey: false, altKey: false, modifierAltGraph: true });
+  for (const key of ["\\", "@", "{", "[", "|"])
+    expect(shortcuts.commandForEvent(altGr(key), keys())).toBeUndefined();
+  // A layout without AltGr keeps Ctrl+Alt as modifiers on Split Editor Down.
+  expect(shortcuts.commandForEvent(event("\\", { altKey: true }), keys())).toBe(
+    "splitSourceDown",
+  );
+});
+
 it("keeps Ctrl+Tab and Ctrl+Shift+Tab editable without the Windows key", () => {
   expect(() => shortcuts.validateBindings(keys())).not.toThrow();
   expect(shortcuts.commandForEvent(event("Tab"), keys())).toBe("nextSourceTab");

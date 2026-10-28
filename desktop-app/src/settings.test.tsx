@@ -8,6 +8,42 @@ vi.mock("./editor", () => ({ CodeEditor: () => null }));
 vi.mock("./CompilerTools", () => ({ CompilerTools: () => null }));
 afterEach(cleanup);
 
+it("waits past a lone AltGr press when recording a shortcut", () => {
+  const onKeys = vi.fn();
+  const onError = vi.fn();
+  render(
+    <Settings
+      settings={{
+        appearance: "system",
+        autoSave: true,
+        opacity: 1,
+        theme: defaults.id,
+        pdfWidth: 500,
+        projectView: "grid",
+      }}
+      themes={[]}
+      theme={defaults}
+      keys={{ schemaVersion: 1, kind: "mathlidelux.keybindings", bindings: {} }}
+      onSettings={vi.fn()}
+      onTheme={vi.fn()}
+      onKeys={onKeys}
+      onClose={vi.fn()}
+      onReload={vi.fn()}
+      onExtractionApplied={vi.fn()}
+      onError={onError}
+      defaultProjectDirectory="/synthetic/projects"
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Shortcuts" }));
+  const row = screen.getByText("Split Editor Down").closest(".shortcut-row");
+  const recorder = row?.querySelector(".key-recorder") as HTMLElement;
+  fireEvent.click(recorder);
+  fireEvent.keyDown(recorder, { key: "AltGraph" });
+  expect(onError).not.toHaveBeenCalled();
+  expect(onKeys).not.toHaveBeenCalled();
+  expect(recorder.textContent).toBe("Press keys…");
+});
+
 it("sorts theme choices without mutating shared themes and forwards appearance selections", () => {
   const themes = [
     { ...defaults, id: "zebra", name: "Zebra" },

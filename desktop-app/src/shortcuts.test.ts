@@ -98,6 +98,19 @@ it("preserves legacy overrides without invalidating the entire shortcut file", (
   expect(() => validateBindings(explicit)).toThrow("Duplicate shortcut");
 });
 
+it("dispatches Option combinations with the primary modifier unchanged", () => {
+  expect(commandForEvent(event("\\"), keys())).toBe("splitSource");
+  expect(commandForEvent(event("\\", { altKey: true }), keys())).toBe(
+    "splitSourceDown",
+  );
+  expect(commandForEvent(event("e", { altKey: true }), keys())).toBe(
+    "projectSource",
+  );
+  expect(
+    commandForEvent(event("\\", { metaKey: false, altKey: true }), keys()),
+  ).toBeUndefined();
+});
+
 it("does not let the plus alias steal an explicitly assigned shifted shortcut", () => {
   const custom = keys({ open: binding("=", { shift: true }) });
   expect(commandForEvent(event("+", { shiftKey: true }), custom)).toBe("open");
