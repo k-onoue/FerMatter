@@ -1,0 +1,81 @@
+---
+import { getCollection } from "astro:content";
+import Product from "../../layouts/Product.astro";
+import { href, guide } from "../../data/links";
+const fixes = (await getCollection("fixes")).sort(
+  (a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id),
+);
+const groups = [
+  {
+    id: "released",
+    title: "Available in downloads",
+    legacyId: "fixes-available-in-downloads",
+  },
+  {
+    id: "pending",
+    title: "Awaiting a release",
+    legacyId: "fixed-in-source-awaiting-a-download",
+  },
+  {
+    id: "earlier",
+    title: "Earlier macOS fixes",
+    legacyId: "already-included-in-the-first-public-macos-preview",
+  },
+];
+---
+
+<Product
+  markdown
+  guideSection="resolved"
+  title="Resolved issues"
+  description="Find a FerMatter problem, its fix, and the version that includes it."
+>
+  <header class="page-intro not-content">
+    <h1>Resolved issues</h1>
+    <p class="lead">Find your symptom and the version that fixes it.</p>
+    <p>
+      Fixes can reach Windows, macOS and Ubuntu at different times. Check the
+      platform and release listed below before updating.
+    </p>
+    <p id="update-fermatter">
+      <span id="find-your-version"></span>
+      <a href={guide("updates")}>How to update →</a>
+    </p>
+  </header>
+  <nav class="fix-links fix-jump-links not-content" aria-label="Fix categories">
+    {groups.map(({ id, title }) => (
+      <a href={`#${id}`}>{title}</a>
+    ))}
+  </nav>
+  {groups.map(({ id, title, legacyId }) => (
+    <section class="fix-group not-content" aria-labelledby={id}>
+      <span id={legacyId} class="legacy-fix-anchor" aria-hidden="true"></span>
+      <h2 id={id}>{title}</h2>
+      {id === "pending" && (
+        <p>
+          These changes are in the source code. Current downloads do not include
+          them yet.
+        </p>
+      )}
+      {id === "earlier" && (
+        <p>
+          Already included in the first public macOS preview. These may help if
+          you installed an older local prototype.
+        </p>
+      )}
+      <ul class="fix-list" role="list">
+        {fixes
+          .filter(({ data }) => data.group === id)
+          .map(({ id, data }) => (
+            <li>
+              <h3>
+                <a href={href(`resolved-issues/${id}/`)}>{data.title}</a>
+              </h3>
+              <p>{data.description}</p>
+              <p class="fix-availability">{data.availability}</p>
+            </li>
+          ))}
+      </ul>
+    </section>
+  ))}
+</Product>

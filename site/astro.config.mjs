@@ -2,7 +2,6 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import { unified } from "@astrojs/markdown-remark";
 import config from "./src/data/site.json" with { type: "json" };
-import pages from "../user-docs/pages.json" with { type: "json" };
 import { remarkGuideLinks } from "../scripts/lib/guide-links.mjs";
 
 const socialImage = new URL(
@@ -16,6 +15,9 @@ export default defineConfig({
   base: config.base || "/",
   trailingSlash: "always",
   output: "static",
+  redirects: {
+    "/guide/resolved-issues/": "/resolved-issues/",
+  },
   markdown: {
     processor: unified({
       remarkPlugins: [[remarkGuideLinks, { base: config.base }]],
@@ -70,21 +72,16 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          label: "Start here",
-          items: pages.map((page) =>
-            page === "README.md"
-              ? "guide"
-              : `guide/${page.replace(/\.md$/, "")}`,
-          ),
+          label: "Setup",
+          items: ["guide", "guide/requirements", "guide/updates"],
         },
         {
-          label: "Reported issues",
-          items: [
-            {
-              label: "Welcome any trouble reports",
-              link: `https://github.com/${config.repository}/issues`,
-            },
-          ],
+          label: "Working with equations",
+          items: ["guide/paper-to-slides", "guide/extraction", "guide/export"],
+        },
+        {
+          label: "Settings and integration",
+          items: ["guide/shortcuts", "guide/appearance", "guide/automation"],
         },
       ],
       credits: false,

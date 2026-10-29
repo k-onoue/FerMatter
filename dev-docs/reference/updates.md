@@ -3,7 +3,7 @@
 ## User behavior
 
 - **Settings → Updates** and the compact global update icon share one native state across Library, Source and Instant windows.
-- Manual check; optional automatic check at most once per 24 hours, including failures. Automatic checking starts **off**. Failed background checks do not open a dialog.
+- Manual check; automatic check at most once per 24 hours, including failures. Automatic checking starts **on** when no update preferences exist; saved opt-outs are preserved. Users can turn it off in Updates. Failed background checks do not open a dialog.
 - A colored indicator announces an available update. Download and **Install and restart** are separate explicit actions; checking/downloading can be cancelled and retried.
 - Download verification completes before installation. All open windows are frozen and flushed through the existing persistence protocol; a failed save or 30-second timeout cancels installation. Admission of new windows/automation remains closed until installation succeeds or fails.
 - macOS replaces the application bundle; Windows hands off to the NSIS installer; Ubuntu installs the DEB through `/usr/bin/pkexec /usr/bin/dpkg -i`. Ubuntu requires a graphical polkit agent. Cancelling authentication does not fall through to a password form or terminal sudo.
@@ -55,7 +55,7 @@ The committed `0.0.0` / empty-platform manifest deliberately offers **no updates
 - Unit tests cover asset provenance/size, automatic-check throttling, corrupt preferences, multi-window save completion/failure/timeout, UI actions and stale state.
 - Manifest tooling verifies an independent Tauri CLI signature fixture, corrupt bytes, signed-version replay and tampered comments.
 - Before activation: actual old→new packaged update on macOS/Windows/Ubuntu, changed/unsigned payload refusal, offline/truncated/oversize downloads, cancellation/retry, insufficient permissions, failed saves, global Instant plus multiple projects, process restart and retained data. Record every unverified platform explicitly.
-- Fix history is Markdown in [resolved issues](../../user-docs/resolved-issues.md). Move an item from “awaiting a download” only after that platform's artifact is published.
+- Fix history uses one Markdown file per issue in [resolved issues](../../site/src/content/resolved-issues/); [updating instructions](../../user-docs/updates.md) stay in the guide. Change an item's availability only after that platform's artifact is published.
 
 ## References
 
