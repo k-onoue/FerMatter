@@ -79,7 +79,7 @@ status: upcoming
 
 - Product design reference: [Ollama](https://ollama.com/), reviewed 2026-10-21. Use plain monochrome surfaces, left-aligned content, restrained type sizes, generous whitespace and a compact navigation bar.
 - Keep product copy functional: feature names, supported formats, requirements and release status. Avoid repeated slogans and decorative section labels.
-- Product pages use a centered reading column; guides and resolved-issue pages reserve space for their shared sidebar. Intermediate widths must not reserve a guide sidebar on product pages. Shared styles live in `site/src/styles/site.css`. Guide pagination uses small text links between published guides.
+- All pages share a centered reading column capped at 48rem, so Features, Guide, Download and resolved issues start at the same horizontal position. At 90rem and above, guide navigation and the page outline sit in the outer margins; below that, navigation uses Menu and the outline uses its dropdown. Keep the 90rem breakpoint in `PageFrame.astro` and `styles/layout.css` synchronized. Shared typography lives in `site/src/styles/site.css`. Guide pagination uses small text links between published guides.
 - All content pages use the shared product footer, including downloads, guides, and 404. Guide pagination stays above the footer.
 - Keep Features, Guide, and Download in the header. The footer links to News, Declaration, Resolved issues and Reported issues; GitHub appears there only when hidden in the header.
 - Website appearance initially follows the OS. The sun/moon button toggles light/dark and remembers the choice in `starlight-theme`; clearing that preference restores automatic detection.
