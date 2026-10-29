@@ -32,6 +32,12 @@ Change the default folder in **Settings → Projects → Default project folder*
 
 Project tabs retain their Library/Source view, open source files and PDF view. Opening the same project selects its existing tab.
 
+### ZIP imports
+
+- Limits: 1 GiB per archive, 10,000 entries, 512 MiB of extracted files and 64 MiB of directory metadata.
+- Multi-part archives and ambiguous ZIP end records are rejected. An otherwise valid archive can also trigger the end-record check if its comment or contents contain the same marker.
+- If an archive is rejected, recreate the ZIP or extract it with your usual archive tool and use **Open Project** on the folder.
+
 ## Continue by task
 
 | Task | Guide |
