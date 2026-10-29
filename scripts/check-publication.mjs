@@ -13,6 +13,10 @@ import { parse } from "parse5";
 import { unzipSync } from "fflate";
 import { DEMOS, demoSource } from "./prepare-demo.mjs";
 import { readSnapshot } from "./download-stats.mjs";
+import {
+  releaseDownloadUrl,
+  validateReleaseConfig,
+} from "./verify-release-download.mjs";
 import { ROOT, inside, localLink, isMain, run } from "./lib/paths.mjs";
 
 function links(html) {
@@ -120,6 +124,43 @@ function checkDownloadStatistics(site) {
   return errors;
 }
 
+function checkMacRelease(site, config) {
+  try {
+    if (!validateReleaseConfig(config)) return [];
+  } catch (error) {
+    return [error.message];
+  }
+  const errors = [];
+  const page = path.join(site, "download/index.html");
+  if (!existsSync(page))
+    return ["Published macOS release has no download page."];
+  const descendants = (node) => [
+    node,
+    ...(node.childNodes ?? []).flatMap(descendants),
+  ];
+  const attribute = (node, name) =>
+    node.attrs?.find((attr) => attr.name === name)?.value;
+  const section = descendants(parse(readFileSync(page, "utf8"))).find(
+    (node) => attribute(node, "id") === "mac",
+  );
+  if (!section) return ["Download page has no macOS release section."];
+  const nodes = descendants(section);
+  const expectedUrl = releaseDownloadUrl(config);
+  if (!nodes.some((node) => attribute(node, "href") === expectedUrl))
+    errors.push("macOS download link differs from the reviewed release.");
+  const text = nodes
+    .filter((node) => node.nodeName === "#text")
+    .map((node) => node.value)
+    .join(" ");
+  if (!text.includes(config.releaseSha256))
+    errors.push("macOS download page must show the reviewed SHA-256.");
+  if (!config.releaseNotarized && !text.includes("not notarized by Apple"))
+    errors.push(
+      "Unnotarized macOS preview must be labeled beside its download.",
+    );
+  return errors;
+}
+
 export function checkPublication(root = ROOT) {
   const files = [
     ...new Set(
@@ -206,9 +247,11 @@ export function checkPublication(root = ROOT) {
   } catch (error) {
     errors.push(`Download statistics: ${error.message}`);
   }
-  const base = JSON.parse(
+  const config = JSON.parse(
     readFileSync(path.join(root, "site/src/data/site.json"), "utf8"),
-  ).base;
+  );
+  const base = config.base;
+  errors.push(...checkMacRelease(site, config));
   for (const html of htmlFiles(site)) {
     const parsed = links(readFileSync(html, "utf8"));
     for (const reference of parsed.references) {

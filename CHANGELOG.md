@@ -24,6 +24,8 @@
 
 - Simplify download labels and installation copy on the website.
 
+- Show the Preview 4 DMG SHA-256 and signing status on the macOS download page; verify the public file before website publication.
+
 - Align version, requirements, install actions and section order across the Download platform tabs.
 
 ## [0.11.0-windows-preview.4] — 2026-10-26

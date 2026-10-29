@@ -27,4 +27,5 @@ jobs:
       - run: npm --prefix scripts test
       - run: node scripts/build-guides.mjs --check
       - run: node scripts/check-publication.mjs
+      - run: node scripts/verify-release-download.mjs
       - run: git diff --check HEAD^ HEAD

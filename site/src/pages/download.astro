@@ -39,7 +39,7 @@ const { Content: Ubuntu } = await render(ubuntu);
   </nav>
   <DownloadPlatform
     id="mac"
-    version={config.version}
+    version={config.releaseAvailable ? config.releaseName : config.version}
     requirements={requirements!}
     action={
       config.releaseAvailable
@@ -47,7 +47,27 @@ const { Content: Ubuntu } = await render(ubuntu);
         : undefined
     }
   >
-    {config.releaseAvailable && <MacOS />}
+    {config.releaseAvailable && (
+      <>
+        {!config.releaseNotarized && (
+          <p>
+            This preview is ad hoc signed and not notarized by Apple. macOS may
+            require approval in Privacy &amp; Security.{" "}
+            <a href="https://support.apple.com/102445">
+              Apple's opening instructions
+            </a>
+            .
+          </p>
+        )}
+        <p>
+          DMG SHA-256: <code>{config.releaseSha256}</code>. Verify the
+          downloaded file with{" "}
+          <code>shasum -a 256 ~/Downloads/{config.assetName}</code> before
+          opening it.
+        </p>
+        <MacOS />
+      </>
+    )}
   </DownloadPlatform>
   <DownloadPlatform
     id="windows"
