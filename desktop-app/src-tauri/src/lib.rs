@@ -1051,6 +1051,7 @@ pub fn run() {
                     std::env::args().skip(1),
                     &std::env::current_dir().unwrap_or_default(),
                 );
+                log::info!("FerMatter application setup complete");
             }
             #[cfg(unix)]
             tauri::RunEvent::Ready => {

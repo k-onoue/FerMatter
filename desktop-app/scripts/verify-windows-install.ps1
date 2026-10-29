@@ -162,6 +162,18 @@ try {
         $app.Refresh()
         if ($app.HasExited) { throw "The migrated resident exited during the compatibility check (code $($app.ExitCode))." }
     }
+    # A live process can still be inside WebView initialization. Require Ready
+    # after forwarding so a queued request cannot hide a failed/stalled setup.
+    $ready = $false
+    $readyDeadline = (Get-Date).AddSeconds(60)
+    do {
+        $app.Refresh()
+        if ($app.HasExited) { throw "The candidate exited before initialization completed (code $($app.ExitCode))." }
+        $ready = Select-String -LiteralPath (Join-Path $diagnosticsDirectory 'candidate-resident.stdout.log') -SimpleMatch 'FerMatter application setup complete' -Quiet
+        if ($ready) { break }
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $readyDeadline)
+    if (-not $ready) { throw 'The candidate did not complete application setup within 60 seconds.' }
     Stop-VerifiedApplication $app
     $app.WaitForExit()
     $app = $null
