@@ -58,10 +58,16 @@ pub fn import_svg_to(app: &tauri::AppHandle, sources: &[String], target: &str) -
     }
     let runtime = app.state::<Arc<Runtime>>();
     // Validate every input before touching an existing draft or opening windows.
-    let restored = sources
+    let mut restored = sources
         .iter()
         .map(|s| roundtrip::decode(s).and_then(|v| roundtrip::resolve(&runtime.store, &v)))
         .collect::<Result<Vec<_>>>()?;
+    for (_, draft) in &mut restored {
+        let token = uuid::Uuid::new_v4().to_string();
+        draft["entryID"] = json!(uuid::Uuid::new_v4().to_string());
+        draft["importAuthorization"] = json!(token);
+        draft["requiresRender"] = json!(true);
+    }
     let target = target.to_owned();
     crate::lifecycle::on_main(app, move |app| admit_imports(&app, restored, &target))
 }

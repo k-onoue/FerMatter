@@ -110,6 +110,7 @@ let project: Project;
 let saved: Project[];
 let failSave: boolean;
 let delaySave: ((value: Project) => Promise<void>) | undefined;
+let delayAuthorize: (() => Promise<void>) | undefined;
 let scanImpl: (() => Promise<Project>) | undefined;
 let availableProjects: Project[];
 let pendingImports: {
@@ -163,6 +164,7 @@ beforeEach(() => {
   save.mockReset().mockResolvedValue("/synthetic/out.svg");
   failSave = false;
   delaySave = undefined;
+  delayAuthorize = undefined;
   scanImpl = undefined;
   rpc
     .mockReset()
@@ -225,6 +227,13 @@ beforeEach(() => {
             p.id === next.id ? next : p,
           );
           return null;
+        }
+        if (operation === "authorize_import_render") {
+          await delayAuthorize?.();
+          const card = structuredClone(payload.card as Card);
+          delete card.importAuthorization;
+          card.requiresRender = false;
+          return card;
         }
         if (operation === "scan") return scanImpl ? scanImpl() : project;
         if (operation === "render") return [];
@@ -360,10 +369,15 @@ it("reopening an existing project with another entrypoint persists it before sca
   expect(screen.getAllByRole("tab")).toHaveLength(2);
 });
 
-it("SVG restoration reuses an existing tab, preserves its prior draft, and previews automatically", async () => {
+it("SVG restoration reuses an existing tab and waits for explicit Render", async () => {
   await openProject();
   edit("my existing scratch");
-  const draft = { ...initialInstant(), source: "imported source" };
+  const draft = {
+    ...initialInstant(),
+    source: "imported source",
+    requiresRender: true,
+    importAuthorization: "token",
+  };
   pendingImports.push({ token: "svg-one", project, draft });
   await act(async () => {
     for (const event of events.get("workspace-import-pending") || []) event();
@@ -382,20 +396,24 @@ it("SVG restoration reuses an existing tab, preserves its prior draft, and previ
   expect(
     saved.at(-1)?.cards.some((card) => card.tex === "my existing scratch"),
   ).toBe(true);
-  expect((saved.at(-1)?.libraryDraft as Card).requiresRender).toBe(false);
+  expect((saved.at(-1)?.libraryDraft as Card).requiresRender).toBe(true);
+  expect(
+    rpc.mock.calls.some(
+      ([op, payload]) =>
+        op === "render" &&
+        payload.cards?.some((card: Card) => card.tex === "imported source"),
+    ),
+  ).toBe(false);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Render imported source" }),
+  );
   await waitFor(() =>
-    expect(
-      rpc.mock.calls.some(
-        ([op, payload]) =>
-          op === "render" &&
-          payload.cards?.some((card: Card) => card.tex === "imported source"),
-      ),
-    ).toBe(true),
+    expect(rpc.mock.calls.some(([op]) => op === "render")).toBe(true),
   );
   expect(rpc.mock.calls.some(([op]) => op === "save_file")).toBe(false);
 });
 
-it("opening a legacy imported Library draft enables preview without changing original cards or source files", async () => {
+it("opening a pending imported Library draft requires explicit Render", async () => {
   const original = structuredClone(project.cards);
   project.libraryDraft = {
     ...project.cards[0],
@@ -403,24 +421,80 @@ it("opening a legacy imported Library draft enables preview without changing ori
     origin: "custom",
     tex: "legacy import",
     requiresRender: true,
+    importAuthorization: "legacy-token",
   };
   await openProject();
+  expect(
+    rpc.mock.calls.some(
+      ([op, payload]) =>
+        op === "render" &&
+        payload.cards?.some((card: Card) => card.tex === "legacy import"),
+    ),
+  ).toBe(false);
+  fireEvent.change(screen.getByRole("textbox", { name: "Variant source" }), {
+    target: { value: "edited legacy import" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Render imported source" }),
+  );
   await waitFor(() =>
-    expect(
-      rpc.mock.calls.some(
-        ([op, payload]) =>
-          op === "render" &&
-          payload.cards?.some(
-            (card: Card) =>
-              card.tex === "legacy import" && card.requiresRender === false,
-          ),
-      ),
-    ).toBe(true),
+    expect(rpc.mock.calls.some(([op]) => op === "render")).toBe(true),
   );
   await act(async () => flushWindow());
   expect(saved.at(-1)?.cards).toEqual(original);
+  expect(
+    saved.some(
+      (value) =>
+        (value.libraryDraft as Card)?.tex === "edited legacy import" &&
+        (value.libraryDraft as Card)?.requiresRender === true &&
+        (value.libraryDraft as Card)?.importAuthorization === "legacy-token",
+    ),
+  ).toBe(true);
+  expect(
+    rpc.mock.calls.some(
+      ([op, payload]) =>
+        op === "authorize_import_render" &&
+        (payload.card as Card).tex === "edited legacy import",
+    ),
+  ).toBe(true);
   expect((saved.at(-1)?.libraryDraft as Card).requiresRender).toBe(false);
   expect(rpc.mock.calls.some(([op]) => op === "save_file")).toBe(false);
+});
+
+it("does not replace a newer Library edit with a stale Render authorization", async () => {
+  project.libraryDraft = {
+    ...project.cards[0],
+    id: "restored",
+    origin: "custom",
+    tex: "imported source",
+    requiresRender: true,
+    importAuthorization: "token",
+  };
+  let release!: () => void;
+  delayAuthorize = () => new Promise<void>((resolve) => (release = resolve));
+  await openProject();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Render imported source" }),
+  );
+  await waitFor(() => expect(release).toBeTypeOf("function"));
+  fireEvent.change(screen.getByRole("textbox", { name: "Variant source" }), {
+    target: { value: "newer edit" },
+  });
+  await act(async () => release());
+  expect(
+    (
+      screen.getByRole("textbox", {
+        name: "Variant source",
+      }) as HTMLTextAreaElement
+    ).value,
+  ).toBe("newer edit");
+  expect(
+    rpc.mock.calls.some(
+      ([op, payload]) =>
+        op === "render" &&
+        payload.cards?.some((card: Card) => card.tex === "imported source"),
+    ),
+  ).toBe(false);
 });
 
 it("native close drains a queued SVG into a new project tab before acknowledging persistence", async () => {

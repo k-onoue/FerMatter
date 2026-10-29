@@ -553,7 +553,7 @@ fn restored_typst_context(
 fn prepare_cards(root: &Path, main: &str, cards: &[Value], c: &Cancellation) -> Result<Vec<Value>> {
     // This gate must precede cache hits, filesystem reads, and compiler startup.
     for card in cards {
-        if card["requiresRender"] == true {
+        if card["requiresRender"] == true || card["importAuthorization"].is_string() {
             return Err("Press Render to compile imported source.".into());
         }
         card_color(card)?;
@@ -1434,6 +1434,18 @@ mod tests {
             "missing.typ",
             "project",
             &[serde_json::json!({"requiresRender":true})],
+            &cache,
+            &super::Cancellation::default(),
+            |_| panic!("unexpected artwork"),
+        )
+        .unwrap_err();
+        assert!(error.contains("Press Render"));
+        assert!(!cache.exists());
+        let error = super::render(
+            &temp.path().join("missing-project"),
+            "missing.typ",
+            "project",
+            &[serde_json::json!({"requiresRender":false,"importAuthorization":"known"})],
             &cache,
             &super::Cancellation::default(),
             |_| panic!("unexpected artwork"),

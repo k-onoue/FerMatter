@@ -116,6 +116,63 @@ fn remember(state: &mut Value, draft: &Value) {
     }
 }
 
+fn is_pending_import(draft: &Value) -> bool {
+    draft["requiresRender"] == true || draft["importAuthorization"].is_string()
+}
+
+fn same_import_snapshot(left: &Value, right: &Value) -> bool {
+    let mut left = left.clone();
+    let mut right = right.clone();
+    for draft in [&mut left, &mut right] {
+        if let Some(draft) = draft.as_object_mut() {
+            draft.remove("entryID");
+            draft.remove("requiresRender");
+            draft.remove("importAuthorization");
+        }
+    }
+    left == right
+}
+
+fn same_import_content(left: &Value, right: &Value) -> bool {
+    ["source", "template", "kind", "contextFile"]
+        .iter()
+        .all(|key| left.get(key) == right.get(key))
+}
+
+fn pending_import<'a>(state: &'a Value, draft: &Value) -> Option<&'a Value> {
+    let ident = string(draft, "entryID");
+    std::iter::once(&state["draft"])
+        .chain(
+            state["history"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|item| &item["draft"]),
+        )
+        .filter(|known| is_pending_import(known))
+        .find(|known| known["entryID"].as_str() == Some(ident) || same_import_content(known, draft))
+}
+
+fn preserve_pending_import(state: &Value, draft: &mut Value) {
+    if let Some(pending) = pending_import(state, draft) {
+        if pending["importAuthorization"].is_string() {
+            draft["importAuthorization"] = pending["importAuthorization"].clone();
+        }
+        draft["requiresRender"] = json!(true);
+    }
+}
+
+fn reject_pending_import(store: &Storage, project: &str, draft: &Value) -> Result<()> {
+    if draft["requiresRender"] == true || draft["importAuthorization"].is_string() {
+        return Err("Press Render to compile imported source.".into());
+    }
+    let state = load(&home(store, project)?)?;
+    if pending_import(&state, draft).is_some() {
+        return Err("Press Render to compile imported source.".into());
+    }
+    Ok(())
+}
+
 pub fn session(store: &Storage, request: &Value) -> Result<Value> {
     let _lock = store.writes.lock().unwrap();
     let home = home(store, string(request, "project"))?;
@@ -124,14 +181,49 @@ pub fn session(store: &Storage, request: &Value) -> Result<Value> {
     migrate_library(&mut state);
     match string(request, "action") {
         "save" => {
-            validate(&request["draft"])?;
-            state["draft"] = request["draft"].clone();
-            remember(&mut state, &request["draft"]);
+            let mut draft = request["draft"].clone();
+            validate(&draft)?;
+            preserve_pending_import(&state, &mut draft);
+            state["draft"] = draft.clone();
+            remember(&mut state, &draft);
         }
         "remember" => {
-            let draft = &request["draft"];
-            validate(draft)?;
-            remember(&mut state, draft);
+            let mut draft = request["draft"].clone();
+            validate(&draft)?;
+            preserve_pending_import(&state, &mut draft);
+            remember(&mut state, &draft);
+        }
+        "authorize_render" => {
+            let requested = &request["draft"];
+            let ident = string(requested, "entryID");
+            let stored = std::iter::once(&state["draft"])
+                .chain(
+                    state["history"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .map(|item| &item["draft"]),
+                )
+                .find(|draft| is_pending_import(draft) && draft["entryID"].as_str() == Some(ident))
+                .ok_or("Imported source changed; reopen the SVG.")?;
+            let stored_token = stored["importAuthorization"].as_str();
+            let requested_token = requested["importAuthorization"].as_str();
+            if !same_import_snapshot(stored, requested)
+                || (stored_token.is_some() && stored_token != requested_token)
+            {
+                return Err("Imported source changed; reopen the SVG.".into());
+            }
+            let mut authorized = requested.clone();
+            validate(&authorized)?;
+            authorized
+                .as_object_mut()
+                .unwrap()
+                .remove("importAuthorization");
+            authorized["requiresRender"] = json!(false);
+            if state["draft"]["entryID"].as_str() == Some(ident) {
+                state["draft"] = authorized.clone();
+            }
+            remember(&mut state, &authorized);
         }
         "load" => {}
         _ => return Err("Unknown Instant history operation.".into()),
@@ -180,9 +272,7 @@ pub fn source(draft: &Value) -> Result<(String, String, Value)> {
 
 pub fn render(store: &Storage, draft: &Value, cancel: &compiler::Cancellation) -> Result<Value> {
     let home = &store.home;
-    if draft["requiresRender"] == true {
-        return Err("Press Render to compile imported source.".into());
-    }
+    reject_pending_import(store, "", draft)?;
     let (main, content, mut card) = source(draft)?;
     if string(draft, "source").trim().is_empty() {
         return Err("Enter an equation or drawing.".into());
@@ -250,9 +340,7 @@ pub fn render_project(
     cancel: &compiler::Cancellation,
 ) -> Result<Value> {
     validate(draft)?;
-    if draft["requiresRender"] == true {
-        return Err("Press Render to compile imported source.".into());
-    }
+    reject_pending_import(store, project, draft)?;
     let p = store.load(project)?;
     if draft["template"]["format"] != p["format"] {
         return Err("The project format changed. Start a new equation.".into());
@@ -460,6 +548,124 @@ mod tests {
         let state = session(&store, &json!({"action":"save", "draft":second})).unwrap();
         assert_eq!(state["history"].as_array().unwrap().len(), 2);
         assert_eq!(state["history"][0]["draft"]["source"], "x^2");
+    }
+    #[test]
+    fn pending_import_survives_generic_saves_until_explicit_authorization() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Storage::new(temp.path().join("data"), temp.path().join("legacy")).unwrap();
+        let mut imported = draft();
+        imported["entryID"] = json!("aaaa");
+        imported["requiresRender"] = json!(true);
+        imported["importAuthorization"] = json!("token");
+        session(&store, &json!({"action":"save","draft":imported})).unwrap();
+        let mut bypass = imported.clone();
+        bypass["source"] = json!("edited");
+        bypass["requiresRender"] = json!(false);
+        bypass
+            .as_object_mut()
+            .unwrap()
+            .remove("importAuthorization");
+        let state = session(&store, &json!({"action":"save","draft":bypass})).unwrap();
+        assert_eq!(state["draft"]["requiresRender"], true);
+        assert_eq!(state["draft"]["importAuthorization"], "token");
+        assert!(render(&store, &bypass, &compiler::Cancellation::default())
+            .unwrap_err()
+            .contains("Press Render"));
+        let mut changed_id = state["draft"].clone();
+        changed_id["entryID"] = json!("bbbb");
+        changed_id["color"] = json!("#2563eb");
+        changed_id["fontSize"] = json!(42);
+        changed_id["requiresRender"] = json!(false);
+        changed_id
+            .as_object_mut()
+            .unwrap()
+            .remove("importAuthorization");
+        assert!(
+            render(&store, &changed_id, &compiler::Cancellation::default())
+                .unwrap_err()
+                .contains("Press Render")
+        );
+
+        let root = temp.path().join("project");
+        fs::create_dir(&root).unwrap();
+        fs::write(
+            root.join("main.tex"),
+            "\\documentclass{article}\\begin{document}x\\end{document}",
+        )
+        .unwrap();
+        let project = store.open(&root, Some("main.tex")).unwrap();
+        let project_id = string(&project, "id");
+        session(
+            &store,
+            &json!({"project":project_id,"action":"save","draft":imported}),
+        )
+        .unwrap();
+        assert!(render_project(
+            &store,
+            project_id,
+            &bypass,
+            &compiler::Cancellation::default(),
+        )
+        .unwrap_err()
+        .contains("Press Render"));
+        let mut project_changed_id = imported.clone();
+        project_changed_id["entryID"] = json!("bbbb");
+        project_changed_id["color"] = json!("#2563eb");
+        project_changed_id["requiresRender"] = json!(false);
+        project_changed_id
+            .as_object_mut()
+            .unwrap()
+            .remove("importAuthorization");
+        assert!(render_project(
+            &store,
+            project_id,
+            &project_changed_id,
+            &compiler::Cancellation::default(),
+        )
+        .unwrap_err()
+        .contains("Press Render"));
+
+        let mut authorize = state["draft"].clone();
+        authorize["source"] = json!("edited");
+        let state = session(
+            &store,
+            &json!({"action":"authorize_render","draft":authorize}),
+        )
+        .unwrap();
+        assert_eq!(state["draft"]["requiresRender"], false);
+        assert!(state["draft"].get("importAuthorization").is_none());
+
+        let mut local = draft();
+        local["entryID"] = json!("cccc");
+        local["source"] = json!("new local source");
+        assert!(pending_import(&state, &local).is_none());
+    }
+    #[test]
+    fn legacy_pending_draft_without_token_is_authorized_once_and_preserved() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Storage::new(temp.path().join("data"), temp.path().join("legacy")).unwrap();
+        let mut legacy = draft();
+        legacy["entryID"] = json!("aaaa");
+        legacy["source"] = json!("legacy source");
+        legacy["requiresRender"] = json!(true);
+        let path = store.home.join("Instant/session.json");
+        json_write(
+            &path,
+            &json!({"schemaVersion":1,"draft":legacy,"history":[{"id":"aaaa","draft":legacy}]}),
+        )
+        .unwrap();
+
+        let loaded = session(&store, &json!({"action":"load"})).unwrap();
+        assert_eq!(loaded["draft"]["source"], "legacy source");
+        assert_eq!(loaded["draft"]["requiresRender"], true);
+        let authorized = session(
+            &store,
+            &json!({"action":"authorize_render","draft":loaded["draft"]}),
+        )
+        .unwrap();
+        assert_eq!(authorized["draft"]["source"], "legacy source");
+        assert_eq!(authorized["draft"]["requiresRender"], false);
+        assert_eq!(authorized["history"][0]["draft"], authorized["draft"]);
     }
     #[test]
     fn upgrades_old_history_once_without_dropping_styles_or_creating_duplicates() {

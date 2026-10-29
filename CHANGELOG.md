@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Wait for an explicit Render action before compiling editable source restored from an SVG, including after reopening Instant or a Library draft.
+
 - Adopt permanent app ID `io.github.fermatter.fermatter` while retaining legacy data, WebView recovery storage, resident coordination and installer upgrade paths. macOS may ask for folder access again.
 
 - Prepare validated ad hoc macOS and unsigned Windows stable candidates, with exact-commit validation reports and artifact hashes. Keep Ubuntu experimental and retain APT signing; this does not publish a stable release.

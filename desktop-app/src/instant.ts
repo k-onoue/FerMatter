@@ -11,6 +11,7 @@ export interface RenderedInstant {
 export interface InstantDraft {
   entryID?: string;
   requiresRender?: boolean;
+  importAuthorization?: string;
   restorationProject?: { uuid: string; name?: string } | null;
   source: string;
   template: ProjectTemplate;

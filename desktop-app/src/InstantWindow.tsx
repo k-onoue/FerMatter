@@ -136,8 +136,21 @@ export default function InstantWindow() {
       if (ticket === contextSequence.current) setContextBusy(false);
     }
   }
-  const refresh = () => {
-    if (draftRef.current?.requiresRender) patch({ requiresRender: false });
+  const refresh = async () => {
+    if (draftRef.current?.requiresRender) {
+      await queue.current;
+      const requested = draftRef.current;
+      const state = await rpc<InstantSession>("instant_session", {
+        action: "authorize_render",
+        draft: requested,
+      });
+      if (draftRef.current !== requested) return;
+      const authorized = state.draft;
+      if (!authorized)
+        throw new Error("Imported source changed; reopen the SVG.");
+      draftRef.current = authorized;
+      setDraft(authorized);
+    }
     void refreshContext().then(() => setRetry((value) => value + 1));
   };
   const newEquation = () => {
@@ -236,12 +249,9 @@ export default function InstantWindow() {
     if (replacement.current !== ticket || draftRef.current !== before)
       return false;
     setRendered(null);
-    // Old SVG imports/history used an explicit-render gate. Opening them now
-    // follows the same automatic preview flow as typing a new equation.
     change({
       ...value,
       entryID: value.entryID || crypto.randomUUID(),
-      requiresRender: false,
     });
     setCompileError("");
     return true;
@@ -334,15 +344,14 @@ export default function InstantWindow() {
               : initialInstant());
         const pending = localStorage.getItem(pendingKey);
         if (pending) next = JSON.parse(pending);
-        const enablePreview = next.requiresRender === true;
-        if (enablePreview) next = { ...next, requiresRender: false };
         next = { ...next, entryID: next.entryID || crypto.randomUUID() };
-        if (pending || enablePreview || next.source.trim()) {
+        if (pending || next.source.trim()) {
           // Validate recovery through the same backend before allowing further edits.
           const saved = await rpc<InstantSession>("instant_session", {
             action: "save",
             draft: next,
           });
+          if (saved.draft) next = saved.draft;
           if (!gone) setHistory(saved.history);
           localStorage.removeItem(pendingKey);
         }
@@ -894,7 +903,7 @@ export default function InstantWindow() {
                   draft={draft}
                   busy={busy}
                   compileError={compileError}
-                  onRender={refresh}
+                  onRender={() => void refresh().catch(report)}
                   onDragStarted={() => persist(draft)}
                   onError={report}
                 />

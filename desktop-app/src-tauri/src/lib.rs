@@ -279,6 +279,82 @@ async fn request(
     .await
     .map_err(err)?
 }
+fn project_cards(project: &Value) -> Vec<&Value> {
+    project["cards"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .chain(
+            project["libraryDraft"]
+                .as_object()
+                .map(|_| &project["libraryDraft"]),
+        )
+        .collect()
+}
+
+fn replace_project_card(project: &mut Value, ident: &str, replacement: &Value) {
+    if let Some(cards) = project["cards"].as_array_mut() {
+        if let Some(card) = cards.iter_mut().find(|card| string(card, "id") == ident) {
+            *card = replacement.clone();
+        }
+    }
+    if string(&project["libraryDraft"], "id") == ident {
+        project["libraryDraft"] = replacement.clone();
+    }
+}
+
+fn same_pending_project_payload(left: &Value, right: &Value) -> bool {
+    let mut left = left.clone();
+    let mut right = right.clone();
+    for card in [&mut left, &mut right] {
+        if let Some(card) = card.as_object_mut() {
+            card.remove("id");
+            card.remove("requiresRender");
+            card.remove("importAuthorization");
+        }
+    }
+    left == right
+}
+
+fn same_pending_project_content(left: &Value, right: &Value) -> bool {
+    [
+        "tex",
+        "kind",
+        "typstContext",
+        "restoredContextFile",
+        "instantColor",
+    ]
+    .iter()
+    .all(|key| left.get(key) == right.get(key))
+}
+
+fn pending_project_import<'a>(project: &'a Value, requested: &Value) -> Option<&'a Value> {
+    project_cards(project).into_iter().find(|known| {
+        known["importAuthorization"].is_string()
+            && (string(known, "id") == string(requested, "id")
+                || same_pending_project_content(known, requested))
+    })
+}
+
+fn preserve_pending_project_imports(current: &Value, next: &mut Value) {
+    for pending in project_cards(current)
+        .into_iter()
+        .filter(|card| card["importAuthorization"].is_string())
+    {
+        let ident = string(pending, "id");
+        let Some(candidate) = project_cards(next).into_iter().find(|card| {
+            string(card, "id") == ident || same_pending_project_content(pending, card)
+        }) else {
+            continue;
+        };
+        let mut candidate = candidate.clone();
+        let candidate_id = string(&candidate, "id").to_owned();
+        candidate["importAuthorization"] = pending["importAuthorization"].clone();
+        candidate["requiresRender"] = json!(true);
+        replace_project_card(next, &candidate_id, &candidate);
+    }
+}
+
 fn dispatch(
     app: &tauri::AppHandle,
     runtime: &Runtime,
@@ -403,11 +479,33 @@ fn dispatch(
         "save_project" => {
             let _guard = store.writes.lock().unwrap();
             let current = store.load(ident)?;
-            store.save(
-                ident,
-                &automation::merge_unseen_variants(&v["value"], &current),
-            )?;
+            let mut next = automation::merge_unseen_variants(&v["value"], &current);
+            preserve_pending_project_imports(&current, &mut next);
+            store.save(ident, &next)?;
             Ok(Value::Null)
+        }
+        "authorize_import_render" => {
+            let _guard = store.writes.lock().unwrap();
+            let mut current = store.load(ident)?;
+            let requested = &v["card"];
+            let card_id = string(requested, "id");
+            let token = string(requested, "importAuthorization");
+            let stored = project_cards(&current)
+                .into_iter()
+                .find(|card| string(card, "id") == card_id)
+                .filter(|card| string(card, "importAuthorization") == token)
+                .filter(|card| same_pending_project_payload(card, requested))
+                .ok_or("Imported source changed; reopen the SVG.")?;
+            let _ = stored;
+            let mut authorized = requested.clone();
+            authorized
+                .as_object_mut()
+                .ok_or("Invalid imported source.")?
+                .remove("importAuthorization");
+            authorized["requiresRender"] = json!(false);
+            replace_project_card(&mut current, card_id, &authorized);
+            store.save(ident, &current)?;
+            Ok(authorized)
         }
         "tree" => Ok(json!(entries(&store.root(ident)?)?
             .into_iter()
@@ -601,6 +699,12 @@ fn dispatch(
                 }
                 "render" => {
                     let cards = v["cards"].as_array().ok_or("Missing equations")?;
+                    if cards
+                        .iter()
+                        .any(|card| pending_project_import(&p, card).is_some())
+                    {
+                        return Err("Press Render to compile imported source.".into());
+                    }
                     let mut results = vec![];
                     compiler::render(&root, main, engine, cards, &cache, &c, |event| {
                         if c.check().is_ok() {
@@ -1076,6 +1180,31 @@ fn windows_arguments(app: &tauri::AppHandle, arguments: impl Iterator<Item = Str
 #[cfg(test)]
 mod request_tests {
     use super::*;
+    #[test]
+    fn pending_project_import_follows_an_id_only_change() {
+        let pending = json!({
+            "id":"aaaa","tex":"imported","kind":"inline","origin":"custom",
+            "status":"pending","requiresRender":true,"importAuthorization":"token"
+        });
+        let current = json!({"cards":[],"libraryDraft":pending});
+        let requested = json!({
+            "id":"bbbb","name":"renamed","tex":"imported","kind":"inline","origin":"custom",
+            "status":"pending"
+        });
+        assert!(pending_project_import(&current, &requested).is_some());
+
+        let mut next = json!({"cards":[],"libraryDraft":requested});
+        preserve_pending_project_imports(&current, &mut next);
+        assert_eq!(next["libraryDraft"]["id"], "bbbb");
+        assert_eq!(next["libraryDraft"]["requiresRender"], true);
+        assert_eq!(next["libraryDraft"]["importAuthorization"], "token");
+
+        let typed = json!({
+            "id":"cccc","tex":"new local source","kind":"inline","origin":"custom",
+            "status":"pending"
+        });
+        assert!(pending_project_import(&current, &typed).is_none());
+    }
     #[test]
     fn closing_instant_does_not_cancel_project_work() {
         let temp = tempfile::tempdir().unwrap();
