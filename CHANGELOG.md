@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+## [0.11.0-preview.5] — 2026-10-29
+
 - Install Linux icons at standard desktop-theme sizes so GNOME can display FerMatter in application search and the launcher.
 
 - Wait for an explicit Render action before compiling editable source restored from an SVG, including after reopening Instant or a Library draft.

@@ -17,6 +17,12 @@ on:
       - "LICENSE"
       - "NOTICE"
   workflow_dispatch:
+    inputs:
+      channel:
+        description: Package channel for a reviewed distribution candidate
+        type: choice
+        options: [stable-candidate, preview]
+        default: stable-candidate
 
 permissions:
   contents: read
@@ -31,6 +37,7 @@ jobs:
     timeout-minutes: 90
     env:
       CARGO_BUILD_JOBS: "2"
+      FERMATTER_PACKAGE_CHANNEL: ${{ inputs.channel || 'stable-candidate' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -97,9 +104,9 @@ jobs:
           # paths only on this disposable CI account so discovery is exercised.
           $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
           [Environment]::SetEnvironmentVariable('PATH', "$texBin;$typstBin;$userPath", 'User')
-      - name: Validate and package unsigned stable candidate
+      - name: Validate and package unsigned candidate
         shell: powershell
-        run: ./desktop-app/scripts/release-check-windows.ps1
+        run: ./desktop-app/scripts/release-check-windows.ps1 -Channel $env:FERMATTER_PACKAGE_CHANNEL
       - name: Install, replace, launch and uninstall synthetic preview
         shell: powershell
         run: |
