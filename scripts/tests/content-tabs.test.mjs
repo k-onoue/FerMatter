@@ -4,15 +4,24 @@ import { test } from "node:test";
 import { runInNewContext } from "node:vm";
 
 const script = readFileSync(
-  new URL("../../site/src/scripts/download-tabs.js", import.meta.url),
+  new URL("../../site/src/scripts/content-tabs.js", import.meta.url),
   "utf8",
 );
 
-function page({ platform = "MacIntel", hash = "", linux = true } = {}) {
+function page({
+  platform = "MacIntel",
+  hash = "",
+  linux = true,
+  fixes = false,
+} = {}) {
   const location = { hash };
   const windowEvents = {};
   const nodes = new Map();
-  const ids = linux ? ["mac", "windows", "ubuntu"] : ["mac", "windows"];
+  const ids = fixes
+    ? ["released", "pending", "earlier"]
+    : linux
+      ? ["mac", "windows", "ubuntu"]
+      : ["mac", "windows"];
   let focused;
   let scrolled;
   const element = (id, attributes = {}) => ({
@@ -25,6 +34,9 @@ function page({ platform = "MacIntel", hash = "", linux = true } = {}) {
     },
     getAttribute(name) {
       return this.attributes[name] ?? null;
+    },
+    hasAttribute(name) {
+      return name in this.attributes;
     },
     addEventListener(name, handler) {
       this.events[name] = handler;
@@ -53,10 +65,16 @@ function page({ platform = "MacIntel", hash = "", linux = true } = {}) {
     ["windows-install", "windows"],
     ["ubuntu-install", "ubuntu"],
     ["ubuntu-update", "ubuntu"],
+    ["fixes-available-in-downloads", "released"],
+    ["fixed-in-source-awaiting-a-download", "pending"],
+    ["already-included-in-the-first-public-macos-preview", "earlier"],
   ]) {
     nodes.set(id, { ...element(id), owner });
   }
-  const navigation = element("navigation");
+  const navigation = element(
+    "navigation",
+    fixes ? {} : { "data-detect-platform": "" },
+  );
   navigation.querySelectorAll = () => entries.map(({ tab }) => tab);
   runInNewContext(script, {
     navigator: { userAgent: platform },
@@ -224,4 +242,44 @@ test("unavailable Linux and malformed fragments retain a readable default", () =
   assert.equal(p.selected(), "windows");
   assert.equal(p.key("windows", "ArrowRight"), true);
   assert.equal(p.selected(), "mac");
+});
+
+test("fix categories show exactly one group, independent of the reader's OS", () => {
+  for (const platform of ["MacIntel", "Win32", "Linux x86_64"]) {
+    const p = page({ fixes: true, platform });
+    assert.equal(p.selected(), "released");
+    for (const id of ["pending", "earlier", "released"]) {
+      p.click(id);
+      assert.deepEqual(
+        p.entries
+          .filter(({ panel }) => !panel.hidden)
+          .map(({ panel }) => panel.id),
+        [id],
+      );
+      assert.equal(p.location.hash, `#${id}`);
+    }
+    p.key("released", "ArrowLeft");
+    assert.equal(p.selected(), "earlier");
+    p.key("earlier", "Home");
+    assert.equal(p.selected(), "released");
+  }
+});
+
+test("fix category and legacy fragments reveal their group on load and hash navigation", () => {
+  for (const [hash, expected] of [
+    ["#pending", "pending"],
+    ["#earlier", "earlier"],
+    ["#fixes-available-in-downloads", "released"],
+    ["#fixed-in-source-awaiting-a-download", "pending"],
+    ["#already-included-in-the-first-public-macos-preview", "earlier"],
+  ]) {
+    const p = page({ fixes: true, hash });
+    assert.equal(p.selected(), expected);
+    assert.equal(p.scrolled(), hash.slice(1));
+    assert.equal(p.focused(), undefined);
+    p.hashChange("#released");
+    assert.equal(p.selected(), "released");
+    p.hashChange(hash);
+    assert.equal(p.selected(), expected);
+  }
 });

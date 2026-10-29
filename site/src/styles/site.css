@@ -460,23 +460,23 @@ html:has(.product-page) .main-pane > main > .content-panel {
   justify-self: end;
   text-align: end;
 }
-.download-platform-tabs {
+.content-tabs {
   display: flex;
-  gap: 1.75rem;
+  gap: clamp(0.75rem, 3vw, 1.75rem);
   border-bottom: 1px solid var(--fm-rule);
 }
-.download-platform-tabs a {
+.content-tabs a {
   padding: 0.75rem 0.1rem;
   border-bottom: 2px solid transparent;
   color: var(--fm-muted);
   text-decoration: none;
 }
-.download-platform-tabs a:hover,
-.download-platform-tabs a[aria-selected="true"] {
+.content-tabs a:hover,
+.content-tabs a[aria-selected="true"] {
   color: var(--fm-ink);
   border-bottom-color: currentColor;
 }
-.download-platform-tabs a:focus-visible {
+.content-tabs a:focus-visible {
   outline: 2px solid var(--fm-ink);
   outline-offset: 4px;
 }
@@ -484,7 +484,8 @@ html:has(.product-page) .main-pane > main > .content-panel {
   padding-top: 2rem;
   scroll-margin-top: 6rem;
 }
-.download-platform-panel[hidden] {
+.download-platform-panel[hidden],
+.fix-group[hidden] {
   display: none;
 }
 .download-platform-header {
@@ -563,14 +564,10 @@ html:has(.product-page) .main-pane > main > .content-panel {
   flex-wrap: wrap;
   gap: 0.65rem 1.5rem;
 }
-.fix-jump-links {
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--fm-rule);
-}
 .fix-group {
-  margin-top: 3rem;
+  padding-top: 2rem;
 }
-.fix-group h2,
+.fix-group,
 .legacy-fix-anchor,
 #update-fermatter,
 #find-your-version {
