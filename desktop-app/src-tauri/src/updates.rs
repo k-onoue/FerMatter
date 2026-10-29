@@ -247,7 +247,7 @@ fn install_available() -> bool {
     #[cfg(not(target_os = "macos"))]
     matches!(
         tauri::utils::platform::bundle_type(),
-        Some(tauri::utils::platform::BundleType::Nsis | tauri::utils::platform::BundleType::Deb)
+        Some(tauri::utils::config::BundleType::Nsis | tauri::utils::config::BundleType::Deb)
     )
 }
 fn validate_asset(value: &Value, version: &str, target: &str) -> Result<(u64, String)> {
