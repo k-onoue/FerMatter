@@ -42,7 +42,7 @@ cargo install --locked cargo-audit --version 0.22.2 --root desktop-app/build/aud
 | Removal | Removing application leaves project folders and saved data intact | Pending |
 
 - Automated functional checks do not mark these rows as passed.
-- In-app automatic updates are not supplied by this packaging work; document manual replacement.
+- In-app updates require separate signed-artifact, failure/recovery and native restart checks; follow [the updater procedure](updates.md). Manual replacement remains necessary for previews without the updater. Local test feeds do not activate or validate public update delivery.
 - Keep stable download links disabled until this checklist and [release conditions](../releasing.md#public-distribution-checklist) pass. Unsigned/unnotarized status is permitted but must be recorded. A preview does not mark these rows as passed.
 
 ## Windows and Ubuntu
