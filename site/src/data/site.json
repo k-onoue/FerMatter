@@ -9,6 +9,7 @@
   "releaseTag": "v0.11.0-preview.4",
   "releaseName": "0.11.0 Preview 4",
   "releaseNotarized": false,
+  "releaseSha256": "e54bb07d5b29a2bd3c4a3b7d90063c7d45ebdfb74ca5486c06056f906b2cf42c",
   "homebrewCask": "fermatter/tap/fermatter",
   "ubuntuAptAvailable": true,
   "windowsReleaseAvailable": true,

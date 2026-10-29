@@ -24,6 +24,8 @@
 
 - Simplify download labels and installation copy on the website.
 
+- Verify the public macOS DMG before website publication; keep its checksum, signing status and opening instructions on a separate page linked from Download.
+
 - Align version, requirements, install actions and section order across the Download platform tabs.
 
 ## [0.11.0-windows-preview.4] — 2026-10-26

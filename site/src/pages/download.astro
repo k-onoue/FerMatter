@@ -3,7 +3,7 @@ import { getEntry, render } from "astro:content";
 import Product from "../layouts/Product.astro";
 import DownloadPlatform from "../components/DownloadPlatform.astro";
 import config from "../data/site.json";
-import { download, windowsDownload } from "../data/links";
+import { download, href, windowsDownload } from "../data/links";
 const macos = (await getEntry("download", "macos"))!;
 const windows = (await getEntry("download", "windows"))!;
 const ubuntu = (await getEntry("download", "ubuntu"))!;
@@ -39,7 +39,7 @@ const { Content: Ubuntu } = await render(ubuntu);
   </nav>
   <DownloadPlatform
     id="mac"
-    version={config.version}
+    version={config.releaseAvailable ? config.releaseName : config.version}
     requirements={requirements!}
     action={
       config.releaseAvailable
@@ -47,7 +47,16 @@ const { Content: Ubuntu } = await render(ubuntu);
         : undefined
     }
   >
-    {config.releaseAvailable && <MacOS />}
+    {config.releaseAvailable && (
+      <>
+        <p class="download-notes">
+          <a href={href("download/macos-notes/")}>
+            Download verification and opening notes →
+          </a>
+        </p>
+        <MacOS />
+      </>
+    )}
   </DownloadPlatform>
   <DownloadPlatform
     id="windows"
@@ -78,6 +87,12 @@ const { Content: Ubuntu } = await render(ubuntu);
     </DownloadPlatform>
   )}
 </Product>
+
+<style>
+  .download-notes {
+    margin-bottom: 2rem;
+  }
+</style>
 
 <script>
   import "../scripts/download-tabs.js";
