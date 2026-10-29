@@ -9,11 +9,13 @@ To find a fix for a particular problem, see [Resolved issues](https://fermatter.
 
 ## Find your version
 
-The older previews all display **0.11.0** inside the app. Use the preview number from your downloaded installer or release page as well. Windows and macOS have separate preview releases; matching version numbers do not mean they contain the same fixes.
+Previews through Preview 5 all display **0.11.0** inside the app. Use the preview number from your downloaded installer or release page as well. Windows and macOS have separate preview releases; matching version numbers do not mean they contain the same fixes.
 
 ## Update FerMatter
 
-- **Existing previews:** follow the [Download page](https://fermatter.github.io/download/). The first move to a version with the updater is manual.
+Preview 5 includes the Updates panel, but the stable feed currently offers no update. Install preview updates manually or through Homebrew/APT.
+
+- **Preview 4 and earlier:** follow the [Download page](https://fermatter.github.io/download/). The first move to a version with the updater is manual.
 - **Versions with the updater:** open **Settings → Updates** or the download icon beside the window controls. Choose **Check for updates**, **Download update**, then **Install and restart**. All open editors must finish saving first; a failed save cancels installation.
 - Automatic checks are on by default and run at most once a day. An indicator appears when an update is available. You can turn checks off in Updates; an existing off setting is preserved. Downloading and installing still require your action.
 - Only published stable updates for your OS and CPU are offered. Preview releases are installed manually. A merged fix does not trigger an update notification.

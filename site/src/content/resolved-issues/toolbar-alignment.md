@@ -2,7 +2,7 @@
 title: "Icons move when switching between Library and Source"
 description: "Shared toolbar alignment keeps the common actions in consistent positions."
 group: "released"
-availability: "Windows Preview 2 · macOS and Ubuntu: awaiting a release"
+availability: "Windows Preview 2 · macOS and Ubuntu Preview 5"
 order: 8
 ---
 
@@ -12,4 +12,4 @@ This is the additional icon-position alignment after the earlier toolbar spacing
 
 ## What to do
 
-The alignment change is included in [Windows Preview 2](https://github.com/FerMatter/fermatter.github.io/releases/tag/v0.11.0-windows-preview.2) and later. macOS and Ubuntu source builds include it, but their current packages still await it.
+The alignment change is included in [Windows Preview 2](https://github.com/FerMatter/fermatter.github.io/releases/tag/v0.11.0-windows-preview.2) and later. For macOS and Ubuntu, install Preview 5 or later from [Download](https://fermatter.github.io/download/).
