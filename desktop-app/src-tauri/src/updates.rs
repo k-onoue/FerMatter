@@ -22,11 +22,19 @@ const FEED: &str = "https://fermatter.github.io/updates/stable.json";
 const MAX_PACKAGE: u64 = 1_000_000_000;
 const DAY: u64 = 24 * 60 * 60;
 
-#[derive(Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Preferences {
     automatic: bool,
     last_check: u64,
+}
+impl Default for Preferences {
+    fn default() -> Self {
+        Self {
+            automatic: true,
+            last_check: 0,
+        }
+    }
 }
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -83,7 +91,10 @@ impl Updates {
             Err(e) => Err(err(e)),
         };
         let error = loaded.as_ref().err().cloned();
-        let preferences = loaded.unwrap_or_default();
+        let preferences = loaded.unwrap_or(Preferences {
+            automatic: false,
+            last_check: 0,
+        });
         Self {
             path,
             inner: Mutex::new(Inner {
@@ -125,7 +136,7 @@ pub fn snapshot(app: &tauri::AppHandle) -> Snapshot {
         .clone()
 }
 pub fn open_history() -> Result<()> {
-    let url = "https://fermatter.github.io/guide/resolved-issues/";
+    let url = "https://fermatter.github.io/resolved-issues/";
     #[cfg(target_os = "macos")]
     let mut command = std::process::Command::new("/usr/bin/open");
     #[cfg(windows)]
@@ -704,8 +715,8 @@ mod tests {
         .is_err());
     }
     #[test]
-    fn automatic_checks_are_opt_in_and_failed_attempts_are_throttled() {
-        assert!(!due(&Preferences::default(), 100));
+    fn automatic_checks_default_on_and_failed_attempts_are_throttled() {
+        assert!(due(&Preferences::default(), 100));
         let p = Preferences {
             automatic: true,
             last_check: 100,
@@ -713,6 +724,27 @@ mod tests {
         assert!(!due(&p, 100 + DAY - 1));
         assert!(due(&p, 100 + DAY));
         assert!(due(&p, 99));
+    }
+    #[test]
+    fn missing_preferences_enable_checks_and_saved_opt_out_is_preserved() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = Updates::new(dir.path(), "0.11.0".into());
+        {
+            let inner = state.inner.lock().unwrap();
+            assert!(inner.snapshot.automatic);
+            assert!(due(&inner.preferences, 100));
+            assert!(inner.preferences_error.is_none());
+        }
+        let path = dir.path().join("UpdatePreferences.json");
+        let saved = br#"{"automatic":false,"lastCheck":42}"#;
+        std::fs::write(&path, saved).unwrap();
+        let state = Updates::new(dir.path(), "0.11.0".into());
+        let inner = state.inner.lock().unwrap();
+        assert!(!inner.snapshot.automatic);
+        assert_eq!(inner.snapshot.last_check, 42);
+        assert!(!due(&inner.preferences, 42 + DAY));
+        assert!(inner.preferences_error.is_none());
+        assert_eq!(std::fs::read(path).unwrap(), saved);
     }
     #[test]
     fn reject_other_hosts_repositories_versions_formats_and_sizes() {

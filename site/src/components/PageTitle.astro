@@ -1,12 +1,17 @@
 ---
 import PageTitle from "@astrojs/starlight/components/PageTitle.astro";
+import GuideNavigation from "./GuideNavigation.astro";
 import { href } from "../data/links";
 const product =
   [href(), href("features/"), href("download/"), href("declaration/")].includes(
     Astro.url.pathname,
   ) ||
   Astro.url.pathname.startsWith(href("news/")) ||
+  Astro.url.pathname.startsWith(href("resolved-issues/")) ||
   Astro.url.pathname.startsWith(href("download/"));
 ---
 
+{Astro.url.pathname.startsWith(href("guide/")) && (
+  <GuideNavigation active="guide" />
+)}
 {!product && <PageTitle />}

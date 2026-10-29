@@ -1,0 +1,24 @@
+---
+import { guide, href, repository } from "../data/links";
+interface Props {
+  active: "guide" | "resolved";
+}
+const { active } = Astro.props;
+---
+
+<nav
+  class="guide-navigation not-content"
+  aria-label="Guide and issues"
+  data-pagefind-ignore
+>
+  <a href={guide()} aria-current={active === "guide" ? "page" : undefined}>
+    User guide
+  </a>
+  <a
+    href={href("resolved-issues/")}
+    aria-current={active === "resolved" ? "page" : undefined}
+  >
+    Resolved issues
+  </a>
+  <a href={`${repository}/issues`}>Reported issues ↗</a>
+</nav>

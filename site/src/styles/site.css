@@ -564,6 +564,79 @@ html:has(.product-page) .main-pane > main > .content-panel > .sl-container {
 .news-article {
   padding-bottom: 1rem;
 }
+.guide-navigation {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.75rem;
+  border-bottom: 1px solid var(--fm-rule);
+  font-size: 0.9375rem;
+}
+.guide-navigation a {
+  color: var(--fm-muted);
+  padding-block: 0.65rem;
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+}
+.guide-navigation a[aria-current] {
+  color: var(--fm-ink);
+  border-bottom-color: currentColor;
+}
+.product-page > .guide-navigation {
+  margin-top: 2.5rem;
+  margin-bottom: 0;
+}
+.product-page > .guide-navigation + .page-intro {
+  padding-top: 1.75rem;
+}
+@media (max-width: 30rem) {
+  .guide-navigation {
+    gap: 0.85rem;
+    font-size: 0.8125rem;
+  }
+}
+.fix-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1.5rem;
+}
+.fix-jump-links {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--fm-rule);
+}
+.fix-group {
+  margin-top: 3rem;
+}
+.fix-group h2 {
+  scroll-margin-top: 6rem;
+}
+.fix-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.fix-list li {
+  padding-block: 1.25rem;
+  border-bottom: 1px solid var(--fm-rule);
+}
+.fix-list h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+}
+.fix-list h3 a {
+  color: var(--fm-ink);
+}
+.fix-list p {
+  margin-block: 0.5rem 0;
+}
+.fix-availability {
+  color: var(--fm-muted);
+  font-size: 0.875rem;
+}
+.fix-detail-links {
+  padding-top: 2rem;
+  margin-top: 2rem;
+  border-top: 1px solid var(--fm-rule);
+}
 .product-page table {
   border-collapse: collapse;
   width: 100%;

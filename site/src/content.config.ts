@@ -5,6 +5,19 @@ import { docsSchema } from "@astrojs/starlight/schema";
 import pages from "../../user-docs/pages.json";
 
 export const collections = {
+  fixes: defineCollection({
+    loader: glob({
+      base: new URL("./content/resolved-issues/", import.meta.url),
+      pattern: "*.md",
+    }),
+    schema: z.object({
+      title: z.string(),
+      description: z.string(),
+      group: z.enum(["released", "pending", "earlier"]),
+      availability: z.string(),
+      order: z.number().int(),
+    }),
+  }),
   download: defineCollection({
     loader: glob({
       base: new URL("./content/download/", import.meta.url),

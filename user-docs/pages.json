@@ -1,11 +1,11 @@
 [
   "README.md",
   "requirements.md",
+  "updates.md",
   "paper-to-slides.md",
   "extraction.md",
   "export.md",
   "shortcuts.md",
   "appearance.md",
-  "automation.md",
-  "resolved-issues.md"
+  "automation.md"
 ]

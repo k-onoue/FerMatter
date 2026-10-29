@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -7,7 +8,12 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { UpdatesPanel, newestUpdate, type UpdateState } from "./Updates";
+import {
+  UpdatesButton,
+  UpdatesPanel,
+  newestUpdate,
+  type UpdateState,
+} from "./Updates";
 const { rpc, callbacks } = vi.hoisted(() => ({
   rpc: vi.fn(),
   callbacks: new Set<(event: { payload: unknown }) => void>(),
@@ -27,7 +33,7 @@ const available: UpdateState = {
   revision: 1,
   currentVersion: "0.11.0",
   phase: "available",
-  automatic: false,
+  automatic: true,
   lastCheck: 0,
   version: "0.12.0",
   notes: "Fixes a synthetic example.",
@@ -83,16 +89,45 @@ it("cancellation returns to retry and late snapshots cannot resurrect progress",
   expect(newestUpdate(cancelled, downloading)).toBe(cancelled);
   expect(rpc).toHaveBeenCalledWith("update_cancel", {});
 });
-it("automatic checks require explicit opt-in; source builds cannot install", async () => {
+it("automatic checks can be turned off; source builds cannot install", async () => {
   rpc.mockReset().mockResolvedValue({ ...available, installAvailable: false });
   render(<UpdatesPanel />);
   const toggle = await screen.findByRole("checkbox");
-  expect((toggle as HTMLInputElement).checked).toBe(false);
+  expect((toggle as HTMLInputElement).checked).toBe(true);
   expect(
     (screen.getByText("Download update") as HTMLButtonElement).disabled,
   ).toBe(true);
   fireEvent.click(toggle);
   await waitFor(() =>
-    expect(rpc).toHaveBeenCalledWith("update_automatic", { enabled: true }),
+    expect(rpc).toHaveBeenCalledWith("update_automatic", { enabled: false }),
   );
+});
+it("shows an update indicator only after a newer version is found", async () => {
+  rpc.mockReset().mockResolvedValue({
+    ...available,
+    phase: "current",
+    version: null,
+  });
+  render(<UpdatesButton />);
+  await waitFor(() => expect(rpc).toHaveBeenCalledWith("update_state"));
+  expect(
+    screen
+      .getByRole("button", { name: "Updates" })
+      .querySelector(".update-dot"),
+  ).toBeNull();
+  act(() => {
+    for (const callback of callbacks) {
+      callback({ payload: { ...available, revision: 2 } });
+    }
+  });
+  const button = await screen.findByRole("button", {
+    name: "Update available: 0.12.0",
+  });
+  expect(button.querySelector(".update-dot")).not.toBeNull();
+  expect(screen.getByRole("status").textContent).toContain(
+    "0.12.0 is available",
+  );
+  expect(rpc.mock.calls.map(([operation]) => operation)).toEqual([
+    "update_state",
+  ]);
 });

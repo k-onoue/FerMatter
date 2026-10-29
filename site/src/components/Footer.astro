@@ -55,6 +55,7 @@ const next = current >= 0 ? guides[current + 1] : undefined;
     <a class="fm-footer-github" href={repository}>
       GitHub ↗
     </a>
-    <a href={`${repository}/issues`}>Issues ↗</a>
+    <a href={href("resolved-issues/")}>Resolved issues</a>
+    <a href={`${repository}/issues`}>Reported issues ↗</a>
   </nav>
 </footer>

@@ -27,7 +27,12 @@ const links = [
     {links.map((link) => (
       <a
         href={link.url}
-        aria-current={path.startsWith(link.url) ? "page" : undefined}
+        aria-current={
+          path.startsWith(link.url) ||
+          (link.label === "Guide" && path.startsWith(href("resolved-issues/")))
+            ? "page"
+            : undefined
+        }
       >
         {link.label}
       </a>
