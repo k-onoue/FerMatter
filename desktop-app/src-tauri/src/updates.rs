@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
+    io::Read,
     path::{Path, PathBuf},
     sync::Mutex,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -69,7 +70,11 @@ fn now() -> u64 {
 impl Updates {
     pub fn new(home: &Path, version: String) -> Self {
         let path = home.join("UpdatePreferences.json");
-        let loaded = match std::fs::read(&path) {
+        let loaded = match std::fs::File::open(&path).and_then(|file| {
+            let mut bytes = Vec::new();
+            file.take(4097).read_to_end(&mut bytes)?;
+            Ok(bytes)
+        }) {
             Ok(bytes) if bytes.len() <= 4096 => serde_json::from_slice(&bytes).map_err(err),
             Ok(_) => {
                 Err("Update preferences are too large; the original file has been kept.".into())

@@ -76,7 +76,7 @@ open 'src-tauri/target/release/bundle/macos/FerMatter.app'
 - The maintainer verified the current UI and approved the replacement. Broader native checks remain before public release: Undo/Redo, IME, file operations, clipboard/drag into presentation software.
 - External-monitor changes and clamshell transitions still need physical verification. Full-screen wallpaper and background-opacity changes have been checked on the current screen.
 - Existing manual Library order metadata is retained; the current UI displays source order and does not expose manual ordering.
-- In-app release checks/downloads are not yet implemented in this app; install newer builds manually. Signed updates need a separate release feed/artifact setup.
+- In-app update checks, signed downloads and installation are implemented; the feed remains disabled until packaged upgrade tests pass. Existing previews need one manual update to acquire the feature. See [update preparation and activation](../dev-docs/reference/updates.md).
 - Experimental Ubuntu 24.04 amd64 packages use a signed APT repository; see [packaging](../dev-docs/reference/packaging.md#experimental-ubuntu). CI checks rendering, clean APT installation, CLI tools and headless startup. Physical Linux desktops/Wayland and cross-application drag remain unverified; native image clipboard and recoverable project deletion are unavailable.
 - Intel macOS has not been built or tested. Windows 11 x64 has native test/build coverage; this is an unsigned preview, with the limitations above.
 - Final installer/update verification remains release work. Stable candidates may be ad hoc signed on macOS and unsigned on Windows; signing/notarization status is separate from release channel.
