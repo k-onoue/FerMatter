@@ -23,6 +23,36 @@ Snapshot: 2026-10-29. Dates below use Asia/Tokyo.
 
 ## Dated evidence
 
+### 2026-10-29 — Windows updater and import follow-up
+
+- Environment: Windows 11 Pro 23H2, build 22631.4602, x64; normal Explorer launch, Japanese JIS keyboard and Microsoft IME. Existing account; synthetic projects and isolated test profiles.
+- Latest-main baseline: `68ee2e37a2faca43ce5c929ba8a7357cde7effd9`, including #136, #137 and #140. Clean release gate passed: 260 frontend tests, 182 Rust tests, Clippy, real LaTeX/Typst/TikZ/CeTZ verification, audits, NSIS packaging and publication checks. The three normally ignored Rust tests also passed separately from Explorer with PATH restricted to System32 (project-free Instant, ZIP compilers and Windows clipboard formats).
+- Final candidate: `3baf8306a42062ecb9b3bd5684031eb850e5866e`, 0.11.0 build 15. The only app change from that baseline corrects Format's Windows/Linux shortcut hint to `Shift+Alt+F`, preserving the macOS label. Its full clean release gate also passed; the ordinary Rust run still reports three ignored tests, with their separate baseline execution recorded above. Informational audit warnings remain in the reports.
+- Final installer SHA-256: `1ae0e7f90f54460362e7b50cdad5f43f1c4bada5a791a6865ff2f9cc3e883713`; installed payload SHA-256: `c508f93731bc986718941da857c8f2ff9181d5ea170ad60c89b146a4dfc54c10`. Local unsigned candidate; no public artifact, tag or update feed was replaced.
+- Existing-account installation passed from the earlier `ae26789` build to the baseline, then to the final candidate. App/data backups were retained; the final installer left all 28 saved user-data files unchanged. The installed final candidate displayed `Format Typst (Shift+Alt+F)`, rendered Instant, and retained the main native menus after Instant closed.
+- Baseline native checks passed: project-free LaTeX/Typst Instant; local project-parent selection and all four demos; a valid Typst ZIP produced 20 equation cards and a one-page PDF; a 10,001-entry ZIP was refused before creating a project. Source editing and Ctrl+S persisted a synthetic comment; Ctrl+Tab and Ctrl+Shift+Tab switched source files.
+- Imported SVG source remained pending across Instant close/reopen until explicit Render. A recipe requiring an unregistered project's `projectValue` correctly reported its missing definition; editing to a self-contained expression recovered rendering. Single SVG copy/paste into LibreOffice Impress 26.8.1.1 remained an embedded SVG in the saved synthetic ODP.
+- The installed baseline's public update check succeeded and reported no newer stable version; the public feed remains inactive. Local updater fixtures used the baseline source with version, app/data identity, test key and loopback transport/provenance overlays; they reused the installed WebView runtime and disabled file-association registration. They exercised the real WebView action API, save protocol, signature/version verification and NSIS handoff, not production HTTPS delivery or publisher credentials.
+
+| Native updater case | Observed result |
+| --- | --- |
+| Default installation, 0.11.1 → 0.11.2 | Passed: language selection confirmed, installer replaced the payload, then restarted it from the same path |
+| Custom installation path containing spaces | Passed: 0.11.1 → 0.11.2 retained that path; matching EXE hash and uninstall registration; no default-path duplicate |
+| HTTP 503, stalled feed and retry | Passed: bounded failure, app remained usable and a later valid check succeeded |
+| Missing Windows target, downgrade, package over 1 GB | Passed: no inappropriate update offered; invalid size refused before download |
+| Changed EXE, malformed signature, signed-version replay | Passed: refused before installation; the replay used a valid 0.11.2 signature with a 0.11.3 feed version |
+| Truncated response, download cancellation and retry | Passed: partial bytes rejected; cancellation returned to Download; a fresh valid download reached Ready |
+| Save failure with two projects, project Instant and global Instant open | Passed: exclusive lock on synthetic Instant storage cancelled installation and kept editors open |
+| Save recovery, installation and restart | Passed: unlock/retry saved the last `x^2 + 42` edit and rendered it after restart; other saved JSON records were unchanged |
+| Light/dark theme after update | Passed: native menu colors followed appearance and labels remained present |
+| Removal of the custom test app | Passed: application removed and 196 saved test files unchanged |
+
+- Fixture payloads: 0.11.1 SHA-256 `20db908a5bda8f2534f5b54a5e341fd54d7971966d321562a6bf9ea6f9ad2214`; 0.11.2 SHA-256 `f912ca2cd935ee2fc4e76b02abe6732b63883d765177cc40e555cec8ffc91741`. Fixture versions are local test identities, not published FerMatter versions.
+- Final installed payload: Explorer launch with PATH restricted to System32 rendered project-free LaTeX align/equation and Typst to nonempty SVG/PNG/PDF, with sources unchanged. Old/new resident forwarding passed in both directions after startup; a new resident also accepted an old launcher after only 100 ms. Three 100-ms current/current launches successfully forwarded SVG into persisted pending Instant drafts. All 28 real user-data files remained unchanged during isolated rapid-launch tests; the normal user profile was restored.
+- Observed historical failure: launching the final app 100 ms after an old Preview 4 resident crashed that old resident with `state() called before manage() for Lifecycle`; the final secondary reported that the resident did not accept the launch. This is not a passing compatibility case. The current resident queues startup callbacks and passed the rapid-launch checks above; do not replace published old binaries.
+- Ignored local evidence: `desktop-app/build/windows-updater-68ee2e3/` in the primary checkout (artifact metadata, native observations, Explorer helper results, fixture request log and saved ODP); final release gate in the validation worktree at `desktop-app/build/release-validation/windows-8d0029573d52477696d6e63934401b9c/`. Fixture binaries and signing material remain outside Git.
+- Not checked: production signed HTTPS update delivery, clean-account installation/security prompts, installer permission denial, an unresponsive-window timeout, physical AltGr, PowerPoint, receiving-app drag, macOS or Linux native operations. Earlier drag automation rejected an endpoint outside the source window; this is not an application failure. These results do not complete [issue #134](https://github.com/k-onoue/FerMatter/issues/134) or authorize release/feed activation.
+
 ### 2026-10-29 — Windows 11 native observations
 
 - Environment: Windows 11 Pro 23H2, build 22631.4602, x64; local Lenovo 20L6 desktop session, normal Explorer launch. Japanese JIS keyboard and Microsoft IME; physical AltGr was unavailable.
