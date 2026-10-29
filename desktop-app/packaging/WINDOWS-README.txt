@@ -14,8 +14,8 @@ pdfcrop and synctex plus Poppler (pdftocairo and pdfinfo).
 
 Choose a project parent folder on first launch. Projects, drafts and application
 data are stored outside the installation folder. Replacing or uninstalling
-FerMatter preserves that data. New versions are installed manually; there is
-no automatic updater.
+FerMatter preserves that data. The Updates panel is included; its stable feed
+remains inactive pending validation. Install preview updates manually.
 
 LICENSE, NOTICE and licenses/ contain application and dependency notices.
 See https://fermatter.github.io/ for setup instructions and known limitations.

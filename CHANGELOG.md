@@ -201,7 +201,8 @@
 
 - Obsolete web UI prototype; retain the native app and product site.
 
-[Unreleased]: https://github.com/k-onoue/FerMatter/commits/main/
+[Unreleased]: https://github.com/k-onoue/FerMatter/compare/v0.11.0-preview.5...main
+[0.11.0-preview.5]: https://github.com/k-onoue/FerMatter/compare/v0.11.0-preview.4...v0.11.0-preview.5
 [0.11.0-windows-preview.4]: https://github.com/FerMatter/fermatter.github.io/releases/tag/v0.11.0-windows-preview.4
 [0.11.0-windows-preview.3]: https://github.com/FerMatter/fermatter.github.io/releases/tag/v0.11.0-windows-preview.3
 [0.11.0-windows-preview.2]: https://github.com/FerMatter/fermatter.github.io/releases/tag/v0.11.0-windows-preview.2
