@@ -1,6 +1,6 @@
 {
   "package": "fermatter",
-  "version": "0.11.0~preview.4+ubuntu.1",
+  "version": "0.11.0~preview.5+ubuntu.1",
   "architecture": "amd64",
   "ubuntu": "24.04",
   "suite": "experimental",
