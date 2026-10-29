@@ -72,16 +72,34 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          label: "Setup",
-          items: ["guide", "guide/requirements", "guide/updates"],
+          label: "User guide",
+          items: [
+            {
+              label: "Setup",
+              items: ["guide", "guide/requirements", "guide/updates"],
+            },
+            {
+              label: "Working with equations",
+              items: [
+                "guide/paper-to-slides",
+                "guide/extraction",
+                "guide/export",
+              ],
+            },
+            {
+              label: "Settings and integration",
+              items: [
+                "guide/shortcuts",
+                "guide/appearance",
+                "guide/automation",
+              ],
+            },
+          ],
         },
+        { label: "Resolved issues", link: `${config.base}/resolved-issues/` },
         {
-          label: "Working with equations",
-          items: ["guide/paper-to-slides", "guide/extraction", "guide/export"],
-        },
-        {
-          label: "Settings and integration",
-          items: ["guide/shortcuts", "guide/appearance", "guide/automation"],
+          label: "Reported issues ↗",
+          link: `https://github.com/${config.repository}/issues`,
         },
       ],
       credits: false,

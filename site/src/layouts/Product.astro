@@ -1,13 +1,12 @@
 ---
 import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
-import GuideNavigation from "../components/GuideNavigation.astro";
 interface Props {
   title: string;
   description: string;
   markdown?: boolean;
-  guideSection?: "resolved";
+  sidebar?: boolean;
 }
-const { title, description, markdown = false, guideSection } = Astro.props;
+const { title, description, markdown = false, sidebar = false } = Astro.props;
 ---
 
 <StarlightPage
@@ -20,10 +19,15 @@ const { title, description, markdown = false, guideSection } = Astro.props;
     prev: false,
     next: false,
   }}
-  hasSidebar={false}
+  hasSidebar={sidebar}
 >
-  <div id="_top" class:list={["product-page", { "not-content": !markdown }]}>
-    {guideSection && <GuideNavigation active={guideSection} />}
+  <div
+    id="_top"
+    class:list={[
+      "product-page",
+      { "not-content": !markdown, "with-sidebar": sidebar },
+    ]}
+  >
     <slot />
   </div>
 </StarlightPage>
