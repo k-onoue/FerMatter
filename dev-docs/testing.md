@@ -33,6 +33,7 @@
 ```
 
 - `check-windows.ps1` builds/tests the frontend, runs Rust tests and clippy, and verifies all four synthetic compiler projects. `-SkipCompilers` is an explicit development-only skip; it is not release evidence.
+- `build.rs` embeds the Common Controls v6 manifest into MSVC app and test binaries. Tauri mock-runtime tests otherwise fail before execution with `STATUS_ENTRYPOINT_NOT_FOUND`; see [the upstream issue](https://github.com/tauri-apps/tauri/issues/13419).
 - `./desktop-app/scripts/audit-windows.ps1` records production npm and Cargo dependency audits with a hash-pinned official cargo-audit binary. Release candidates require no reported vulnerabilities; retain informational warnings in the validation record.
 - Install the packaged EXE into a disposable directory; verify bundled resources/notices, app startup, project-folder setup, Library/Source/Instant, rendered SVG/PNG/JPEG/PDF, document navigation and cancellation.
 - `verify-windows-install.ps1 -CheckCompilers` requires an account/CI machine without an existing FerMatter installation. It tests the installed EXE's LaTeX align/equation and Typst paths with a minimal Windows system PATH, verifies SVG/PNG/PDF artifacts and unchanged synthetic sources, and retains compiler evidence beside the install report. Omission of the switch is recorded as a compiler-check skip.
