@@ -261,7 +261,7 @@ pub fn resolve(store: &Storage, value: &Value) -> Result<(Option<Value>, Value)>
     // Imported artwork is a new editable item, never authority to overwrite
     // an existing entry in this installation's Instant library.
     draft.as_object_mut().unwrap().remove("entryID");
-    draft["requiresRender"] = json!(false);
+    draft["requiresRender"] = json!(true);
     if let Some(p) = &project {
         let root = store.root(string(p, "id"))?;
         let context = string(&draft, "contextFile");
@@ -386,11 +386,11 @@ mod tests {
             .is_symlink());
     }
     #[test]
-    fn fallback_restores_an_automatic_preview_draft_without_compiling() {
+    fn fallback_restores_a_draft_that_requires_explicit_render() {
         let dir = tempfile::tempdir().unwrap();
         let store = Storage::new(dir.path().join("data"), dir.path().join("legacy")).unwrap();
         let (_, value) = resolve(&store, &recipe(&draft(), Value::Null)).unwrap();
-        assert_eq!(value["requiresRender"], false);
+        assert_eq!(value["requiresRender"], true);
         assert_eq!(value["source"], draft()["source"]);
     }
 

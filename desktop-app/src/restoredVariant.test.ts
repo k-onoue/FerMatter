@@ -3,7 +3,7 @@ import { initialInstant } from "./instant";
 import { restoredVariant } from "./restoredVariant";
 import type { Project } from "./types";
 
-it("restores source/style/context into independent variants ready for automatic preview", () => {
+it("restores source/style/context into independent variants pending explicit render", () => {
   const project = {
     id: "demo",
     main: "main.typ",
@@ -16,6 +16,7 @@ it("restores source/style/context into independent variants ready for automatic 
     color: "#123abc",
     fontSize: 40,
     exportFormat: "pdf",
+    importAuthorization: "token",
   };
   const before = JSON.stringify(project);
   const first = restoredVariant(draft, project);
@@ -25,7 +26,8 @@ it("restores source/style/context into independent variants ready for automatic 
     tex: "custom(x)",
     origin: "custom",
     status: "pending",
-    requiresRender: false,
+    requiresRender: true,
+    importAuthorization: "token",
     restoredContextFile: "sections/model.typ",
     instantColor: "123abc",
     exportFontSize: 40,

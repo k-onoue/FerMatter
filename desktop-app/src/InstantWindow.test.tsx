@@ -86,6 +86,7 @@ let pending: { token: string; draft: InstantDraft }[];
 let saveDraft: ((draft: InstantDraft) => Promise<void>) | undefined;
 let rememberDraft: (() => Promise<void>) | undefined;
 let renderDraft: ((draft: InstantDraft) => Promise<Result>) | undefined;
+let authorizeDraft: (() => Promise<void>) | undefined;
 
 function result(draft: InstantDraft): Result {
   const path = `/synthetic/${draft.source}-${draft.color.slice(1)}.${draft.exportFormat}`;
@@ -121,6 +122,7 @@ beforeEach(() => {
   saveDraft = undefined;
   rememberDraft = undefined;
   renderDraft = undefined;
+  authorizeDraft = undefined;
   localStorage.clear();
   events.clear();
   save.mockReset().mockResolvedValue("/synthetic/export.svg");
@@ -157,6 +159,13 @@ beforeEach(() => {
         revision: "config",
       };
     if (operation === "instant_session") {
+      if (payload.action === "authorize_render") {
+        await authorizeDraft?.();
+        const draft = structuredClone(payload.draft);
+        delete draft.importAuthorization;
+        draft.requiresRender = false;
+        session.draft = draft;
+      }
       if (payload.action === "save") {
         await saveDraft?.(payload.draft);
         saved.push(structuredClone(payload.draft));
@@ -305,7 +314,7 @@ it("shows autosaved equations on reopen, updates one item, and duplicates withou
   expect(rpc.mock.calls.some(([op]) => op === "copy_images")).toBe(false);
 });
 
-it("restores and renders an image automatically while preserving the previous draft and waiting to acknowledge its save", async () => {
+it("keeps restored source pending until Render and waits to acknowledge its save", async () => {
   await openInstant();
   let finishSave!: () => void;
   saveDraft = (draft) =>
@@ -319,14 +328,18 @@ it("restores and renders an image automatically while preserving the previous dr
     source: "restored",
     color: "#2563eb",
     requiresRender: true,
+    importAuthorization: "token",
   });
-  await waitFor(() => expect(previewPath()).toContain("restored-2563eb"));
+  expect(screen.getByText("Render")).not.toBeNull();
+  expect(screen.queryByRole("img", { name: "Rendered equation" })).toBeNull();
   expect(pending).toHaveLength(1);
   expect(remembered[0].source).toBe("x");
   await act(async () => finishSave());
   await waitFor(() => expect(pending).toHaveLength(0));
+  fireEvent.click(screen.getByText("Render"));
+  await waitFor(() => expect(previewPath()).toContain("restored-2563eb"));
   expect(previewPath()).toContain("restored-2563eb");
-  expect(saved.at(-1)?.requiresRender).toBe(false);
+  expect(session.draft?.requiresRender).toBe(false);
   expect(
     (screen.getByRole("button", { name: "Copy image" }) as HTMLButtonElement)
       .disabled,
@@ -360,7 +373,7 @@ it("ignores an obsolete color render that finishes after a newer one", async () 
   );
 });
 
-it("migrates an older imported recovery draft to automatic preview before display", async () => {
+it("keeps a legacy recovery draft pending and renders it explicitly without a token", async () => {
   localStorage.setItem(
     instantPendingKey(""),
     JSON.stringify({
@@ -369,13 +382,45 @@ it("migrates an older imported recovery draft to automatic preview before displa
       requiresRender: true,
     }),
   );
-  await openInstant();
-  expect(previewPath()).toContain("recovered");
+  render(<InstantWindow />);
+  await screen.findByRole("textbox", { name: "Equation source" });
+  expect(screen.getByText("Render")).not.toBeNull();
+  expect(screen.queryByRole("img", { name: "Rendered equation" })).toBeNull();
   expect(saved[0]).toMatchObject({
     source: "recovered",
-    requiresRender: false,
+    requiresRender: true,
   });
+  expect(saved[0]?.importAuthorization).toBeUndefined();
   expect(localStorage.getItem(instantPendingKey(""))).toBeNull();
+  fireEvent.click(screen.getByText("Render"));
+  await waitFor(() => expect(previewPath()).toContain("recovered"));
+  expect(session.draft?.requiresRender).toBe(false);
+});
+
+it("does not replace a newer edit with a stale Render authorization", async () => {
+  session.draft = {
+    ...session.draft!,
+    source: "imported source",
+    requiresRender: true,
+    importAuthorization: "token",
+  };
+  let release!: () => void;
+  authorizeDraft = () => new Promise<void>((resolve) => (release = resolve));
+  render(<InstantWindow />);
+  const editor = await screen.findByRole("textbox", {
+    name: "Equation source",
+  });
+  fireEvent.click(screen.getByText("Render"));
+  await waitFor(() => expect(release).toBeTypeOf("function"));
+  fireEvent.change(editor, { target: { value: "newer edit" } });
+  await act(async () => release());
+  expect((editor as HTMLTextAreaElement).value).toBe("newer edit");
+  expect(
+    rpc.mock.calls.some(
+      ([op, payload]) =>
+        op === "instant_render" && payload.draft.source === "imported source",
+    ),
+  ).toBe(false);
 });
 
 it("keeps newly typed text and leaves the import queued when history saving overlaps an edit", async () => {

@@ -8,6 +8,7 @@
 
 ## [Unreleased]
 
+- Wait for an explicit Render action before compiling editable source restored from an SVG, including after reopening Instant or a Library draft.
 - Queue forwarded Windows launches until application setup finishes, preserving requests received while the first window is still starting.
 - Preserve Windows menus and their selected theme when closing Instant windows.
 

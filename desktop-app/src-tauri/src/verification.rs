@@ -741,12 +741,13 @@ fn verify_instant(store: &crate::storage::Storage) -> Result<()> {
             let temp = tempfile::tempdir().map_err(err)?;
             let scratch =
                 crate::storage::Storage::new(temp.path().join("data"), temp.path().join("legacy"))?;
-            let (_, restored) = crate::roundtrip::resolve(&scratch, &recipe)?;
-            if restored["color"] != colored["color"] || restored["requiresRender"] != false {
+            let (_, mut restored) = crate::roundtrip::resolve(&scratch, &recipe)?;
+            if restored["color"] != colored["color"] || restored["requiresRender"] != true {
                 return Err(format!(
-                    "Instant {name}: restored draft is not ready to preview"
+                    "Instant {name}: restored draft did not wait for explicit Render"
                 ));
             }
+            restored["requiresRender"] = json!(false);
             instant::render(store, &restored, &c)?;
         }
         // A failed render must not return the previous successful image.

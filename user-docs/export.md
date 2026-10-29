@@ -59,5 +59,6 @@ Use Command-click to toggle cards or Shift-click for a range, then copy to paste
 1. Keep the original FerMatter **SVG** export; other apps may strip its source metadata.
 2. Choose **Open SVG** in Instant, or drop the SVG into FerMatter.
 3. Edit the restored source in the matching project's variant editor or Instant. Missing or ambiguous projects open in standalone Instant.
+4. Review the source and press **Render** to compile it. Imported source remains pending across reopening and history restoration until this explicit action.
 
 SVG includes equation/template source, not the whole manuscript. Project imports, packages and fonts may still be needed. PDF, PNG and JPEG do not restore editable source.
