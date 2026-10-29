@@ -23,6 +23,17 @@ Snapshot: 2026-10-29. Dates below use Asia/Tokyo.
 
 ## Dated evidence
 
+### 2026-10-29 — Windows final main refresh
+
+- Environment: the Windows 11 Pro 23H2 desktop recorded below; existing account, Explorer launch, isolated synthetic profiles.
+- Installed candidate: main `759eccd14696943f8877e39c5744aa93863b747e`, 0.11.0 build 15, including automatic checks from [#144](https://github.com/k-onoue/FerMatter/pull/144) and the Windows/Linux Format hint correction in [#143](https://github.com/k-onoue/FerMatter/pull/143). Subsequent main `b55e416` changes only site/documentation files; its app sources are identical.
+- Clean `release-check-windows.ps1` passed: 261 frontend tests (including explicit Win32 shortcut tests), 183 ordinary Rust tests, Clippy, real LaTeX/Typst/TikZ/CeTZ checks, audits, NSIS packaging and publication checks. All three normally ignored Rust tests also passed separately from Explorer with PATH restricted to System32; none were skipped in that separate run. Retain informational audit warnings with the reports.
+- Installer SHA-256: `77652fea01b65b6630c308fcbfb0f4839cd3c05918363d8328254dab32378108`; installed payload SHA-256: `0b7fd8ca2fec55b6139804fd13590948b4325d5a242e3ff669f67f1ff173bd8a`. Existing-account replacement of the `3baf830` candidate passed; all 28 saved user-data files remained unchanged, with app/data backups retained.
+- Native update checks passed: missing preferences enabled an automatic public-feed check; it reported no newer stable version. Turning checks off in the UI still allowed a manual check. After quit/reopen the checkbox stayed off and the preferences file was byte-identical. The normal user's saved opt-out was also preserved.
+- The installed EXE rendered project-free LaTeX align/equation and Typst to SVG/PNG/PDF from Explorer with PATH restricted to System32; synthetic sources were unchanged. Three pairs of launches, 100 ms apart, forwarded SVG to pending Instant drafts without losing the resident. The 28 real user-data files remained unchanged during these isolated tests; the normal user profile was restored afterward.
+- Evidence: primary checkout `desktop-app/build/windows-updater-68ee2e3/latest-main-*`; clean gate in the validation worktree at `desktop-app/build/release-validation/windows-2a0b8a25851441c0befa810d7d96f9f4/`. [#143 Windows CI](https://github.com/k-onoue/FerMatter/actions/runs/40850518395), macOS and Ubuntu checks passed before its owner-authorized merge.
+- Scope: signed local updater installation/failure cases below used the earlier `68ee2e3` source; this refresh changed updater defaults and history navigation, not download verification or installation. Public update delivery remains inactive. The untested native/release cases below still apply; no public asset, tag or feed was replaced.
+
 ### 2026-10-29 — Windows updater and import follow-up
 
 - Environment: Windows 11 Pro 23H2, build 22631.4602, x64; normal Explorer launch, Japanese JIS keyboard and Microsoft IME. Existing account; synthetic projects and isolated test profiles.
