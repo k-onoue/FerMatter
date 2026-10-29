@@ -58,6 +58,15 @@ function render(source, destination, size) {
   ]);
 }
 render(path.join(resources, "AppIcon.svg"), path.join(icons, "icon.png"), 1024);
+// hicolor's standard directories stop at 512 px. A lone 1024 px PNG is
+// installed by Tauri but cannot be found by GNOME's icon-theme lookup.
+for (const size of [32, 128, 256, 512]) {
+  render(
+    path.join(resources, "AppIcon.svg"),
+    path.join(icons, `${size}x${size}.png`),
+    size,
+  );
+}
 execFileSync("magick", [
   path.join(icons, "icon.png"),
   "-define",
