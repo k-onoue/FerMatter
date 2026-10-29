@@ -120,5 +120,6 @@ jobs:
             desktop-app/build/release-validation/
             desktop-app/build/windows-install-*/verification.json
             desktop-app/build/windows-install-*/installed-compilers/
+            desktop-app/build/windows-install-*/startup-diagnostics/
           if-no-files-found: ignore
           retention-days: 30

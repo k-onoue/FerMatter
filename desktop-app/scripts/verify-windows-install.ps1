@@ -15,6 +15,16 @@ function Stop-VerifiedApplication {
         throw "Application process $($Process.Id) survived cleanup (taskkill code $($termination.ExitCode))."
     }
 }
+function Start-VerifiedApplication {
+    param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$Name)
+    $process = Start-Process -FilePath $Executable -PassThru -WindowStyle Hidden `
+        -RedirectStandardOutput (Join-Path $diagnosticsDirectory "$Name.stdout.log") `
+        -RedirectStandardError (Join-Path $diagnosticsDirectory "$Name.stderr.log")
+    # Keep the handle open so Windows PowerShell retains the exit code even if
+    # a secondary instance exits before the next poll.
+    $null = $process.Handle
+    Write-Output -InputObject $process -NoEnumerate
+}
 $Installer = (Resolve-Path -LiteralPath $Installer).Path
 $manifestPath = Join-Path (Split-Path -Parent $Installer) 'build-info.json'
 if (-not (Test-Path -LiteralPath $manifestPath)) { throw 'Missing build-info.json beside the installer.' }
@@ -42,7 +52,9 @@ $qaRoot = Join-Path $DesktopRoot ('build\windows-install-' + [Guid]::NewGuid().T
 $installDirectory = Join-Path $qaRoot 'application'
 $dataDirectory = Join-Path $qaRoot 'data'
 $projectDirectory = Join-Path $qaRoot 'Synthetic project'
-New-Item -ItemType Directory -Path $dataDirectory, $projectDirectory -Force | Out-Null
+$diagnosticsDirectory = Join-Path $qaRoot 'startup-diagnostics'
+New-Item -ItemType Directory -Path $dataDirectory, $projectDirectory, $diagnosticsDirectory -Force | Out-Null
+$verificationStarted = Get-Date
 $sentinel = Join-Path $dataDirectory 'preserved-draft.txt'
 $source = Join-Path $projectDirectory 'main.typ'
 Set-Content -LiteralPath $sentinel -Value 'Synthetic draft: preserve through installation and removal.'
@@ -136,36 +148,36 @@ try {
             }
         }
     }
-    $app = Start-Process -FilePath (Join-Path $installDirectory 'FerMatter.exe') -PassThru -WindowStyle Hidden
+    $app = Start-VerifiedApplication (Join-Path $installDirectory 'FerMatter.exe') 'candidate-resident'
     Start-Sleep -Seconds 8
     $app.Refresh()
     if ($app.HasExited) { throw "Installed application exited during startup (code $($app.ExitCode))." }
     if ($PreviousInstaller) {
-        $old = Start-Process -FilePath (Join-Path $qaRoot 'previous-application\FerMatter.exe') -PassThru -WindowStyle Hidden
-        $oldHandle = $old.Handle
+        $old = Start-VerifiedApplication (Join-Path $qaRoot 'previous-application\FerMatter.exe') 'previous-secondary'
         if (-not $old.WaitForExit(15000)) {
             Stop-VerifiedApplication $old
             throw 'The old preview created a second resident after the ID migration.'
         }
-        if ($old.ExitCode -ne 0) { throw 'The old preview could not forward its launch to the migrated resident.' }
+        if ($old.ExitCode -ne 0) { throw "The old preview could not forward its launch to the migrated resident (code $($old.ExitCode))." }
         $app.Refresh()
-        if ($app.HasExited) { throw 'The migrated resident exited during the compatibility check.' }
+        if ($app.HasExited) { throw "The migrated resident exited during the compatibility check (code $($app.ExitCode))." }
     }
     Stop-VerifiedApplication $app
     $app.WaitForExit()
     $app = $null
     if ($PreviousInstaller) {
-        $app = Start-Process -FilePath (Join-Path $qaRoot 'previous-application\FerMatter.exe') -PassThru -WindowStyle Hidden
+        $app = Start-VerifiedApplication (Join-Path $qaRoot 'previous-application\FerMatter.exe') 'previous-resident'
         Start-Sleep -Seconds 8
         $app.Refresh()
-        if ($app.HasExited) { throw 'The old preview could not start for reverse compatibility verification.' }
-        $secondary = Start-Process -FilePath (Join-Path $installDirectory 'FerMatter.exe') -PassThru -WindowStyle Hidden
-        $secondaryHandle = $secondary.Handle
+        if ($app.HasExited) { throw "The old preview could not start for reverse compatibility verification (code $($app.ExitCode))." }
+        $secondary = Start-VerifiedApplication (Join-Path $installDirectory 'FerMatter.exe') 'candidate-secondary'
         if (-not $secondary.WaitForExit(15000)) {
             Stop-VerifiedApplication $secondary
             throw 'The new candidate created a second resident beside the old preview.'
         }
-        if ($secondary.ExitCode -ne 0) { throw 'The new candidate could not forward to the old preview.' }
+        if ($secondary.ExitCode -ne 0) { throw "The new candidate could not forward to the old preview (code $($secondary.ExitCode))." }
+        $app.Refresh()
+        if ($app.HasExited) { throw "The old resident exited during reverse compatibility verification (code $($app.ExitCode))." }
         Stop-VerifiedApplication $app
         $app.WaitForExit()
         $app = $null
@@ -199,6 +211,19 @@ try {
     }
     $report | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $qaRoot 'verification.json') -Encoding utf8
     Write-Output "PASS: installer, replacement, bundled notices, installed startup, uninstall and synthetic data preservation. Evidence: $qaRoot"
+} catch {
+    $_ | Out-String | Set-Content -LiteralPath (Join-Path $diagnosticsDirectory 'failure.txt') -Encoding utf8
+    # Collect only this app's events during the isolated check, not other apps'
+    # event history. Missing event-log access must not replace the original error.
+    Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $verificationStarted } -ErrorAction SilentlyContinue |
+        Where-Object { $_.Message -match 'FerMatter\.exe' } |
+        Format-List TimeCreated, Id, ProviderName, Message | Out-String |
+        Set-Content -LiteralPath (Join-Path $diagnosticsDirectory 'application-events.txt') -Encoding utf8
+    Get-ChildItem -LiteralPath $diagnosticsDirectory -Filter '*.log' | ForEach-Object {
+        Write-Output "Startup log: $($_.Name)"
+        Get-Content -LiteralPath $_.FullName -Tail 80
+    }
+    throw
 } finally {
     if ($app) {
         Stop-VerifiedApplication $app
