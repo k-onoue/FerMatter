@@ -4,8 +4,9 @@ interface Props {
   title: string;
   description: string;
   markdown?: boolean;
+  sidebar?: boolean;
 }
-const { title, description, markdown = false } = Astro.props;
+const { title, description, markdown = false, sidebar = false } = Astro.props;
 ---
 
 <StarlightPage
@@ -18,9 +19,15 @@ const { title, description, markdown = false } = Astro.props;
     prev: false,
     next: false,
   }}
-  hasSidebar={false}
+  hasSidebar={sidebar}
 >
-  <div id="_top" class:list={["product-page", { "not-content": !markdown }]}>
+  <div
+    id="_top"
+    class:list={[
+      "product-page",
+      { "not-content": !markdown, "with-sidebar": sidebar },
+    ]}
+  >
     <slot />
   </div>
 </StarlightPage>

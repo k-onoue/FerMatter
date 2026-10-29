@@ -18,7 +18,7 @@ const previous = current > 0 ? guides[current - 1] : undefined;
 const next = current >= 0 ? guides[current + 1] : undefined;
 ---
 
-{hasSidebar && (
+{hasSidebar && current >= 0 && (
   <div class="fm-guide-footer" data-pagefind-ignore>
     <nav class="fm-guide-pagination" aria-label="Guide pages">
       {previous && (
@@ -55,6 +55,7 @@ const next = current >= 0 ? guides[current + 1] : undefined;
     <a class="fm-footer-github" href={repository}>
       GitHub ↗
     </a>
-    <a href={`${repository}/issues`}>Issues ↗</a>
+    <a href={href("resolved-issues/")}>Resolved issues</a>
+    <a href={`${repository}/issues`}>Reported issues ↗</a>
   </nav>
 </footer>

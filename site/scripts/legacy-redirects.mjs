@@ -14,3 +14,10 @@ for (const name of pages) {
     `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0;url=${target}"><link rel="canonical" href="${config.url}${target}"><title>Page moved</title><a href="${target}">Continue to the guide</a></html>`,
   );
 }
+
+// Preserve links made before fix history became a top-level section.
+const fixesTarget = `${config.base}/resolved-issues/`;
+writeFileSync(
+  new URL("../dist/guide/resolved-issues.html", import.meta.url),
+  `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0;url=${fixesTarget}"><link rel="canonical" href="${config.url}${fixesTarget}"><title>Page moved</title><a href="${fixesTarget}">Continue to resolved issues</a></html>`,
+);

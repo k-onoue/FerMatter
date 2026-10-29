@@ -1,0 +1,34 @@
+---
+import { getCollection, render } from "astro:content";
+import type { CollectionEntry } from "astro:content";
+import Product from "../../layouts/Product.astro";
+import { href, guide, repository } from "../../data/links";
+export async function getStaticPaths() {
+  return (await getCollection("fixes")).map((entry) => ({
+    params: { id: entry.id },
+    props: { entry },
+  }));
+}
+interface Props {
+  entry: CollectionEntry<"fixes">;
+}
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const { title, description, availability } = entry.data;
+---
+
+<Product markdown sidebar title={title} description={description}>
+  <header class="page-intro not-content">
+    <a href={href("resolved-issues/")}>← Resolved issues</a>
+    <h1>{title}</h1>
+    <p class="lead">{description}</p>
+    <p class="fix-availability">{availability}</p>
+  </header>
+  <article class="product-markdown sl-markdown-content">
+    <Content />
+  </article>
+  <nav class="fix-links fix-detail-links not-content" aria-label="Next steps">
+    <a href={guide("updates")}>How to update →</a>
+    <a href={`${repository}/issues`}>Still happening? Report an issue ↗</a>
+  </nav>
+</Product>

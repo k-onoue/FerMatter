@@ -6,6 +6,7 @@ const product =
     Astro.url.pathname,
   ) ||
   Astro.url.pathname.startsWith(href("news/")) ||
+  Astro.url.pathname.startsWith(href("resolved-issues/")) ||
   Astro.url.pathname.startsWith(href("download/"));
 ---
 

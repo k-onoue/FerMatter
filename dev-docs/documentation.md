@@ -11,6 +11,7 @@
 | Homepage, features, Download layout | `site/src/pages/` | Astro static pages |
 | Download instructions | `site/src/content/download/*.md` | `/download/` |
 | Announcements | `site/src/content/news/*.md` | `/news/` and individual articles |
+| Resolved issues | `site/src/content/resolved-issues/*.md` | `/resolved-issues/` and one page per issue |
 | Navigation, shared UI | `site/src/components/`, `site/src/styles/site.css` | Site and guide |
 | Demo descriptions and links | `site/src/data/demos.json` | Features page |
 | Reviewed screenshots/video | `site/public/assets/` | Public media |
@@ -21,7 +22,7 @@
 - Stack: [Astro](https://docs.astro.build/) + [Starlight](https://starlight.astro.build/); static HTML on GitHub Pages.
 - Search: [Pagefind](https://pagefind.app/), generated at build time; no search backend.
 - One canonical explanation per topic; short bullets, tables, commands, and primary-source links.
-- Guide ownership: overview/project folders in `README.md`; tools/compiler errors in `requirements.md`; editing modes/PDF refresh in `paper-to-slides.md`; image format/size/color/SVG restoration in `export.md`; keybindings/zoom in `shortcuts.md`; app appearance/theme files in `appearance.md`; agent setup/permissions in `automation.md`; Library exclusions in `extraction.md`; symptom-to-release mapping in `resolved-issues.md`. Cross-link to the owner instead of repeating instructions.
+- Guide ownership: overview/project folders in `README.md`; tools/compiler errors in `requirements.md`; editing modes/PDF refresh in `paper-to-slides.md`; image format/size/color/SVG restoration in `export.md`; keybindings/zoom in `shortcuts.md`; app appearance/theme files in `appearance.md`; agent setup/permissions in `automation.md`; Library exclusions in `extraction.md`; update instructions in `updates.md`. Symptom-to-release mapping lives in the separate Resolved issues collection. Cross-link to the owner instead of repeating instructions.
 - Download owns app installation and updates; `/download/macos-notes/` covers macOS signing, first-launch approval and checksum verification. Guide setup begins with workspace selection after the app opens. Keep existing guide routes and section anchors when reorganizing content.
 - Release assets/counters use `releaseRepository`, separately from the application source `repository`. The download page owns the copyable full/BasicTeX/Typst install commands; requirements link there. Recheck installer and package-metadata sizes when changing the TeX release.
 - Publish only the allowlisted guides and reviewed assets; developer docs remain on GitHub.
@@ -60,6 +61,7 @@ node scripts/preview-site.mjs
 - Use `site/src/components/DownloadPlatform.astro` for each platform's version, requirements and primary action. Keep Markdown sections in the same order: Install, Rendering tools, Update. Linux's primary action links to its APT instructions.
 - Display each published platform's release name from `site.json`: `releaseName`, `windowsReleaseName`, and `ubuntuReleaseName` (for example, `0.11.0 Preview 4`). Update them independently with the actual published DMG, EXE or APT package; the shared app version alone does not identify a preview.
 - **News:** add a dated `.md` file to `site/src/content/news/`. The homepage automatically lists the five newest dates and titles. Each article appears in `/news/`, linked from every footer, and gets its own `/news/<filename>/` route.
+- **Resolved issues:** add one `.md` file per problem to `site/src/content/resolved-issues/`. Frontmatter supplies `title` (the symptom), `description` (the fix), `group` (`released`, `pending`, or `earlier`), `availability` (platform and first fixed release), and `order`. The index and individual pages are generated from these files. Put release links and next steps in the body; keep partially released fixes explicit by platform. The shared left sidebar places User guide, Resolved issues and Reported issues at the same level on guides and fix-history pages. User guide contains the Setup, Working with equations, and Settings and integration chapters; on mobile the same hierarchy is available in Menu. Every footer also links to both issue sections. The old `/guide/resolved-issues/` and `.html` URLs redirect to the new index.
 
 ```yaml
 ---
@@ -77,9 +79,9 @@ status: upcoming
 
 - Product design reference: [Ollama](https://ollama.com/), reviewed 2026-10-21. Use plain monochrome surfaces, left-aligned content, restrained type sizes, generous whitespace and a compact navigation bar.
 - Keep product copy functional: feature names, supported formats, requirements and release status. Avoid repeated slogans and decorative section labels.
-- Product pages use a centered reading column; guides reserve space for visible navigation. Intermediate widths must not reserve a guide sidebar on product pages. Shared styles live in `site/src/styles/site.css`. Guide pagination uses small text links between published guides.
+- Product pages use a centered reading column; guides and resolved-issue pages reserve space for their shared sidebar. Intermediate widths must not reserve a guide sidebar on product pages. Shared styles live in `site/src/styles/site.css`. Guide pagination uses small text links between published guides.
 - All content pages use the shared product footer, including downloads, guides, and 404. Guide pagination stays above the footer.
-- Keep Features, Guide, and Download in the header. The footer links to News, Declaration and Issues; GitHub appears there only when hidden in the header.
+- Keep Features, Guide, and Download in the header. The footer links to News, Declaration, Resolved issues and Reported issues; GitHub appears there only when hidden in the header.
 - Website appearance initially follows the OS. The sun/moon button toggles light/dark and remembers the choice in `starlight-theme`; clearing that preference restores automatic detection.
 - Use the transparent Fermat mark for headers; reserve its blue tile for the application icon. See [artwork sources and regeneration](../desktop-app/resources/AppIcon.md).
 - Link-preview image metadata lives in `site/astro.config.mjs`: use an absolute public URL for `site/public/assets/icon.png`, with its PNG type, dimensions and alt text. X cards use the square `summary` layout.

@@ -158,7 +158,7 @@ export function UpdatesPanel() {
         installation always require your action.
       </p>
       <button onClick={() => void action("update_history")}>
-        Resolved issues and update instructions ↗
+        Resolved issues ↗
       </button>
     </div>
   );
