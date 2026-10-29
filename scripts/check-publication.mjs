@@ -11,6 +11,7 @@ import {
 import path from "node:path";
 import { parse } from "parse5";
 import { unzipSync } from "fflate";
+import { validateFeed } from "./prepare-update.mjs";
 import { DEMOS, demoSource } from "./prepare-demo.mjs";
 import { readSnapshot } from "./download-stats.mjs";
 import {
@@ -248,6 +249,17 @@ export function checkPublication(root = ROOT) {
       errors.push(`Credential-like content found: ${name}`);
   }
   const site = realpathSync(path.join(root, "site/dist"));
+  try {
+    const feed = readFileSync(path.join(site, "updates/stable.json"), "utf8");
+    validateFeed(JSON.parse(feed));
+    if (
+      feed !==
+      readFileSync(path.join(root, "site/public/updates/stable.json"), "utf8")
+    )
+      errors.push("Published update feed is stale.");
+  } catch (error) {
+    errors.push(`Update feed: ${error.message}`);
+  }
   try {
     errors.push(...checkDownloadStatistics(site));
   } catch (error) {

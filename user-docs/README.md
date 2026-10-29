@@ -42,3 +42,4 @@ Project tabs retain their Library/Source view, open source files and PDF view. O
 | Change keyboard commands or display zoom | [Shortcuts](shortcuts.md) |
 | Choose a theme, transparency or window pinning | [Appearance](appearance.md) |
 | Connect a local agent | [MCP](automation.md) |
+| Check whether an error has been fixed in a newer release | [Resolved issues](resolved-issues.md) |

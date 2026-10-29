@@ -32,13 +32,20 @@ pub struct Lifecycle {
 struct Flush {
     token: u64,
     waiting: HashSet<String>,
-    quit: bool,
+    action: Action,
+    completion: Option<tokio::sync::oneshot::Sender<Result<u64>>>,
+}
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Action {
+    Close,
+    Quit,
+    Update,
 }
 #[derive(Debug, PartialEq)]
 enum FlushOutcome {
     Pending,
     Failed,
-    Complete(bool),
+    Complete(Action),
 }
 impl Lifecycle {
     fn acknowledge(&self, label: &str, token: u64, success: bool) -> FlushOutcome {
@@ -50,6 +57,9 @@ impl Lifecycle {
             return FlushOutcome::Pending;
         }
         if !success {
+            if let Some(sender) = request.completion.take() {
+                let _ = sender.send(Err("An editor could not save.".into()));
+            }
             pending.take();
             return FlushOutcome::Failed;
         }
@@ -57,13 +67,19 @@ impl Lifecycle {
         if !request.waiting.is_empty() {
             return FlushOutcome::Pending;
         }
-        let quit = request.quit;
-        if quit {
+        let action = request.action;
+        if action == Action::Update {
+            if let Some(sender) = request.completion.take() {
+                let _ = sender.send(Ok(token));
+            }
+            return FlushOutcome::Complete(action);
+        }
+        if action == Action::Quit {
             // Keep admission closed between the last acknowledgement and app.exit.
             self.exiting.store(true, Ordering::SeqCst);
         }
         pending.take();
-        FlushOutcome::Complete(quit)
+        FlushOutcome::Complete(action)
     }
 }
 pub fn quitting(app: &tauri::AppHandle) -> bool {
@@ -74,7 +90,7 @@ pub fn quitting(app: &tauri::AppHandle) -> bool {
             .lock()
             .unwrap()
             .as_ref()
-            .is_some_and(|request| request.quit)
+            .is_some_and(|request| request.action != Action::Close)
 }
 pub fn exiting(app: &tauri::AppHandle) -> bool {
     app.state::<Lifecycle>().exiting.load(Ordering::SeqCst)
@@ -85,7 +101,7 @@ pub fn cancel_close(app: &tauri::AppHandle, label: &str) {
     let mut pending = state.pending.lock().unwrap();
     let cancelled = if pending
         .as_ref()
-        .is_some_and(|request| !request.quit && request.waiting.contains(label))
+        .is_some_and(|request| request.action == Action::Close && request.waiting.contains(label))
     {
         pending.take().map(|request| request.token)
     } else {
@@ -102,32 +118,43 @@ fn resume_windows(app: &tauri::AppHandle, token: u64) {
     let _ = app.emit("flush-window-finished", json!({"token":token}));
 }
 fn cancel_token(state: &Lifecycle, token: u64) -> bool {
+    cancel_token_if(state, token, false)
+}
+fn cancel_token_if(state: &Lifecycle, token: u64, only_waiting: bool) -> bool {
     let mut pending = state.pending.lock().unwrap();
-    if pending
-        .as_ref()
-        .is_some_and(|request| request.token == token)
-    {
-        pending.take();
+    if pending.as_ref().is_some_and(|request| {
+        request.token == token && (!only_waiting || !request.waiting.is_empty())
+    }) {
+        if let Some(mut request) = pending.take() {
+            if let Some(sender) = request.completion.take() {
+                let _ = sender.send(Err("An editor did not finish saving.".into()));
+            }
+        }
         true
     } else {
         false
     }
 }
 pub fn request_quit(app: &tauri::AppHandle) {
-    begin(app, None);
+    let _ = begin(app, None, Action::Quit, None);
 }
 pub fn request_close(app: &tauri::AppHandle, label: &str) {
-    begin(app, Some(label));
+    let _ = begin(app, Some(label), Action::Close, None);
 }
-fn begin(app: &tauri::AppHandle, label: Option<&str>) {
+fn begin(
+    app: &tauri::AppHandle,
+    label: Option<&str>,
+    action: Action,
+    completion: Option<tokio::sync::oneshot::Sender<Result<u64>>>,
+) -> Result<()> {
     let state = app.state::<Lifecycle>();
     let mut pending = state.pending.lock().unwrap();
     // Explicit Quit supersedes an unfinished single-window hide/close.
     if pending
         .as_ref()
-        .is_some_and(|request| request.quit || label.is_some())
+        .is_some_and(|request| request.action != Action::Close || label.is_some())
     {
-        return;
+        return Err("A window is already closing or an update is being installed.".into());
     }
     let superseded = pending.take().map(|request| request.token);
     let windows: Vec<_> = app
@@ -141,7 +168,8 @@ fn begin(app: &tauri::AppHandle, label: Option<&str>) {
     *pending = Some(Flush {
         token,
         waiting: windows.iter().map(|(name, _)| name.clone()).collect(),
-        quit: label.is_none(),
+        action,
+        completion,
     });
     drop(pending);
     if let Some(token) = superseded {
@@ -152,7 +180,7 @@ fn begin(app: &tauri::AppHandle, label: Option<&str>) {
             if cancel_token(&state, token) {
                 resume_windows(app, token);
             }
-            return;
+            return Err("Could not ask an editor to save.".into());
         }
     }
     // A missing/unresponsive WebView must never cause data to be discarded.
@@ -160,7 +188,9 @@ fn begin(app: &tauri::AppHandle, label: Option<&str>) {
     tauri::async_runtime::spawn_blocking(move || {
         std::thread::sleep(std::time::Duration::from_secs(30));
         let state = app.state::<Lifecycle>();
-        if cancel_token(&state, token) {
+        // The check and cancellation share the same lock: a final save arriving
+        // at the deadline must not resume editors after granting install permission.
+        if cancel_token_if(&state, token, true) {
             resume_windows(&app, token);
             let _ = app.emit(
                 "persistence-error",
@@ -168,6 +198,28 @@ fn begin(app: &tauri::AppHandle, label: Option<&str>) {
             );
         }
     });
+    Ok(())
+}
+pub async fn prepare_update(app: &tauri::AppHandle) -> Result<u64> {
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    on_main(app, move |app| {
+        begin(&app, None, Action::Update, Some(sender))
+    })?;
+    receiver.await.map_err(err)?
+}
+pub fn cancel_update(app: &tauri::AppHandle, token: u64) {
+    let _ = on_main(app, move |app| {
+        if cancel_token(&app.state::<Lifecycle>(), token) {
+            resume_windows(&app, token);
+        }
+        Ok(())
+    });
+}
+pub fn exit_after_update(app: &tauri::AppHandle) {
+    app.state::<Lifecycle>()
+        .exiting
+        .store(true, Ordering::SeqCst);
+    app.exit(0);
 }
 pub fn complete(app: &tauri::AppHandle, label: &str, token: u64, error: &str) -> Result<()> {
     let label = label.to_owned();
@@ -178,7 +230,7 @@ pub fn complete(app: &tauri::AppHandle, label: &str, token: u64, error: &str) ->
 }
 fn complete_on_main(app: &tauri::AppHandle, label: &str, token: u64, error: &str) -> Result<()> {
     let state = app.state::<Lifecycle>();
-    let quit = match state.acknowledge(label, token, error.is_empty()) {
+    let action = match state.acknowledge(label, token, error.is_empty()) {
         FlushOutcome::Pending => return Ok(()),
         FlushOutcome::Failed => {
             resume_windows(app, token);
@@ -188,9 +240,12 @@ fn complete_on_main(app: &tauri::AppHandle, label: &str, token: u64, error: &str
             }
             return Err(error.into());
         }
-        FlushOutcome::Complete(quit) => quit,
+        FlushOutcome::Complete(action) => action,
     };
-    if quit {
+    if action == Action::Update {
+        return Ok(());
+    }
+    if action == Action::Quit {
         // Every window remains inert until process exit.
         app.exit(0);
     } else if let Some(window) = app.get_webview_window(label) {
@@ -225,7 +280,8 @@ mod tests {
             pending: Mutex::new(Some(Flush {
                 token,
                 waiting: ["main".into(), "instant".into()].into(),
-                quit: true,
+                action: Action::Quit,
+                completion: None,
             })),
             ..Default::default()
         }
@@ -240,7 +296,7 @@ mod tests {
         assert!(!state.exiting.load(Ordering::SeqCst));
         assert_eq!(
             state.acknowledge("instant", 2, true),
-            FlushOutcome::Complete(true)
+            FlushOutcome::Complete(Action::Quit)
         );
         assert!(state.exiting.load(Ordering::SeqCst));
     }
@@ -259,5 +315,57 @@ mod tests {
         assert!(state.pending.lock().unwrap().is_some());
         assert!(cancel_token(&state, 8));
         assert!(state.pending.lock().unwrap().is_none());
+    }
+    #[test]
+    fn update_waits_for_every_editor_and_keeps_admission_closed_until_install_finishes() {
+        let state = request(9);
+        let (sender, mut receiver) = tokio::sync::oneshot::channel();
+        {
+            let mut pending = state.pending.lock().unwrap();
+            let request = pending.as_mut().unwrap();
+            request.action = Action::Update;
+            request.completion = Some(sender);
+        }
+        assert_eq!(state.acknowledge("main", 9, true), FlushOutcome::Pending);
+        assert!(receiver.try_recv().is_err());
+        assert_eq!(
+            state.acknowledge("instant", 9, true),
+            FlushOutcome::Complete(Action::Update)
+        );
+        assert_eq!(receiver.try_recv().unwrap(), Ok(9));
+        assert!(!cancel_token_if(&state, 9, true));
+        assert!(state
+            .pending
+            .lock()
+            .unwrap()
+            .as_ref()
+            .is_some_and(|r| r.action == Action::Update));
+        assert!(!state.exiting.load(Ordering::SeqCst));
+        assert_eq!(state.acknowledge("instant", 9, true), FlushOutcome::Pending);
+        assert!(cancel_token(&state, 9));
+        assert!(state.pending.lock().unwrap().is_none());
+    }
+    #[test]
+    fn failed_or_timed_out_update_flush_never_grants_install_permission() {
+        for success in [false, true] {
+            let state = request(10);
+            let (sender, mut receiver) = tokio::sync::oneshot::channel();
+            {
+                let mut pending = state.pending.lock().unwrap();
+                let request = pending.as_mut().unwrap();
+                request.action = Action::Update;
+                request.completion = Some(sender);
+            }
+            state.acknowledge("main", 10, success);
+            if success {
+                assert!(cancel_token(&state, 10));
+            }
+            assert!(receiver.try_recv().unwrap().is_err());
+            assert_eq!(
+                state.acknowledge("instant", 10, true),
+                FlushOutcome::Pending
+            );
+            assert!(!state.exiting.load(Ordering::SeqCst));
+        }
     }
 }

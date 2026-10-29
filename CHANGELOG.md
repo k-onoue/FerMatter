@@ -8,9 +8,14 @@
 
 ## [Unreleased]
 
+- Queue forwarded Windows launches until application setup finishes, preserving requests received while the first window is still starting.
 - Preserve Windows menus and their selected theme when closing Instant windows.
 
 - Keep single SVG copies as vector artwork on Windows, including when pasting into LibreOffice Impress; choose PNG explicitly for bitmap-only receivers.
+
+- Add an optional daily update check, availability indicator, verified download and in-app installation for packaged macOS, Windows and Ubuntu builds. Save all open editors before installation; offer only published stable updates. The feed remains disabled until validated signed artifacts are published.
+
+- Add a Markdown guide of resolved issues with platform-specific published fix versions and a separate list of fixes awaiting release.
 
 - Adopt permanent app ID `io.github.fermatter.fermatter` while retaining legacy data, WebView recovery storage, resident coordination and installer upgrade paths. macOS may ask for folder access again.
 

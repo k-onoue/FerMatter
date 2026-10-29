@@ -8,6 +8,7 @@ import { Modal } from "./ui";
 import { CodeEditor } from "./editor";
 import { OutputSizeControl } from "./OutputSizeControl";
 import { CompilerTools } from "./CompilerTools";
+import { UpdatesPanel } from "./Updates";
 import { ExtractionSettings } from "./ExtractionSettings";
 import type { Keybindings, Preferences, Theme } from "./types";
 import {
@@ -106,6 +107,7 @@ export function Settings({
           "Shortcuts",
           "Extraction",
           "Tools",
+          "Updates",
         ].map((t) => (
           <button
             key={t}
@@ -117,6 +119,7 @@ export function Settings({
         ))}
       </div>
       <div className="settings-content">
+        {tab === "Updates" && <UpdatesPanel />}
         {tab === "Projects" && (
           <>
             <div className="setting-row">
