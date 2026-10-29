@@ -61,7 +61,9 @@ const { Content: Ubuntu } = await render(ubuntu);
   <DownloadPlatform
     id="windows"
     version={
-      config.windowsReleaseAvailable ? config.windowsReleaseName : config.version
+      config.windowsReleaseAvailable
+        ? config.windowsReleaseName
+        : config.version
     }
     requirements={windows.data.platform!}
     action={
