@@ -55,9 +55,12 @@ export default defineConfig({
           attrs: { name: "twitter:image:alt", content: socialImageAlt },
         },
       ],
-      customCss: ["./src/styles/site.css"],
+      customCss: ["./src/styles/site.css", "./src/styles/layout.css"],
       components: {
         Header: "./src/components/Header.astro",
+        PageFrame: "./src/components/PageFrame.astro",
+        TwoColumnContent: "./src/components/TwoColumnContent.astro",
+        PageSidebar: "./src/components/PageSidebar.astro",
         ThemeProvider: "./src/components/ThemeProvider.astro",
         ThemeSelect: "./src/components/ThemeToggle.astro",
         PageTitle: "./src/components/PageTitle.astro",

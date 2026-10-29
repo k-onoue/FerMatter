@@ -1,0 +1,118 @@
+/* One centered reading column, whether or not a page has navigation. */
+html:root[data-has-sidebar] {
+  --sl-content-inline-start: 0;
+}
+:root[data-has-toc] {
+  --sl-mobile-toc-height: 3rem;
+  scroll-padding-top: calc(var(--sl-nav-height) + 4.5rem);
+}
+.page {
+  min-height: 100vh;
+}
+.page > .header {
+  position: fixed;
+  z-index: var(--sl-z-index-navbar);
+  inset: 0 0 auto;
+  height: var(--sl-nav-height);
+  padding: var(--sl-nav-pad-y) var(--sl-nav-pad-x);
+  background: var(--sl-color-bg-nav);
+}
+[data-has-sidebar] .page > .header {
+  padding-inline-end: calc(
+    var(--sl-nav-gap) + var(--sl-nav-pad-x) + var(--sl-menu-button-size)
+  );
+}
+.main-frame {
+  padding-top: calc(var(--sl-nav-height) + var(--sl-mobile-toc-height));
+}
+.main-pane {
+  isolation: isolate;
+}
+.sidebar .sl-menu-button {
+  display: flex;
+}
+.sidebar-pane {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  height: auto;
+  color: inherit;
+  position: fixed;
+  z-index: var(--sl-z-index-menu);
+  inset: var(--sl-nav-height) 0 0;
+  width: 100%;
+  background: var(--sl-color-bg-sidebar);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.sidebar-content {
+  min-height: 100%;
+  padding: 1rem var(--sl-sidebar-pad-x);
+  flex-direction: column;
+  gap: 1rem;
+}
+.sidebar-content > .md\:sl-hidden {
+  display: block;
+}
+body:has(#starlight__sidebar:popover-open) {
+  overflow: hidden;
+}
+.fm-desktop-toc {
+  display: none;
+}
+.fm-desktop-toc h2 {
+  color: var(--fm-ink);
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+.fm-desktop-toc a {
+  display: block;
+  color: var(--fm-muted);
+  font-size: var(--sl-text-xs);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.fm-desktop-toc a:hover {
+  color: var(--fm-ink);
+}
+/* 48rem of text plus two 18.75rem sidebars and their gutters. */
+@media (min-width: 90rem) {
+  :root[data-has-toc] {
+    --sl-mobile-toc-height: 0rem;
+    scroll-padding-top: calc(var(--sl-nav-height) + 1.5rem);
+  }
+  [data-has-sidebar] .page > .header {
+    padding-inline-end: var(--sl-nav-pad-x);
+  }
+  .sidebar .sl-menu-button,
+  .sidebar-content > .md\:sl-hidden,
+  .fm-mobile-toc {
+    display: none;
+  }
+  .sidebar-pane {
+    display: block;
+    inset-inline-end: auto;
+    width: var(--sl-sidebar-width);
+    border-inline-end: 1px solid var(--fm-rule);
+  }
+  body:has(#starlight__sidebar:popover-open) {
+    overflow: auto;
+  }
+  .fm-desktop-toc {
+    display: block;
+    position: fixed;
+    inset: var(--sl-nav-height) 0 0 auto;
+    width: var(--sl-sidebar-width);
+    padding: 1rem var(--sl-sidebar-pad-x);
+    overflow-y: auto;
+    border-inline-start: 1px solid var(--fm-rule);
+  }
+}
+@media print {
+  .page > .header {
+    position: relative;
+  }
+  .page > .main-frame {
+    padding-top: 0;
+  }
+}

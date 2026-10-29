@@ -1,0 +1,12 @@
+---
+const { toc } = Astro.locals.starlightRoute;
+---
+
+{toc && (
+  <aside class="fm-page-toc print:hidden">
+    <slot name="right-sidebar" />
+  </aside>
+)}
+<div class="main-pane">
+  <slot />
+</div>
