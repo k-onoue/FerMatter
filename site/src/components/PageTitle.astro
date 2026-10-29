@@ -1,5 +1,6 @@
 ---
 import PageTitle from "@astrojs/starlight/components/PageTitle.astro";
+import MobileTableOfContents from "@astrojs/starlight/components/MobileTableOfContents.astro";
 import { href } from "../data/links";
 const product =
   [href(), href("features/"), href("download/"), href("declaration/")].includes(
@@ -10,4 +11,13 @@ const product =
   Astro.url.pathname.startsWith(href("download/"));
 ---
 
-{!product && <PageTitle />}
+{!product && (
+  <>
+    <PageTitle />
+    {Astro.locals.starlightRoute.toc && (
+      <div class="fm-mobile-toc print:hidden">
+        <MobileTableOfContents />
+      </div>
+    )}
+  </>
+)}

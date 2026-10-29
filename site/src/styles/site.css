@@ -7,6 +7,7 @@
   --sl-color-bg: #111111;
   --sl-color-bg-nav: #111111;
   --fm-content-width: 48rem;
+  --fm-title-gap: 3rem;
   --sl-content-width: calc(
     var(--fm-content-width) + 2 * var(--sl-content-pad-x)
   );
@@ -38,12 +39,13 @@ html {
   container: page-content / inline-size;
 }
 .main-pane > main > .content-panel:first-child {
-  padding-block: 3rem 1.5rem;
+  padding-block: var(--fm-title-gap) 1.5rem;
 }
 .main-pane > main > .content-panel + .content-panel {
   border-top: 0;
 }
 .main-pane h1 {
+  margin: 0;
   font-size: clamp(1.8rem, 3vw, 2.25rem);
   line-height: 1.25;
   letter-spacing: -0.035em;
@@ -314,7 +316,7 @@ html:has(.product-page) .main-pane > main > .content-panel {
   font-size: 0.9375rem;
 }
 .page-intro {
-  padding: 3rem 0 2.5rem;
+  padding: var(--fm-title-gap) 0 2.5rem;
 }
 .feature-index {
   display: flex;
@@ -700,6 +702,7 @@ html:has(.product-page) .main-pane > main > .content-panel {
 @media (max-width: 650px) {
   :root {
     --sl-nav-height: 6rem;
+    --fm-title-gap: 2.5rem;
   }
   .fm-header {
     flex-wrap: wrap;
@@ -727,7 +730,7 @@ html:has(.product-page) .main-pane > main > .content-panel {
     padding: 3rem 0 2.5rem;
   }
   .page-intro {
-    padding: 2.5rem 0 2rem;
+    padding-bottom: 2rem;
   }
   .product-page .lead {
     font-size: 1rem;
