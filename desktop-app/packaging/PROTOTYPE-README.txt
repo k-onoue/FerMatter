@@ -53,8 +53,9 @@ No security settings are changed by the packaging script or installer.
 
 UPDATES
 
-This version does not include an in-app update downloader. Download the next
-build manually and replace the app. No background helper is installed.
+The Updates panel is included, but local prototypes require manual replacement.
+The stable in-app update feed remains inactive pending validation.
+No background helper is installed.
 
 REMOVAL
 

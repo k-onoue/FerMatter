@@ -26,11 +26,14 @@ FerMatter. See https://fermatter.github.io/guide/requirements/
 UPDATES AND DATA
 
 Update with brew upgrade --cask fermatter/tap/fermatter, or download the next
-DMG and replace the app after quitting. There is no in-app update downloader.
+DMG and replace the app after quitting. The Updates panel is included, but
+preview releases use manual or package-manager updates. The stable in-app
+update feed remains inactive pending validation.
 Projects, settings, drafts and Instant history are kept outside the app;
-replacement/removal preserves them. The existing bundle identity and legacy
-Slide Math data paths remain unchanged. A new signing identity may require
-folder access to be approved again. Source mode edits real project files.
+replacement/removal preserves them. The permanent app identity is now
+io.github.fermatter.fermatter; legacy Slide Math data and WebView recovery
+paths are retained. macOS may request folder access again after this one-time
+identity migration. Source mode edits real project files.
 
 LICENSE
 
