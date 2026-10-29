@@ -273,9 +273,6 @@ html[data-platform="windows"] code {
 .project-setup p {
   line-height: 1.6;
 }
-.setup-demos {
-  color: var(--comment);
-}
 .setup-path {
   max-width: 100%;
   overflow-wrap: anywhere;

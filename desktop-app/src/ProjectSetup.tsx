@@ -74,10 +74,6 @@ export function ProjectSetup({
                 {directory}
               </div>
             )}
-            <p className="setup-demos">
-              LaTeX, Typst, TikZ, and CeTZ demos will be added to a Demos
-              folder.
-            </p>
             {error && (
               <p role="alert" className="setup-error">
                 {error}
