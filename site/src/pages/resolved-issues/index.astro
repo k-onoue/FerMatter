@@ -6,9 +6,21 @@ const fixes = (await getCollection("fixes")).sort(
   (a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id),
 );
 const groups = [
-  { id: "released", title: "Available in downloads" },
-  { id: "pending", title: "Awaiting a release" },
-  { id: "earlier", title: "Earlier macOS fixes" },
+  {
+    id: "released",
+    title: "Available in downloads",
+    legacyId: "fixes-available-in-downloads",
+  },
+  {
+    id: "pending",
+    title: "Awaiting a release",
+    legacyId: "fixed-in-source-awaiting-a-download",
+  },
+  {
+    id: "earlier",
+    title: "Earlier macOS fixes",
+    legacyId: "already-included-in-the-first-public-macos-preview",
+  },
 ];
 ---
 
@@ -25,7 +37,8 @@ const groups = [
       Fixes can reach Windows, macOS and Ubuntu at different times. Check the
       platform and release listed below before updating.
     </p>
-    <p>
+    <p id="update-fermatter">
+      <span id="find-your-version"></span>
       <a href={guide("updates")}>How to update →</a>
     </p>
   </header>
@@ -34,8 +47,9 @@ const groups = [
       <a href={`#${id}`}>{title}</a>
     ))}
   </nav>
-  {groups.map(({ id, title }) => (
+  {groups.map(({ id, title, legacyId }) => (
     <section class="fix-group not-content" aria-labelledby={id}>
+      <span id={legacyId} class="legacy-fix-anchor" aria-hidden="true"></span>
       <h2 id={id}>{title}</h2>
       {id === "pending" && (
         <p>

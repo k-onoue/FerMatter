@@ -606,8 +606,14 @@ html:has(.product-page) .main-pane > main > .content-panel > .sl-container {
 .fix-group {
   margin-top: 3rem;
 }
-.fix-group h2 {
+.fix-group h2,
+.legacy-fix-anchor,
+#update-fermatter,
+#find-your-version {
   scroll-margin-top: 6rem;
+}
+.legacy-fix-anchor {
+  display: block;
 }
 .fix-list {
   list-style: none;
