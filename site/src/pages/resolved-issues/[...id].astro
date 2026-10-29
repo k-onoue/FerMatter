@@ -17,12 +17,7 @@ const { Content } = await render(entry);
 const { title, description, availability } = entry.data;
 ---
 
-<Product
-  markdown
-  guideSection="resolved"
-  title={title}
-  description={description}
->
+<Product markdown sidebar title={title} description={description}>
   <header class="page-intro not-content">
     <a href={href("resolved-issues/")}>← Resolved issues</a>
     <h1>{title}</h1>

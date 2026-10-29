@@ -18,7 +18,7 @@ const previous = current > 0 ? guides[current - 1] : undefined;
 const next = current >= 0 ? guides[current + 1] : undefined;
 ---
 
-{hasSidebar && (
+{hasSidebar && current >= 0 && (
   <div class="fm-guide-footer" data-pagefind-ignore>
     <nav class="fm-guide-pagination" aria-label="Guide pages">
       {previous && (
