@@ -9,6 +9,7 @@ use serde_json::{json, Value};
 use std::{
     collections::HashSet,
     fs,
+    io::Read,
     path::{Path, PathBuf},
 };
 
@@ -86,7 +87,34 @@ fn save(store: &Storage, setup: &Setup) -> Result<()> {
 pub fn required(store: &Storage) -> Result<bool> {
     Ok(load(store)?.is_none_or(|setup| !setup.complete))
 }
-fn same_sources(a: &Path, b: &Path) -> bool {
+const DEMO_COMPARE_LIMIT: u64 = 16 * 1024 * 1024;
+
+fn same_sources_with_limit(a: &Path, b: &Path, limit: u64) -> bool {
+    fn same_file(a: &Path, b: &Path, compared: &mut u64, limit: u64) -> Result<bool> {
+        let mut a = fs::File::open(a).map_err(err)?;
+        let mut b = fs::File::open(b).map_err(err)?;
+        if a.metadata().map_err(err)?.len() != b.metadata().map_err(err)?.len() {
+            return Ok(false);
+        }
+        let mut a_buffer = [0; 64 * 1024];
+        let mut b_buffer = [0; 64 * 1024];
+        loop {
+            let a_read = a.read(&mut a_buffer).map_err(err)?;
+            let b_read = b.read(&mut b_buffer).map_err(err)?;
+            if a_read != b_read || a_buffer[..a_read] != b_buffer[..b_read] {
+                return Ok(false);
+            }
+            *compared = compared
+                .checked_add(a_read as u64)
+                .ok_or("Demo size overflow.")?;
+            if *compared > limit {
+                return Ok(false);
+            }
+            if a_read == 0 {
+                return Ok(true);
+            }
+        }
+    }
     let compare = || -> Result<bool> {
         let list = |root: &Path| -> Result<Vec<String>> {
             for entry in walkdir::WalkDir::new(root)
@@ -109,14 +137,30 @@ fn same_sources(a: &Path, b: &Path) -> bool {
         if names != list(b)? {
             return Ok(false);
         }
+        let mut total = 0u64;
+        for name in &names {
+            let a_length = safe(a, name)?.metadata().map_err(err)?.len();
+            let b_length = safe(b, name)?.metadata().map_err(err)?.len();
+            if a_length != b_length {
+                return Ok(false);
+            }
+            total = total.checked_add(a_length).ok_or("Demo size overflow.")?;
+            if total > limit {
+                return Ok(false);
+            }
+        }
+        let mut compared = 0;
         for name in names {
-            if fs::read(safe(a, &name)?).map_err(err)? != fs::read(safe(b, &name)?).map_err(err)? {
+            if !same_file(&safe(a, &name)?, &safe(b, &name)?, &mut compared, limit)? {
                 return Ok(false);
             }
         }
         Ok(true)
     };
     compare().unwrap_or(false)
+}
+fn same_sources(a: &Path, b: &Path) -> bool {
+    same_sources_with_limit(a, b, DEMO_COMPARE_LIMIT)
 }
 fn prepare(store: &Storage, directory: &Path) -> Result<Setup> {
     let stage = tempfile::tempdir_in(directory).map_err(err)?;
@@ -283,6 +327,21 @@ mod tests {
         fs::create_dir_all(base).unwrap();
         fs::write(&zip, bytes).unwrap();
         storage::import_zip(&zip, base).unwrap()
+    }
+    #[test]
+    fn demo_source_comparison_handles_large_files_in_bounded_chunks() {
+        let temp = tempfile::tempdir().unwrap();
+        let first = temp.path().join("first");
+        let second = temp.path().join("second");
+        fs::create_dir(&first).unwrap();
+        fs::create_dir(&second).unwrap();
+        let bytes = vec![b'x'; 64 * 1024 + 1];
+        fs::write(first.join("main.typ"), &bytes).unwrap();
+        fs::write(second.join("main.typ"), &bytes).unwrap();
+        assert!(same_sources(&first, &second));
+        assert!(!same_sources_with_limit(&first, &second, 1024));
+        fs::write(second.join("main.typ"), &bytes[..bytes.len() - 1]).unwrap();
+        assert!(!same_sources(&first, &second));
     }
     #[cfg(windows)]
     #[test]

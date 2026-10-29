@@ -391,28 +391,333 @@ pub fn merge_scan(mut p: Value, scan: Value) -> Value {
     p["files"] = scan["files"].clone();
     p
 }
-pub fn import_zip(archive: &Path, parent: &Path) -> Result<PathBuf> {
-    use std::io::{Read, Write};
-    let mut zip = zip::ZipArchive::new(fs::File::open(archive).map_err(err)?).map_err(err)?;
-    if zip.len() > 10000 {
+const ZIP_ENTRY_LIMIT: u64 = 10_000;
+const ZIP_DIRECTORY_LIMIT: u64 = 64 * 1024 * 1024;
+const ZIP_INPUT_LIMIT: u64 = 1024 * 1024 * 1024;
+const ZIP_OUTPUT_LIMIT: u64 = 512 * 1024 * 1024;
+
+#[derive(Clone, Copy)]
+struct ZipLimits {
+    entries: u64,
+    directory: u64,
+    input: u64,
+    output: u64,
+}
+const ZIP_LIMITS: ZipLimits = ZipLimits {
+    entries: ZIP_ENTRY_LIMIT,
+    directory: ZIP_DIRECTORY_LIMIT,
+    input: ZIP_INPUT_LIMIT,
+    output: ZIP_OUTPUT_LIMIT,
+};
+
+fn zip_u16(bytes: &[u8], offset: usize) -> Result<u16> {
+    Ok(u16::from_le_bytes(
+        bytes
+            .get(offset..offset + 2)
+            .ok_or("Invalid ZIP directory metadata.")?
+            .try_into()
+            .map_err(err)?,
+    ))
+}
+fn zip_u32(bytes: &[u8], offset: usize) -> Result<u32> {
+    Ok(u32::from_le_bytes(
+        bytes
+            .get(offset..offset + 4)
+            .ok_or("Invalid ZIP directory metadata.")?
+            .try_into()
+            .map_err(err)?,
+    ))
+}
+fn zip_u64(bytes: &[u8], offset: usize) -> Result<u64> {
+    Ok(u64::from_le_bytes(
+        bytes
+            .get(offset..offset + 8)
+            .ok_or("Invalid ZIP directory metadata.")?
+            .try_into()
+            .map_err(err)?,
+    ))
+}
+fn validate_zip_directory(
+    file: &mut fs::File,
+    entries: u64,
+    directory_size: u64,
+    directory_end: u64,
+) -> Result<()> {
+    use std::io::{Read, Seek, SeekFrom};
+    let directory_start = directory_end
+        .checked_sub(directory_size)
+        .ok_or("ZIP directory metadata is out of bounds.")?;
+    file.seek(SeekFrom::Start(directory_start)).map_err(err)?;
+    let mut cursor = directory_start;
+    for _ in 0..entries {
+        let header_end = cursor
+            .checked_add(46)
+            .ok_or("ZIP directory offset overflow.")?;
+        if header_end > directory_end {
+            return Err("ZIP directory record exceeds its declared size.".into());
+        }
+        let mut header = [0; 46];
+        file.read_exact(&mut header).map_err(err)?;
+        if &header[..4] != b"PK\x01\x02" {
+            return Err("ZIP directory record is invalid or ambiguous.".into());
+        }
+        let name_size = u64::from(zip_u16(&header, 28)?);
+        let extra_size = u64::from(zip_u16(&header, 30)?);
+        let comment_size = u64::from(zip_u16(&header, 32)?);
+        let variable_size = name_size
+            .checked_add(extra_size)
+            .and_then(|size| size.checked_add(comment_size))
+            .ok_or("ZIP directory size overflow.")?;
+        cursor = header_end
+            .checked_add(variable_size)
+            .ok_or("ZIP directory offset overflow.")?;
+        if cursor > directory_end {
+            return Err("ZIP directory record exceeds its declared size.".into());
+        }
+        file.seek(SeekFrom::Start(cursor)).map_err(err)?;
+    }
+    if cursor != directory_end {
+        return Err("ZIP directory size does not match its records.".into());
+    }
+    Ok(())
+}
+fn preflight_zip(file: &mut fs::File, limits: ZipLimits) -> Result<u64> {
+    use std::io::{Read, Seek, SeekFrom};
+    let length = file.metadata().map_err(err)?.len();
+    if length > limits.input {
+        return Err("ZIP archive exceeds 1 GB.".into());
+    }
+    // zip 9 searches from file_len - (18-byte EOCD body + 4-byte signature
+    // + 65,536-byte comment range). Cover that entire selection window.
+    let tail_length = length.min(65_558) as usize;
+    let mut tail = vec![0; tail_length];
+    file.seek(SeekFrom::End(-(tail_length as i64)))
+        .map_err(err)?;
+    file.read_exact(&mut tail).map_err(err)?;
+    let tail_start = length - tail_length as u64;
+    // zip may reject a structurally bounded newest directory and backtrack to
+    // any earlier EOCD signature in this window. Require a single signature,
+    // not merely a single record whose comment happens to end at EOF.
+    let mut signatures = tail
+        .windows(4)
+        .enumerate()
+        .filter_map(|(index, signature)| (signature == b"PK\x05\x06").then_some(index));
+    let eocd_index = signatures
+        .next()
+        .filter(|_| signatures.next().is_none())
+        .ok_or("ZIP archive has no unambiguous end record.")?;
+    let eocd_end = eocd_index
+        .checked_add(22)
+        .filter(|end| *end <= tail.len())
+        .ok_or("ZIP archive has no unambiguous end record.")?;
+    let eocd = &tail[eocd_index..eocd_end];
+    let comment = usize::from(zip_u16(eocd, 20)?);
+    if eocd_end.checked_add(comment) != Some(tail.len()) {
+        return Err("ZIP archive has no unambiguous end record.".into());
+    }
+    let eocd_offset = tail_start + eocd_index as u64;
+    let disk = zip_u16(eocd, 4)?;
+    let directory_disk = zip_u16(eocd, 6)?;
+    let disk_entries = zip_u16(eocd, 8)?;
+    let entries = zip_u16(eocd, 10)?;
+    let directory_size = zip_u32(eocd, 12)?;
+    let directory_offset = zip_u32(eocd, 16)?;
+    let zip64 = disk_entries == u16::MAX
+        || entries == u16::MAX
+        || directory_size == u32::MAX
+        || directory_offset == u32::MAX;
+    let (entries, directory_size, directory_offset, directory_end, archive_offset) = if zip64 {
+        if disk != 0 || directory_disk != 0 || eocd_offset < 20 {
+            return Err("ZIP64 archive has no valid locator.".into());
+        }
+        let locator_offset = eocd_offset - 20;
+        file.seek(SeekFrom::Start(locator_offset)).map_err(err)?;
+        let mut locator = [0; 20];
+        file.read_exact(&mut locator).map_err(err)?;
+        if &locator[..4] != b"PK\x06\x07"
+            || zip_u32(&locator, 4)? != 0
+            || zip_u32(&locator, 16)? != 1
+        {
+            return Err("ZIP64 multi-disk or ambiguous metadata is not supported.".into());
+        }
+        let declared_record_offset = zip_u64(&locator, 8)?;
+        // ZIP64 locator offsets, like central-directory offsets, are relative to
+        // the start of an archive. Find the record that ends at the locator so
+        // prefixed archives retain one exact, bounded archive offset.
+        let search_start = locator_offset.saturating_sub(limits.directory.saturating_add(56));
+        let search_length = usize::try_from(locator_offset - search_start).map_err(err)?;
+        let mut search = vec![0; search_length];
+        file.seek(SeekFrom::Start(search_start)).map_err(err)?;
+        file.read_exact(&mut search).map_err(err)?;
+        let mut records = search
+            .windows(4)
+            .enumerate()
+            .rev()
+            .filter_map(|(index, signature)| {
+                if signature != b"PK\x06\x06" || index + 12 > search.len() {
+                    return None;
+                }
+                let size = u64::from_le_bytes(search[index + 4..index + 12].try_into().ok()?);
+                let offset = search_start + index as u64;
+                (size >= 44 && offset.checked_add(12)?.checked_add(size)? == locator_offset)
+                    .then_some((index, offset, size))
+            });
+        let (record_index, record_offset, record_size) = records
+            .next()
+            .filter(|_| records.next().is_none())
+            .ok_or("ZIP64 end record is truncated or ambiguous.")?;
+        let record_end = record_index
+            .checked_add(usize::try_from(record_size + 12).map_err(err)?)
+            .ok_or("ZIP64 directory offset overflow.")?;
+        let record = &search[record_index..record_end];
+        let record_size = zip_u64(record, 4)?;
+        let archive_offset = record_offset
+            .checked_sub(declared_record_offset)
+            .ok_or("ZIP64 directory metadata is out of bounds.")?;
+        if &record[..4] != b"PK\x06\x06"
+            || record_size < 44
+            || zip_u32(record, 16)? != 0
+            || zip_u32(record, 20)? != 0
+            || zip_u64(record, 24)? != zip_u64(record, 32)?
+        {
+            return Err("ZIP64 multi-disk or ambiguous metadata is not supported.".into());
+        }
+        (
+            zip_u64(record, 32)?,
+            zip_u64(record, 40)?,
+            zip_u64(record, 48)?,
+            record_offset,
+            archive_offset,
+        )
+    } else {
+        let has_zip64_locator =
+            eocd_index >= 20 && &tail[eocd_index - 20..eocd_index - 16] == b"PK\x06\x07";
+        if disk != 0 || directory_disk != 0 || disk_entries != entries || has_zip64_locator {
+            return Err("Multi-disk or ambiguous ZIP metadata is not supported.".into());
+        }
+        (
+            u64::from(entries),
+            u64::from(directory_size),
+            u64::from(directory_offset),
+            eocd_offset,
+            eocd_offset
+                .checked_sub(u64::from(directory_size))
+                .and_then(|start| start.checked_sub(u64::from(directory_offset)))
+                .ok_or("ZIP directory metadata is out of bounds.")?,
+        )
+    };
+    if entries > limits.entries {
         return Err("Archive exceeds 10,000 entries.".into());
     }
-    let mut total = 0u64;
+    if directory_size > limits.directory {
+        return Err("ZIP directory exceeds 64 MB.".into());
+    }
+    if archive_offset
+        .checked_add(directory_offset)
+        .and_then(|start| start.checked_add(directory_size))
+        != Some(directory_end)
+        || directory_offset.checked_add(directory_size).is_none()
+    {
+        return Err("ZIP directory metadata is out of bounds.".into());
+    }
+    validate_zip_directory(file, entries, directory_size, directory_end)?;
+    file.rewind().map_err(err)?;
+    Ok(archive_offset)
+}
+
+fn copy_zip_output(
+    input: &mut impl std::io::Read,
+    output: &mut impl std::io::Write,
+    total: &mut u64,
+    limit: u64,
+) -> Result<()> {
+    let mut buffer = [0; 64 * 1024];
+    loop {
+        let read = input.read(&mut buffer).map_err(err)?;
+        if read == 0 {
+            return Ok(());
+        }
+        *total = total
+            .checked_add(read as u64)
+            .ok_or("Archive size overflow")?;
+        if *total > limit {
+            return Err("Archive exceeds decompressed size limit.".into());
+        }
+        output.write_all(&buffer[..read]).map_err(err)?;
+    }
+}
+
+fn snapshot_zip_input(
+    input: &mut impl std::io::Read,
+    declared_length: u64,
+    limit: u64,
+) -> Result<fs::File> {
+    use std::io::{Seek, Write};
+    if declared_length > limit {
+        return Err("ZIP archive exceeds 1 GB.".into());
+    }
+    let mut snapshot = tempfile::tempfile().map_err(err)?;
+    let mut limited = std::io::Read::take(input, limit.saturating_add(1));
+    let copied = std::io::copy(&mut limited, &mut snapshot).map_err(err)?;
+    if copied > limit {
+        return Err("ZIP archive exceeds 1 GB.".into());
+    }
+    snapshot.flush().map_err(err)?;
+    snapshot.rewind().map_err(err)?;
+    Ok(snapshot)
+}
+
+fn snapshot_zip(archive: &Path, limit: u64) -> Result<fs::File> {
+    if !fs::metadata(archive).map_err(err)?.file_type().is_file() {
+        return Err("Choose a regular ZIP archive file.".into());
+    }
+    // A path may be replaced with a FIFO between metadata and open. On Unix,
+    // nonblocking open lets the descriptor check below reject it without hanging.
+    #[cfg(unix)]
+    let mut source = {
+        use std::os::unix::fs::OpenOptionsExt;
+        fs::OpenOptions::new()
+            .read(true)
+            .custom_flags(libc::O_NONBLOCK)
+            .open(archive)
+            .map_err(err)?
+    };
+    #[cfg(not(unix))]
+    let mut source = fs::File::open(archive).map_err(err)?;
+    let metadata = source.metadata().map_err(err)?;
+    if !metadata.file_type().is_file() {
+        return Err("Choose a regular ZIP archive file.".into());
+    }
+    let declared_length = metadata.len();
+    snapshot_zip_input(&mut source, declared_length, limit)
+}
+
+fn import_zip_with_limits(archive: &Path, parent: &Path, limits: ZipLimits) -> Result<PathBuf> {
+    // Preflight and zip must parse the same private bytes. The selected source
+    // file may otherwise be rewritten between validation and indexing.
+    let mut archive_file = snapshot_zip(archive, limits.input)?;
+    let archive_offset = preflight_zip(&mut archive_file, limits)?;
+    let config = zip::read::Config {
+        archive_offset: zip::read::ArchiveOffset::Known(archive_offset),
+    };
+    let mut zip = zip::ZipArchive::with_config(config, archive_file).map_err(err)?;
+    let mut declared_total = 0u64;
     for i in 0..zip.len() {
         let file = zip.by_index(i).map_err(err)?;
         relative(file.name().map_err(err)?.trim_end_matches('/'))?;
         if file.unix_mode().is_some_and(|m| m & 0o170000 == 0o120000) {
             return Err("ZIP symbolic links are not supported.".into());
         }
-        total = total
+        declared_total = declared_total
             .checked_add(file.size())
             .ok_or("Archive size overflow")?;
-        if total > 512 * 1024 * 1024 {
+        if declared_total > limits.output {
             return Err("Archive exceeds 512 MB.".into());
         }
     }
     fs::create_dir_all(parent).map_err(err)?;
     let temp = tempfile::tempdir_in(parent).map_err(err)?;
+    let mut actual_total = 0u64;
     for i in 0..zip.len() {
         let mut file = zip.by_index(i).map_err(err)?;
         let out = temp
@@ -427,15 +732,7 @@ pub fn import_zip(archive: &Path, parent: &Path) -> Result<PathBuf> {
                 .write(true)
                 .open(&out)
                 .map_err(err)?;
-            let mut bytes = vec![];
-            file.by_ref()
-                .take(512 * 1024 * 1024 + 1)
-                .read_to_end(&mut bytes)
-                .map_err(err)?;
-            if bytes.len() > 512 * 1024 * 1024 {
-                return Err("ZIP entry exceeds size limit.".into());
-            }
-            dest.write_all(&bytes).map_err(err)?;
+            copy_zip_output(&mut file, &mut dest, &mut actual_total, limits.output)?;
         }
     }
     let children: Vec<_> = fs::read_dir(temp.path())
@@ -457,8 +754,314 @@ pub fn import_zip(archive: &Path, parent: &Path) -> Result<PathBuf> {
         &archive.file_stem().unwrap_or_default().to_string_lossy(),
     )
 }
+pub fn import_zip(archive: &Path, parent: &Path) -> Result<PathBuf> {
+    import_zip_with_limits(archive, parent, ZIP_LIMITS)
+}
 #[cfg(test)]
 mod tests {
+    use std::io::{Cursor, Write};
+
+    fn test_zip(path: &Path, names: &[&str]) {
+        let mut writer = zip::ZipWriter::new(fs::File::create(path).unwrap());
+        for name in names {
+            writer
+                .start_file(name, zip::write::SimpleFileOptions::default())
+                .unwrap();
+            writer.write_all(b"$x$").unwrap();
+        }
+        writer.finish().unwrap();
+    }
+
+    fn duplicate_central_names(path: &Path) {
+        let mut bytes = fs::read(path).unwrap();
+        let mut offset = 0;
+        while let Some(relative) = bytes[offset..]
+            .windows(4)
+            .position(|window| window == b"PK\x01\x02")
+        {
+            let header = offset + relative;
+            let name_length = u16::from_le_bytes([bytes[header + 28], bytes[header + 29]]) as usize;
+            assert_eq!(name_length, 5);
+            bytes[header + 46..header + 51].copy_from_slice(b"x.typ");
+            offset = header + 51;
+        }
+        fs::write(path, bytes).unwrap();
+    }
+
+    fn bounded_zip(path: &Path) -> zip::ZipArchive<fs::File> {
+        let mut file = fs::File::open(path).unwrap();
+        let archive_offset = preflight_zip(&mut file, ZIP_LIMITS).unwrap();
+        zip::ZipArchive::with_config(
+            zip::read::Config {
+                archive_offset: zip::read::ArchiveOffset::Known(archive_offset),
+            },
+            file,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn zip_preflight_bounds_raw_entries_before_parser_construction() {
+        let temp = tempfile::tempdir().unwrap();
+        let archive = temp.path().join("duplicate.zip");
+        test_zip(&archive, &["a.typ", "b.typ", "c.typ"]);
+        duplicate_central_names(&archive);
+        let length = archive.metadata().unwrap().len();
+        let mut limits = ZIP_LIMITS;
+        limits.entries = 2;
+        assert!(
+            preflight_zip(&mut fs::File::open(&archive).unwrap(), limits)
+                .unwrap_err()
+                .contains("10,000 entries")
+        );
+        limits.entries = 3;
+        preflight_zip(&mut fs::File::open(&archive).unwrap(), limits).unwrap();
+        assert_eq!(
+            zip::ZipArchive::new(fs::File::open(&archive).unwrap())
+                .unwrap()
+                .len(),
+            1
+        );
+        limits.input = length - 1;
+        assert!(
+            preflight_zip(&mut fs::File::open(&archive).unwrap(), limits)
+                .unwrap_err()
+                .contains("1 GB")
+        );
+    }
+
+    #[test]
+    fn zip_preflight_accepts_bounded_zip64_directory_metadata() {
+        let temp = tempfile::tempdir().unwrap();
+        let archive = temp.path().join("zip64.zip");
+        let mut bytes = b"PK\x01\x02".to_vec();
+        bytes.extend_from_slice(&[0; 42]);
+        bytes.extend_from_slice(b"PK\x06\x06");
+        bytes.extend_from_slice(&44u64.to_le_bytes());
+        bytes.extend_from_slice(&[0; 4]);
+        bytes.extend_from_slice(&0u32.to_le_bytes());
+        bytes.extend_from_slice(&0u32.to_le_bytes());
+        bytes.extend_from_slice(&1u64.to_le_bytes());
+        bytes.extend_from_slice(&1u64.to_le_bytes());
+        bytes.extend_from_slice(&46u64.to_le_bytes());
+        bytes.extend_from_slice(&0u64.to_le_bytes());
+        bytes.extend_from_slice(b"PK\x06\x07");
+        bytes.extend_from_slice(&0u32.to_le_bytes());
+        bytes.extend_from_slice(&46u64.to_le_bytes());
+        bytes.extend_from_slice(&1u32.to_le_bytes());
+        bytes.extend_from_slice(b"PK\x05\x06");
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        bytes.extend_from_slice(&u16::MAX.to_le_bytes());
+        bytes.extend_from_slice(&u16::MAX.to_le_bytes());
+        bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+        bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        fs::write(&archive, &bytes).unwrap();
+        preflight_zip(&mut fs::File::open(&archive).unwrap(), ZIP_LIMITS).unwrap();
+        bytes[86..94].copy_from_slice(&45u64.to_le_bytes());
+        fs::write(&archive, bytes).unwrap();
+        assert!(preflight_zip(&mut fs::File::open(archive).unwrap(), ZIP_LIMITS).is_err());
+    }
+
+    #[test]
+    fn zip_preflight_and_parser_accept_the_same_prefixed_zip32_region() {
+        let temp = tempfile::tempdir().unwrap();
+        let archive = temp.path().join("prefixed.zip");
+        test_zip(&archive, &["main.typ"]);
+        let original = fs::read(&archive).unwrap();
+        let mut prefix = b"PK\x01\x02".to_vec();
+        prefix.extend_from_slice(&[0; 42]);
+        let expected_directory = prefix.len() as u64
+            + original
+                .windows(4)
+                .position(|window| window == b"PK\x01\x02")
+                .unwrap() as u64;
+        prefix.extend_from_slice(&original);
+        fs::write(&archive, prefix).unwrap();
+
+        let mut file = fs::File::open(&archive).unwrap();
+        assert_eq!(preflight_zip(&mut file, ZIP_LIMITS).unwrap(), 46);
+        let mut zip = bounded_zip(&archive);
+        assert_eq!(zip.central_directory_start(), expected_directory);
+        assert_eq!(zip.len(), 1);
+        assert_eq!(zip.by_index(0).unwrap().name().unwrap(), "main.typ");
+    }
+
+    #[test]
+    fn zip_preflight_accepts_prefixed_zip64_locator_offsets() {
+        let temp = tempfile::tempdir().unwrap();
+        let archive = temp.path().join("prefixed-zip64.zip");
+        let prefix = b"self-extracting-prefix";
+        let mut bytes = prefix.to_vec();
+        bytes.extend_from_slice(b"PK\x01\x02");
+        bytes.extend_from_slice(&[0; 42]);
+        bytes.extend_from_slice(b"PK\x06\x06");
+        bytes.extend_from_slice(&44u64.to_le_bytes());
+        bytes.extend_from_slice(&[0; 4]);
+        bytes.extend_from_slice(&0u32.to_le_bytes());
+        bytes.extend_from_slice(&0u32.to_le_bytes());
+        bytes.extend_from_slice(&1u64.to_le_bytes());
+        bytes.extend_from_slice(&1u64.to_le_bytes());
+        bytes.extend_from_slice(&46u64.to_le_bytes());
+        bytes.extend_from_slice(&0u64.to_le_bytes());
+        bytes.extend_from_slice(b"PK\x06\x07");
+        bytes.extend_from_slice(&0u32.to_le_bytes());
+        bytes.extend_from_slice(&46u64.to_le_bytes());
+        bytes.extend_from_slice(&1u32.to_le_bytes());
+        bytes.extend_from_slice(b"PK\x05\x06");
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        bytes.extend_from_slice(&u16::MAX.to_le_bytes());
+        bytes.extend_from_slice(&u16::MAX.to_le_bytes());
+        bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+        bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        fs::write(&archive, bytes).unwrap();
+
+        assert_eq!(
+            preflight_zip(&mut fs::File::open(archive).unwrap(), ZIP_LIMITS).unwrap(),
+            prefix.len() as u64
+        );
+    }
+
+    #[test]
+    fn zip_preflight_rejects_understated_standard_directory_size() {
+        let temp = tempfile::tempdir().unwrap();
+        let archive = temp.path().join("understated.zip");
+        test_zip(&archive, &["main.typ"]);
+        let mut bytes = fs::read(&archive).unwrap();
+        let eocd = bytes.len() - 22;
+        let size = u32::from_le_bytes(bytes[eocd + 12..eocd + 16].try_into().unwrap());
+        bytes[eocd + 12..eocd + 16].copy_from_slice(&(size - 1).to_le_bytes());
+        fs::write(&archive, bytes).unwrap();
+        assert!(
+            preflight_zip(&mut fs::File::open(archive).unwrap(), ZIP_LIMITS)
+                .unwrap_err()
+                .contains("directory record")
+        );
+    }
+
+    #[test]
+    fn zip_preflight_rejects_unconsumed_declared_directory_bytes() {
+        let temp = tempfile::tempdir().unwrap();
+        let archive = temp.path().join("overstated.zip");
+        test_zip(&archive, &["main.typ"]);
+        let mut bytes = fs::read(&archive).unwrap();
+        let eocd = bytes.len() - 22;
+        let size = u32::from_le_bytes(bytes[eocd + 12..eocd + 16].try_into().unwrap());
+        let offset = u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap());
+        bytes[eocd + 12..eocd + 16].copy_from_slice(&(size + 1).to_le_bytes());
+        bytes[eocd + 16..eocd + 20].copy_from_slice(&(offset - 1).to_le_bytes());
+        fs::write(&archive, bytes).unwrap();
+        assert!(
+            preflight_zip(&mut fs::File::open(archive).unwrap(), ZIP_LIMITS)
+                .unwrap_err()
+                .contains("invalid or ambiguous")
+        );
+    }
+
+    #[test]
+    fn zip_preflight_rejects_ambiguous_end_records_before_parser_selection() {
+        let temp = tempfile::tempdir().unwrap();
+        let archive = temp.path().join("ambiguous.zip");
+        test_zip(&archive, &["main.typ"]);
+        let mut bytes = fs::read(&archive).unwrap();
+        let eocd = bytes.len() - 22;
+        bytes[eocd + 20..eocd + 22].copy_from_slice(&22u16.to_le_bytes());
+        bytes.extend_from_slice(b"PK\x05\x06");
+        bytes.extend_from_slice(&[0; 18]);
+        fs::write(&archive, bytes).unwrap();
+        assert!(
+            preflight_zip(&mut fs::File::open(archive).unwrap(), ZIP_LIMITS)
+                .unwrap_err()
+                .contains("unambiguous")
+        );
+    }
+
+    #[test]
+    fn zip_preflight_conservatively_rejects_eocd_signature_in_comment() {
+        let temp = tempfile::tempdir().unwrap();
+        let archive = temp.path().join("signature-comment.zip");
+        test_zip(&archive, &["main.typ"]);
+        let mut bytes = fs::read(&archive).unwrap();
+        let eocd = bytes.len() - 22;
+        bytes[eocd + 20..eocd + 22].copy_from_slice(&4u16.to_le_bytes());
+        bytes.extend_from_slice(b"PK\x05\x06");
+        fs::write(&archive, bytes).unwrap();
+
+        assert!(
+            preflight_zip(&mut fs::File::open(archive).unwrap(), ZIP_LIMITS)
+                .unwrap_err()
+                .contains("unambiguous")
+        );
+    }
+
+    #[test]
+    fn zip_preflight_rejects_backtracking_to_earlier_over_limit_directory() {
+        let temp = tempfile::tempdir().unwrap();
+        let archive = temp.path().join("backtracking.zip");
+        test_zip(&archive, &["first.typ", "second.typ"]);
+        let mut bytes = fs::read(&archive).unwrap();
+
+        // The newest EOCD declares one raw, bounded CDFH. Its one-byte extra
+        // field is invalid to zip's richer parser, which would otherwise retry
+        // the earlier two-entry EOCD and bypass the pre-index entry cap.
+        let directory_offset = u32::try_from(bytes.len()).unwrap();
+        let mut header = b"PK\x01\x02".to_vec();
+        header.extend_from_slice(&[0; 42]);
+        header[30..32].copy_from_slice(&1u16.to_le_bytes());
+        bytes.extend_from_slice(&header);
+        bytes.push(0);
+        bytes.extend_from_slice(b"PK\x05\x06");
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        bytes.extend_from_slice(&1u16.to_le_bytes());
+        bytes.extend_from_slice(&1u16.to_le_bytes());
+        bytes.extend_from_slice(&47u32.to_le_bytes());
+        bytes.extend_from_slice(&directory_offset.to_le_bytes());
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        fs::write(&archive, bytes).unwrap();
+
+        let mut limits = ZIP_LIMITS;
+        limits.entries = 1;
+        assert!(preflight_zip(&mut fs::File::open(archive).unwrap(), limits)
+            .unwrap_err()
+            .contains("unambiguous"));
+    }
+
+    #[test]
+    fn streamed_zip_output_enforces_actual_aggregate_bytes() {
+        let mut output = Vec::new();
+        let mut total = 2;
+        let error =
+            copy_zip_output(&mut Cursor::new(b"1234"), &mut output, &mut total, 5).unwrap_err();
+        assert!(error.contains("decompressed size"));
+        assert!(output.is_empty());
+    }
+
+    #[test]
+    fn zip_snapshot_bounds_declared_and_actual_input_bytes() {
+        let mut grown = Cursor::new(b"123456");
+        assert!(snapshot_zip_input(&mut grown, 5, 5)
+            .unwrap_err()
+            .contains("1 GB"));
+
+        let mut oversized_metadata = Cursor::new(b"12345");
+        assert!(snapshot_zip_input(&mut oversized_metadata, 6, 5)
+            .unwrap_err()
+            .contains("1 GB"));
+        assert_eq!(oversized_metadata.position(), 0);
+    }
+
+    #[test]
+    fn zip_snapshot_rejects_nonregular_input_before_copying() {
+        let temp = tempfile::tempdir().unwrap();
+        assert!(snapshot_zip(temp.path(), ZIP_INPUT_LIMIT)
+            .unwrap_err()
+            .contains("regular ZIP archive"));
+    }
+
     #[test]
     fn artifact_access_compares_canonical_storage_roots() {
         let temp = tempfile::tempdir().unwrap();
