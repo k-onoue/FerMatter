@@ -14,7 +14,7 @@ Snapshot: 2026-10-29. Dates below use Asia/Tokyo.
 | --- | --- | --- | --- |
 | macOS / arm64 (Apple Silicon) | macOS 14+ deployment target | Local development and compiler/build checks on macOS 26.5.2; historical native UI checks linked below | Final ad hoc artifact, clean installation and upgrade with actual opening prompts; test the oldest claimed OS or narrow the support claim |
 | Windows / x64 | Windows 11 preview | Windows 11 Pro 23H2 native setup/editing/IME, draft recovery and Impress clipboard checks below; Windows Server 2022 CI | Clean-account installation/update/removal and security prompts, physical AltGr, receiving-app drag and remaining final-artifact checks |
-| Ubuntu / amd64 | Ubuntu 24.04 experimental | CI compiler/build checks, container installation and headless startup | Physical desktop or VM GUI session, recorded Wayland/X11 environment, cross-application output; native image clipboard and recoverable project deletion are currently unavailable |
+| Ubuntu / amd64 | Ubuntu 24.04 experimental | Physical Ubuntu 24.04.5 / GNOME 46 X11 session through RDP; native setup, saved-data update, Library/Source/Instant, rendering and Impress SVG insertion below; CI packaging | Wayland, IME, remaining recovery/updater/removal cases and receiving-app drag; native image clipboard and recoverable project deletion are currently unavailable |
 | macOS / x86_64, Windows / ARM64 or x86, other Linux environments | No current distribution target | No validation recorded here | Separate build and validation before advertising support |
 
 - Native baseline and platform limitations: [desktop README](../../desktop-app/README.md#remaining-release-gates).
@@ -22,6 +22,30 @@ Snapshot: 2026-10-29. Dates below use Asia/Tokyo.
 - Distribution scope and procedures: [packaging](packaging.md).
 
 ## Dated evidence
+
+### 2026-10-29 — Ubuntu native installation and desktop icons
+
+- Environment: physical x86_64 machine, Ubuntu 24.04.5 LTS, kernel `7.0.0-38-generic`, GNOME 46, xrdp X11 session. Existing account without FerMatter installed before this check. Remote desktop input and screenshots; this is not Wayland or local-display validation. WebKitGTK 4.1 runtime `2.52.6-0ubuntu0.24.04.1`; TeX Live 2023/Debian, latexmk 4.83, Typst 0.15.1 and pdf2svg. RDP emitted graphics-device/DRI3 warnings but rendered the tested UI.
+- Installed the public Preview 4 DEB, then replaced it using `apt-get install --reinstall` with the [main CI candidate](https://github.com/k-onoue/FerMatter/actions/runs/40853996414), commit `759eccd14696943f8877e39c5744aa93863b747e`, 0.11.0 build 15. Its app sources match main `e6c2d3e3d00b80e3a784331ea288c7ff3c7999df`. Package version remains `0.11.0~preview.4+ubuntu.1` for local verification; no public package was replaced.
+- Public DEB SHA-256: `3e69e7a977f2d5fdcc3beac26ad3fab89a5bfc9b8e16168256dff5298d79760f`. Baseline candidate DEB SHA-256: `ca1c8dbf61eaaee34f94e867f56f00da26a0c2af622a68490525456473730f32`; installed payload SHA-256: `84d307a1829121370b1c60149a723e85d1e2f2424fd27e231602e6494ad0bd51`.
+
+| Native operation | Observed result |
+| --- | --- |
+| First setup | Passed: project-parent selection, missing-Typst message, explicit compiler path detection, all four demos created |
+| Library variants and labels | Passed on Preview: created a named Typst variant and label; all original `.tex`/`.typ` source hashes unchanged |
+| Source save | Passed on Preview: Ctrl+S saved a synthetic Typst comment to the real source file |
+| Instant and PDF | Passed on Preview: rendered `x^2 + 42`, retained draft/history records, displayed the one-page Typst PDF |
+| Replacement and saved data | Passed: backed up data; all 14 saved settings/project/Instant records remained byte-identical during installation; candidate reopened without repeating setup |
+| Candidate figure rendering | Passed: native TikZ and CeTZ libraries each displayed three cards; CeTZ document PDF displayed |
+| Native menu appearance | Public Preview showed transparency/overlap; current candidate displayed an opaque menu. This fixes the observed appearance, not every menu lifecycle case |
+
+- Baseline candidate automation on this Ubuntu machine passed CLI/MCP/resident export, idempotency/conflict, progress and cancellation checks. Project-free LaTeX align/equation and Typst produced SVG/PNG/PDF with synthetic sources unchanged; TikZ/CeTZ each produced nonempty SVG/PNG/PDF. These are automated exports, not receiving-application or drag verification.
+- Found: the DEB supplied only a 1024 px icon, outside this system's hicolor directories. GTK lookup failed at every tested size. [#149](https://github.com/k-onoue/FerMatter/pull/149) supplies standard 32/128/256/512 px icons and adds an installed-desktop-entry/icon-load check to Ubuntu CI.
+- Final icon candidate: [Ubuntu CI](https://github.com/k-onoue/FerMatter/actions/runs/40866786002), merge-test commit `d0de81a1f7bed95f6f5e66673e71ea70bb7e0707` (identical tree to PR head `3760c513917be35a303bba7b5964eed0ae1471c3`). DEB SHA-256 `fe2c5805d05c94d80b332df678774fefae0b913314889f6c1bd4ee75fbc68536`; installed payload SHA-256 `fc75a3ab211fda419903c88227b0b7a26149d078b9c01e6a002a17c72a5cc2a2`. Installed through authenticated APT replacement; GTK resolved/loaded the icon at 32/64/128/256/512 px, and GNOME search and the dock displayed the FerMatter artwork.
+- Final candidate native checks: launched the installed desktop entry through GIO with the isolated profile, retained all four projects without setup, displayed 27 LaTeX cards and a three-page PDF, and exported a card through the native SVG save dialog. LibreOffice Impress 24.2.7.2 inserted that file and saved it in a synthetic ODP; its embedded SVG equals the exported file byte-for-byte. A direct card-drag attempt did not insert an object; the cause is not isolated, so drag remains unverified. Manual public-feed check succeeded and reported no newer stable version; automatic checking was enabled.
+- Final candidate CI passed frontend/Rust tests, script/APT checks, audits, Clippy, real LaTeX/Typst/TikZ/CeTZ checks, DEB build, clean container APT installation and headless startup/icon lookup. Ordinary Rust tests reported 191 passed and one compiler-dependent test ignored; the separate real-compiler check passed. macOS/Windows PR checks and local macOS `check.sh`/`build.sh` also passed. Retain informational audit warnings; the `published` job was skipped and this does not validate the public APT repository.
+- Scope: synthetic projects and isolated app data. Closing the windows left a resident running; after confirming saved records and taking backups, those processes were terminated for replacement/restart. Do not count this as a passing normal-Quit or old/new concurrent-launch check. Not checked: clean OS/account, Wayland, physical IME/AltGr, unsaved Source recovery/conflicts, native image clipboard, package removal or signed in-app updater/polkit flows. Direct drag was unsuccessful as described above. Linux remains experimental; [#134](https://github.com/k-onoue/FerMatter/issues/134) remains open.
+- Ignored evidence: `desktop-app/build/ubuntu-native-20261029/` (package metadata, checksums, compiler/export reports and native captures), with the corresponding isolated profile and backups retained on the test machine. No tag, release, Homebrew/APT publication or public update feed was changed.
 
 ### 2026-10-29 — Windows final main refresh
 
