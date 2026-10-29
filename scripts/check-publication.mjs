@@ -148,15 +148,21 @@ function checkMacRelease(site, config) {
   const expectedUrl = releaseDownloadUrl(config);
   if (!nodes.some((node) => attribute(node, "href") === expectedUrl))
     errors.push("macOS download link differs from the reviewed release.");
-  const text = nodes
+  const notesUrl = `${config.base}/download/macos-notes/`;
+  if (!nodes.some((node) => attribute(node, "href") === notesUrl))
+    errors.push("macOS download must link to its verification notes.");
+  const notes = path.join(site, "download/macos-notes/index.html");
+  if (!existsSync(notes))
+    return [...errors, "Published macOS release has no verification notes."];
+  const text = descendants(parse(readFileSync(notes, "utf8")))
     .filter((node) => node.nodeName === "#text")
     .map((node) => node.value)
     .join(" ");
   if (!text.includes(config.releaseSha256))
-    errors.push("macOS download page must show the reviewed SHA-256.");
+    errors.push("macOS verification notes must show the reviewed SHA-256.");
   if (!config.releaseNotarized && !text.includes("not notarized by Apple"))
     errors.push(
-      "Unnotarized macOS preview must be labeled beside its download.",
+      "Unnotarized macOS preview must be labeled in its verification notes.",
     );
   return errors;
 }

@@ -55,7 +55,7 @@ function fixture(t) {
   };
 }
 
-test("macOS download shows the pinned release and unnotarized status", (t) => {
+test("macOS download links to separate checksum and signing notes", (t) => {
   const { root, write } = fixture(t);
   const config = {
     base: "/FerMatter",
@@ -67,14 +67,32 @@ test("macOS download shows the pinned release and unnotarized status", (t) => {
     releaseNotarized: false,
   };
   write("site/src/data/site.json", JSON.stringify(config));
-  const good = `<section id="mac"><a href="${releaseDownloadUrl(config)}">Download DMG</a><p>Preview is not notarized by Apple. SHA-256: <code>${config.releaseSha256}</code></p></section>`;
+  const notesUrl = "/FerMatter/download/macos-notes/";
+  const notesPath = "site/dist/download/macos-notes/index.html";
+  const good = `<section id="mac"><a href="${releaseDownloadUrl(config)}">Download DMG</a><a href="${notesUrl}">Download verification and opening notes</a></section>`;
+  const notes = `<p>Preview is not notarized by Apple. SHA-256: <code>${config.releaseSha256}</code></p>`;
   write("site/dist/download/index.html", good);
+  assert.match(
+    checkPublication(root).errors.join("\n"),
+    /no verification notes/,
+  );
+
+  write(notesPath, notes);
   assert.deepEqual(checkPublication(root).errors, []);
+
+  write("site/dist/download/index.html", good.replace(notesUrl, "#mac"));
+  assert.match(
+    checkPublication(root).errors.join("\n"),
+    /must link to its verification notes/,
+  );
 
   write(
     "site/dist/download/index.html",
-    good
-      .replace(releaseDownloadUrl(config), "https://example.com/other.dmg")
+    good.replace(releaseDownloadUrl(config), "https://example.com/other.dmg"),
+  );
+  write(
+    notesPath,
+    notes
       .replace(config.releaseSha256, "b".repeat(64))
       .replace("not notarized by Apple", "ready"),
   );

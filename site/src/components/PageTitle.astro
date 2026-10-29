@@ -4,7 +4,9 @@ import { href } from "../data/links";
 const product =
   [href(), href("features/"), href("download/"), href("declaration/")].includes(
     Astro.url.pathname,
-  ) || Astro.url.pathname.startsWith(href("news/"));
+  ) ||
+  Astro.url.pathname.startsWith(href("news/")) ||
+  Astro.url.pathname.startsWith(href("download/"));
 ---
 
 {!product && <PageTitle />}
