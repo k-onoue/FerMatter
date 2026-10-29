@@ -21,9 +21,10 @@ const { Content: Ubuntu } = await render(ubuntu);
     <h1>{title}</h1>
   </header>
   <nav
-    class="download-platform-tabs not-content"
+    class="content-tabs not-content"
     aria-label="Operating system"
-    data-download-tabs
+    data-content-tabs
+    data-detect-platform
   >
     <a id="download-tab-mac" href="#mac">
       macOS
@@ -99,5 +100,5 @@ const { Content: Ubuntu } = await render(ubuntu);
 </style>
 
 <script>
-  import "../scripts/download-tabs.js";
+  import "../scripts/content-tabs.js";
 </script>

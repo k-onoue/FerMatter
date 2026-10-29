@@ -42,19 +42,30 @@ const groups = [
       <a href={guide("updates")}>How to update →</a>
     </p>
   </header>
-  <nav class="fix-links fix-jump-links not-content" aria-label="Fix categories">
+  <nav
+    class="content-tabs not-content"
+    aria-label="Fix categories"
+    data-content-tabs
+  >
     {groups.map(({ id, title }) => (
-      <a href={`#${id}`}>{title}</a>
+      <a id={`fix-tab-${id}`} href={`#${id}`}>
+        {title}
+      </a>
     ))}
   </nav>
   {groups.map(({ id, title, legacyId }) => (
-    <section class="fix-group not-content" aria-labelledby={id}>
+    <section
+      id={id}
+      class="fix-group not-content"
+      aria-labelledby={`${id}-title`}
+    >
       <span id={legacyId} class="legacy-fix-anchor" aria-hidden="true"></span>
-      <h2 id={id}>{title}</h2>
+      <h2 id={`${id}-title`}>{title}</h2>
       {id === "pending" && (
         <p>
-          These changes are in the source code. Current downloads do not include
-          them yet.
+          {fixes.some(({ data }) => data.group === "pending")
+            ? "These changes are in the source code. Current downloads do not include them yet."
+            : "No fixes are currently awaiting a release."}
         </p>
       )}
       {id === "earlier" && (
@@ -79,3 +90,7 @@ const groups = [
     </section>
   ))}
 </Product>
+
+<script>
+  import "../../scripts/content-tabs.js";
+</script>

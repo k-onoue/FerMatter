@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Show one Resolved issues status at a time using tabs, with direct links and keyboard navigation matching Download.
+
 ## [0.11.0-preview.5] — 2026-10-29
 
 - Install Linux icons at standard desktop-theme sizes so GNOME can display FerMatter in application search and the launcher.

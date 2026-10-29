@@ -1,5 +1,5 @@
 (() => {
-  const navigation = document.querySelector("[data-download-tabs]");
+  const navigation = document.querySelector("[data-content-tabs]");
   if (!navigation) return;
   const entries = Array.from(navigation.querySelectorAll('a[href^="#"]'))
     .map((tab) => ({
@@ -79,12 +79,15 @@
     });
   }
 
-  const platform = navigator.userAgent;
-  const preferred = /Win/i.test(platform)
-    ? "windows"
-    : /Linux/i.test(platform)
-      ? "ubuntu"
-      : "mac";
+  let preferred;
+  if (navigation.hasAttribute("data-detect-platform")) {
+    const platform = navigator.userAgent;
+    preferred = /Win/i.test(platform)
+      ? "windows"
+      : /Linux/i.test(platform)
+        ? "ubuntu"
+        : "mac";
+  }
   if (!revealHash()) {
     activate(entries.find(({ panel }) => panel.id === preferred) || entries[0]);
   }
