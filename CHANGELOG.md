@@ -12,6 +12,8 @@
 
 - Prepare validated ad hoc macOS and unsigned Windows stable candidates, with exact-commit validation reports and artifact hashes. Keep Ubuntu experimental and retain APT signing; this does not publish a stable release.
 
+- Bound ZIP import metadata and decompressed output before extraction, and compare demo migrations without loading whole source files.
+
 - Clarify on the website that FerMatter is a standalone desktop app for LaTeX and Typst equations, exporting SVG for PowerPoint and other presentation tools.
 
 - Apply native titlebar spacing and appearance synchronization in Linux source builds.
