@@ -9,7 +9,7 @@
 - macOS replaces the application bundle; Windows hands off to the NSIS installer; Ubuntu installs the DEB through `/usr/bin/pkexec /usr/bin/dpkg -i`. Ubuntu requires a graphical polkit agent. Cancelling authentication does not fall through to a password form or terminal sudo.
 - Unix relaunch waits for the previous resident to exit before claiming its lock. Existing projects, settings, drafts, app identity and legacy storage locations remain unchanged.
 - Homebrew's receipt is not modified by in-app replacement. Users who want Homebrew to track installation should use `brew upgrade --cask fermatter/tap/fermatter`. DEB installation updates dpkg's package database; APT remains usable.
-- The currently published previews have no updater: their first update to an updater-enabled release is manual.
+- Preview 4 and earlier have no updater. Preview 5 includes the interface; the first update from those older previews is manual. The stable feed remains inactive.
 
 ## Network and trust boundary
 

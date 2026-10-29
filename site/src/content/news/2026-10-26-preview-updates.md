@@ -2,10 +2,10 @@
 title: "Library controls and platform updates"
 description: "Exclude tables from Library cards, with updates for Windows and Linux."
 date: 2026-10-26
-status: upcoming
+status: available
 ---
 
-The Library extraction controls below are planned for the next app release and are not included in **0.11.0 Preview 4**. See [Download](https://fermatter.github.io/download/) for current platform-specific installers.
+These changes are now available in **0.11.0 Preview 5** on macOS, Windows and Ubuntu. The original announcement below describes the controls and platform work. See [Download](https://fermatter.github.io/download/) for current installers.
 
 ## Choose what appears in your Library
 

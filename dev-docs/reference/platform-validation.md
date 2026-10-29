@@ -23,6 +23,18 @@ Snapshot: 2026-10-29. Dates below use Asia/Tokyo.
 
 ## Dated evidence
 
+### 2026-10-29 — Preview 5 public distributions
+
+- Source: `7798fdecd0328092c2306193e7eed77dc41e6589`, app 0.11.0, macOS build 16. Preview tags: `v0.11.0-preview.5` and `v0.11.0-windows-preview.5`; Ubuntu version `0.11.0~preview.5+ubuntu.1`. These previews do not complete the stable gates in [#134](https://github.com/k-onoue/FerMatter/issues/134); the stable update feed remains inactive.
+- macOS: clean local release gate passed frontend/Rust tests, real LaTeX/Typst/TikZ/CeTZ checks, WebView identity migration, Clippy, build, audits and publication checks. Ad hoc DMG payload passed strict signature and package inspection. DMG SHA-256: `c4711d1134e498c1e66512719052560d1a1306d6a0aa001cb802766b273e556b`.
+- Native macOS 26.5.2 (25F84), arm64: the exact DMG payload showed first setup; a copied synthetic profile reopened four demos without setup, displayed 27 LaTeX cards, Source and a three-page PDF, and showed Updates with automatic checking enabled. Normal menu Quit exited. Installed LaTeX align/equation and Typst exports produced SVG/PNG/PDF with sources unchanged. The new folder-picker input could not be delivered by automation, so full fresh setup is not counted as passed.
+- Public DMG anonymous download matched the hash. Homebrew upgraded Preview 4 build 15 to Preview 5 build 16 in an isolated app directory; the executable matched the tested DMG payload. Native launch of the quarantined Homebrew copy was not established: the old preview exited 137 and its test bundle disappeared. Clean-account opening, actual folder-consent prompts, oldest macOS and full native old-to-new data migration remain separate gates. The user's Applications installation was untouched.
+- [Windows final CI](https://github.com/k-onoue/FerMatter/actions/runs/40887338933) passed the full preview gate, hash-pinned Preview 4 replacement, installed compiler exports with minimal PATH, old/new resident checks and data-preserving removal on Windows Server 2022. The public EXE and checksum come from this run; see its release `build-info.json`. This is not a new Windows 11 native or clean-account observation.
+- [Ubuntu final CI](https://github.com/k-onoue/FerMatter/actions/runs/40887331454) passed tests, audits, Clippy, all four compilers, signed-APT installation and startup/icon lookup. DEB SHA-256: `57cdb5a19992c57bc91d66f4185d816f4757512823a2eed1ae614598fbaabd72`. [Public APT CI](https://github.com/k-onoue/FerMatter/actions/runs/40891476102) passed fresh installation and previous-version upgrade with synthetic data retained. Earlier native Ubuntu observations below remain scoped to their recorded candidates.
+- Audit scope: zero production npm/Cargo vulnerability entries; maintenance warnings and the Linux `glib 0.18.5` unsoundness advisory remain visible. No blanket ignores. Linux remains experimental; no new Wayland, native drag, clipboard or signed-updater claims.
+- Ignored evidence: `desktop-app/build/distribution-preview5/` and `desktop-app/build/release-validation/run.PbbRUo/`. Public release metadata contains sanitized provenance, not local paths or captures.
+
+
 ### 2026-10-29 — Ubuntu native installation and desktop icons
 
 - Environment: physical x86_64 machine, Ubuntu 24.04.5 LTS, kernel `7.0.0-38-generic`, GNOME 46, xrdp X11 session. Existing account without FerMatter installed before this check. Remote desktop input and screenshots; this is not Wayland or local-display validation. WebKitGTK 4.1 runtime `2.52.6-0ubuntu0.24.04.1`; TeX Live 2023/Debian, latexmk 4.83, Typst 0.15.1 and pdf2svg. RDP emitted graphics-device/DRI3 warnings but rendered the tested UI.

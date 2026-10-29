@@ -1,8 +1,8 @@
 ---
 title: "SVG artwork loses its vector format in LibreOffice Impress"
 description: "Single SVG copies stay vector artwork when pasted into Impress on Windows."
-group: "pending"
-availability: "Windows: source builds only; awaiting a release"
+group: "released"
+availability: "Windows Preview 5"
 order: 10
 ---
 
@@ -12,4 +12,4 @@ The Windows clipboard path preserves vector artwork for a single copied SVG when
 
 ## What to do
 
-This fix is not yet in the linked Windows download. Check this page before updating. See [export formats](https://fermatter.github.io/guide/export/).
+Update to [Windows Preview 5](https://github.com/FerMatter/fermatter.github.io/releases/tag/v0.11.0-windows-preview.5) or later. See [export formats](https://fermatter.github.io/guide/export/).

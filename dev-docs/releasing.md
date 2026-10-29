@@ -10,7 +10,7 @@
 
 ## Windows public preview
 
-- Windows 11 x64 preview uses the separate `v0.11.0-windows-preview.4` tag. App version remains `0.11.0`; the immutable installer filename includes its Windows preview revision.
+- Windows 11 x64 preview uses the separate `v0.11.0-windows-preview.5` tag. App version remains `0.11.0`; the immutable installer filename includes its Windows preview revision.
 - Run [Windows checks and packaging](reference/packaging.md#windows-preview) on the reviewed candidate; install and launch the exact final setup EXE with isolated synthetic data.
 - Publish an **unsigned prerelease** and checksum manifest to `FerMatter/fermatter.github.io`. Verify anonymous access and the downloaded bytes before enabling `windowsReleaseAvailable` in a separate reviewed site change.
 - Keep macOS `releaseTag`/`assetName` unchanged. Windows download fields are independent so a Windows release cannot break the existing DMG/Homebrew channel.
@@ -19,13 +19,14 @@
 ## Unnotarized public preview
 
 - First preview: app version `0.11.0`, build `12`, prerelease tag `v0.11.0-preview.1`.
-- Current preview: app version `0.11.0`, build `15`, prerelease tag `v0.11.0-preview.4`; compact and consistent workspace controls, updated guides, and experimental Ubuntu APT distribution.
+- Current preview: app version `0.11.0`, build `16`, prerelease tag `v0.11.0-preview.5`; extraction controls, identity migration, update interface and platform fixes. The stable update feed remains inactive pending native validation.
 - Source stays in `k-onoue/FerMatter`; publish reviewed binaries and notices in `FerMatter/fermatter.github.io` Releases. Repository visibility is managed separately from distribution.
 - Run app checks, clippy, build, dependency audits and publication checks on the committed candidate. Record skipped native/clean-Mac checks honestly; a preview is not a stable-release validation pass.
 - Preserve the development-signed local bundle. Copy it to an ignored staging directory, sign that copy ad hoc, then run `package.sh --preview --app PATH --validation REPORT`. The report must pass every gate on this exact clean commit; preview re-signing does not require identical bundle hashes.
 - Create a draft **prerelease** with the DMG and SHA-256 manifest. Inspect the payload and bundled notices before publication. Keep published assets fixed.
 - The tap is `FerMatter/homebrew-tap`; the cask pins the version/build, URL and SHA-256. It installs only `FerMatter.app`, keeps quarantine enabled, and does not delete user data.
 - Verify anonymous DMG download, checksum, and a Homebrew install into an isolated `--appdir`; then enable the website download and Homebrew command in a separate reviewed site PR.
+- For isolated Homebrew checks, set `HOMEBREW_NO_AUTOREMOVE=1` and `HOMEBREW_NO_INSTALL_CLEANUP=1`; use a separate `--appdir`. Remove only the test cask afterward, preserving unrelated formulae and the normal Applications install.
 - First launch may require **System Settings → Privacy & Security → Open Anyway**; link to [Apple's instructions](https://support.apple.com/102445). Never remove quarantine or disable Gatekeeper in the installer/cask.
 - The clean-Mac stable-release checklist remains required. Developer ID/public-mode packaging is optional and separate.
 
