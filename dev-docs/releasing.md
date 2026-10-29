@@ -4,7 +4,7 @@
 
 - Development prototype: Apple Silicon; macOS 14+ deployment target, verified on macOS 26. Only compiler tools remain external; no Python runtime.
 - Stable and preview are release channels, independent of signing. The current policy permits macOS ad hoc signing without Developer ID/notarization and Windows without Authenticode. Record those states accurately; keep APT repository signatures.
-- [Packaging](reference/packaging.md) separates prototypes, validated candidates and optional Developer ID/notarization. Final-artifact installation/upgrade validation remains required. In-app update transport is not implemented.
+- [Packaging](reference/packaging.md) separates prototypes, validated candidates and optional Developer ID/notarization. Final-artifact installation/upgrade validation remains required. The signed in-app updater is implemented; its feed stays disabled until final-artifact upgrade checks pass. See [updates](reference/updates.md).
 - The source repository and Pages are public. Test release access without authentication before advertising downloads.
 - Keep stable downloads disabled until all public-release checks pass. Preserve prerelease tags and signing/notarization provenance with release artifacts; verify anonymous access and checksums before enabling downloads. Product pages follow the concise [website presentation rules](documentation.md#publish).
 
@@ -40,7 +40,7 @@
 - The permanent bundle ID is `io.github.fermatter.fermatter`; do not change it for versions or channels. The one-time migration retains legacy storage, resident coordination and installer compatibility: [identity migration](reference/storage.md#app-identity-migration).
 - Prerelease example: `0.11.0-rc.1`; do not offer it through stable update/download links.
 - Set the version in `desktop-app/src-tauri/tauri.conf.json`; keep Cargo/npm versions consistent. Increment `bundle.macOS.bundleVersion` for each distributable build.
-- Keep site version and release notes consistent; a future updater must compare semantic versions, not only build metadata.
+- Keep site version and release notes consistent; the updater compares semantic versions, not only build metadata.
 - Reference: [SemVer](https://semver.org/lang/ja/); its 0.x rules allow instability, while the stricter rules above are this project's policy.
 
 ## Changelog
@@ -67,7 +67,7 @@
 - Verify the macOS ad hoc signature and unsigned Windows installer, record that they are not notarized/Authenticode-signed, and document any per-app opening approval. No system-wide security bypass. Developer ID/notarization is an optional future path.
 - Include LICENSE, NOTICE, and notices for bundled third-party components.
 - Verify installation, launch, compilers, exports and upgrading from the current preview on each supported OS/CPU. Record exact environments in the [platform record](reference/platform-validation.md); Ubuntu remains experimental.
-- Verify manual app replacement preserves data. Before offering in-app updates, implement and test the [update contract](reference/updates.md).
+- Verify manual app replacement preserves data. Before activating in-app updates, test the [update contract](reference/updates.md).
 - Prepare a validated [unnotarized stable candidate](reference/packaging.md#unsigned-stable-candidates); do not promote unchecked prototype artifacts.
 - Verify anonymous access to the release asset; never embed a repository credential in the app/site.
 - Reference: [Apple Developer ID distribution](https://developer.apple.com/developer-id/).
@@ -88,7 +88,7 @@ git push origin vX.Y.Z
 - Create a draft GitHub Release from the tag; attach tested artifacts and curated notes; inspect before publication.
 - Publish as stable only when the release is stable; keep previews marked prerelease.
 - After anonymous download/install checks pass, use a separate reviewed site change to enable downloads and set the version.
-- Website asset name: `FerMatter.dmg`; the proposed [update contract](reference/updates.md) defines a versioned fallback.
+- Website asset name: `FerMatter.dmg`; the [update contract](reference/updates.md) defines separate signed in-app artifacts.
 - References: [Git tags](https://git-scm.com/book/ja/v2/Git-%E3%81%AE%E5%9F%BA%E6%9C%AC-%E3%82%BF%E3%82%B0), [GitHub Releases](https://docs.github.com/ja/repositories/releasing-projects-on-github/about-releases), [release asset links](https://docs.github.com/en/repositories/releasing-projects-on-github/linking-to-releases).
 
 ## Publish the website

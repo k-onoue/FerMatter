@@ -27,6 +27,9 @@ function fixture(t) {
     mkdirSync(path.dirname(file), { recursive: true });
     writeFileSync(file, text);
   };
+  const feed = JSON.stringify({ version: "0.0.0", platforms: {} });
+  write("site/public/updates/stable.json", feed);
+  write("site/dist/updates/stable.json", feed);
   const page = "README.md";
   write("user-docs/pages.json", JSON.stringify([page]));
   write("user-docs/README.md", "# Guide\n\n- First instruction.\n");

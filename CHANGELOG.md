@@ -10,6 +10,10 @@
 
 - Keep single SVG copies as vector artwork on Windows, including when pasting into LibreOffice Impress; choose PNG explicitly for bitmap-only receivers.
 
+- Add an optional daily update check, availability indicator, verified download and in-app installation for packaged macOS, Windows and Ubuntu builds. Save all open editors before installation; offer only published stable updates. The feed remains disabled until validated signed artifacts are published.
+
+- Add a Markdown guide of resolved issues with platform-specific published fix versions and a separate list of fixes awaiting release.
+
 - Adopt permanent app ID `io.github.fermatter.fermatter` while retaining legacy data, WebView recovery storage, resident coordination and installer upgrade paths. macOS may ask for folder access again.
 
 - Prepare validated ad hoc macOS and unsigned Windows stable candidates, with exact-commit validation reports and artifact hashes. Keep Ubuntu experimental and retain APT signing; this does not publish a stable release.
