@@ -292,14 +292,14 @@ fn project_cards(project: &Value) -> Vec<&Value> {
         .collect()
 }
 
-fn replace_project_card(project: &mut Value, ident: &str, replacement: &Value) {
+fn visit_project_cards(project: &mut Value, mut visit: impl FnMut(&mut Value, bool)) {
     if let Some(cards) = project["cards"].as_array_mut() {
-        if let Some(card) = cards.iter_mut().find(|card| string(card, "id") == ident) {
-            *card = replacement.clone();
+        for card in cards {
+            visit(card, false);
         }
     }
-    if string(&project["libraryDraft"], "id") == ident {
-        project["libraryDraft"] = replacement.clone();
+    if project["libraryDraft"].is_object() {
+        visit(&mut project["libraryDraft"], true);
     }
 }
 
@@ -328,31 +328,85 @@ fn same_pending_project_content(left: &Value, right: &Value) -> bool {
     .all(|key| left.get(key) == right.get(key))
 }
 
+// A saved variant and its working draft may share an ID while holding different
+// source. Prefer a matching snapshot, then the corresponding draft/card slot.
+fn known_project_card<'a>(
+    project: &'a Value,
+    requested: &Value,
+    prefer_draft: bool,
+) -> Option<&'a Value> {
+    let mut cards = project_cards(project);
+    if prefer_draft && project["libraryDraft"].is_object() {
+        cards.rotate_right(1);
+    }
+    let same_id = |card: &&Value| string(card, "id") == string(requested, "id");
+    cards
+        .iter()
+        .copied()
+        .filter(same_id)
+        .find(|card| same_pending_project_payload(card, requested))
+        .or_else(|| {
+            cards.iter().copied().filter(same_id).find(|card| {
+                card["requiresRender"] == false
+                    && !card["importAuthorization"].is_string()
+                    && same_pending_project_content(card, requested)
+            })
+        })
+        .or_else(|| {
+            cards
+                .iter()
+                .copied()
+                .filter(same_id)
+                .find(|card| same_pending_project_content(card, requested))
+        })
+        .or_else(|| cards.iter().copied().find(same_id))
+        .or_else(|| {
+            cards.iter().copied().find(|card| {
+                card["importAuthorization"].is_string()
+                    && same_pending_project_content(card, requested)
+            })
+        })
+}
+
 fn pending_project_import<'a>(project: &'a Value, requested: &Value) -> Option<&'a Value> {
-    project_cards(project).into_iter().find(|known| {
-        known["importAuthorization"].is_string()
-            && (string(known, "id") == string(requested, "id")
-                || same_pending_project_content(known, requested))
-    })
+    known_project_card(project, requested, true)
+        .filter(|card| card["importAuthorization"].is_string() || card["requiresRender"] == true)
 }
 
 fn preserve_pending_project_imports(current: &Value, next: &mut Value) {
-    for pending in project_cards(current)
-        .into_iter()
-        .filter(|card| card["importAuthorization"].is_string())
-    {
-        let ident = string(pending, "id");
-        let Some(candidate) = project_cards(next).into_iter().find(|card| {
-            string(card, "id") == ident || same_pending_project_content(pending, card)
-        }) else {
-            continue;
-        };
-        let mut candidate = candidate.clone();
-        let candidate_id = string(&candidate, "id").to_owned();
-        candidate["importAuthorization"] = pending["importAuthorization"].clone();
-        candidate["requiresRender"] = json!(true);
-        replace_project_card(next, &candidate_id, &candidate);
+    visit_project_cards(next, |candidate, is_draft| {
+        if let Some(pending) = known_project_card(current, candidate, is_draft).filter(|card| {
+            card["importAuthorization"].is_string() || card["requiresRender"] == true
+        }) {
+            if pending["importAuthorization"].is_string() {
+                candidate["importAuthorization"] = pending["importAuthorization"].clone();
+            }
+            candidate["requiresRender"] = json!(true);
+        }
+    });
+}
+
+fn authorize_project_import(project: &mut Value, requested: &Value) -> Result<Value> {
+    let matches = |card: &Value| {
+        string(card, "id") == string(requested, "id")
+            && string(card, "importAuthorization") == string(requested, "importAuthorization")
+            && same_pending_project_payload(card, requested)
+    };
+    if !project_cards(project).into_iter().any(matches) {
+        return Err("Imported source changed; reopen the SVG.".into());
     }
+    let mut authorized = requested.clone();
+    authorized
+        .as_object_mut()
+        .ok_or("Invalid imported source.")?
+        .remove("importAuthorization");
+    authorized["requiresRender"] = json!(false);
+    visit_project_cards(project, |card, _| {
+        if matches(card) {
+            *card = authorized.clone();
+        }
+    });
+    Ok(authorized)
 }
 
 fn dispatch(
@@ -487,23 +541,7 @@ fn dispatch(
         "authorize_import_render" => {
             let _guard = store.writes.lock().unwrap();
             let mut current = store.load(ident)?;
-            let requested = &v["card"];
-            let card_id = string(requested, "id");
-            let token = string(requested, "importAuthorization");
-            let stored = project_cards(&current)
-                .into_iter()
-                .find(|card| string(card, "id") == card_id)
-                .filter(|card| string(card, "importAuthorization") == token)
-                .filter(|card| same_pending_project_payload(card, requested))
-                .ok_or("Imported source changed; reopen the SVG.")?;
-            let _ = stored;
-            let mut authorized = requested.clone();
-            authorized
-                .as_object_mut()
-                .ok_or("Invalid imported source.")?
-                .remove("importAuthorization");
-            authorized["requiresRender"] = json!(false);
-            replace_project_card(&mut current, card_id, &authorized);
+            let authorized = authorize_project_import(&mut current, &v["card"])?;
             store.save(ident, &current)?;
             Ok(authorized)
         }
@@ -1180,6 +1218,45 @@ fn windows_arguments(app: &tauri::AppHandle, arguments: impl Iterator<Item = Str
 #[cfg(test)]
 mod request_tests {
     use super::*;
+    #[test]
+    fn pending_import_keeps_saved_card_and_edited_draft_separate() {
+        let saved = json!({
+            "id":"aaaa","tex":"original","kind":"inline","origin":"custom",
+            "status":"pending","requiresRender":true,"importAuthorization":"token"
+        });
+        let current = json!({"cards":[saved],"libraryDraft":saved});
+        let mut edited = saved.clone();
+        edited["tex"] = json!("edited");
+        let mut next = json!({"cards":[saved],"libraryDraft":edited});
+        preserve_pending_project_imports(&current, &mut next);
+        assert_eq!(next["cards"][0], saved);
+        assert_eq!(next["libraryDraft"], edited);
+
+        let authorized = authorize_project_import(&mut next, &edited).unwrap();
+        assert_eq!(next["cards"][0], saved);
+        assert_eq!(next["libraryDraft"], authorized);
+        assert!(pending_project_import(&next, &saved).is_some());
+        assert!(pending_project_import(&next, &authorized).is_none());
+
+        // Autosave must not re-arm the authorized draft or authorize the old card.
+        let mut autosaved = next.clone();
+        autosaved["libraryDraft"]["tex"] = json!("edited again");
+        preserve_pending_project_imports(&next, &mut autosaved);
+        assert_eq!(autosaved["cards"][0], saved);
+        assert_eq!(autosaved["libraryDraft"]["requiresRender"], false);
+
+        // Saving the rendered variant replaces the old card only on explicit Save.
+        let mut rendered = authorized.clone();
+        rendered["status"] = json!("ready");
+        rendered["svgPath"] = json!("preview.svg");
+        let mut committed = json!({"cards":[rendered],"libraryDraft":null});
+        preserve_pending_project_imports(&next, &mut committed);
+        assert_eq!(committed["cards"][0], rendered);
+
+        let mut stale = edited.clone();
+        stale["tex"] = json!("stale source");
+        assert!(authorize_project_import(&mut next, &stale).is_err());
+    }
     #[test]
     fn pending_project_import_follows_an_id_only_change() {
         let pending = json!({

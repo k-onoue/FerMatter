@@ -141,16 +141,21 @@ fn same_import_content(left: &Value, right: &Value) -> bool {
 
 fn pending_import<'a>(state: &'a Value, draft: &Value) -> Option<&'a Value> {
     let ident = string(draft, "entryID");
-    std::iter::once(&state["draft"])
-        .chain(
+    let drafts = || {
+        std::iter::once(&state["draft"]).chain(
             state["history"]
                 .as_array()
                 .into_iter()
                 .flatten()
                 .map(|item| &item["draft"]),
         )
-        .filter(|known| is_pending_import(known))
-        .find(|known| known["entryID"].as_str() == Some(ident) || same_import_content(known, draft))
+    };
+    // Each import has its own identity. Another pending copy of identical source
+    // must not re-arm an entry that the user has already explicitly rendered.
+    if let Some(known) = drafts().find(|known| known["entryID"].as_str() == Some(ident)) {
+        return is_pending_import(known).then_some(known);
+    }
+    drafts().find(|known| is_pending_import(known) && same_import_content(known, draft))
 }
 
 fn preserve_pending_import(state: &Value, draft: &mut Value) {
@@ -639,6 +644,30 @@ mod tests {
         local["entryID"] = json!("cccc");
         local["source"] = json!("new local source");
         assert!(pending_import(&state, &local).is_none());
+    }
+    #[test]
+    fn authorizing_one_import_is_not_blocked_by_an_identical_pending_import() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Storage::new(temp.path().join("data"), temp.path().join("legacy")).unwrap();
+        let mut first = draft();
+        first["entryID"] = json!("aaaa");
+        first["requiresRender"] = json!(true);
+        first["importAuthorization"] = json!("first-token");
+        session(&store, &json!({"action":"save","draft":first})).unwrap();
+        let mut second = first.clone();
+        second["entryID"] = json!("bbbb");
+        second["importAuthorization"] = json!("second-token");
+        let state = session(&store, &json!({"action":"save","draft":second})).unwrap();
+        let state = session(
+            &store,
+            &json!({"action":"authorize_render","draft":state["draft"]}),
+        )
+        .unwrap();
+        let authorized = state["draft"].clone();
+        assert!(reject_pending_import(&store, "", &authorized).is_ok());
+        let state = session(&store, &json!({"action":"save","draft":authorized})).unwrap();
+        assert_eq!(state["draft"]["requiresRender"], false);
+        assert!(pending_import(&state, &first).is_some());
     }
     #[test]
     fn legacy_pending_draft_without_token_is_authorized_once_and_preserved() {
