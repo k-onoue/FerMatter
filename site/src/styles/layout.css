@@ -4,7 +4,7 @@ html:root[data-has-sidebar] {
 }
 :root[data-has-toc] {
   --sl-mobile-toc-height: 3rem;
-  scroll-padding-top: calc(var(--sl-nav-height) + 4.5rem);
+  scroll-padding-top: calc(var(--sl-nav-height) + 1.5rem);
 }
 .page {
   min-height: 100vh;
@@ -23,7 +23,7 @@ html:root[data-has-sidebar] {
   );
 }
 .main-frame {
-  padding-top: calc(var(--sl-nav-height) + var(--sl-mobile-toc-height));
+  padding-top: var(--sl-nav-height);
 }
 .main-pane {
   isolation: isolate;
@@ -60,6 +60,11 @@ body:has(#starlight__sidebar:popover-open) {
 .fm-desktop-toc {
   display: none;
 }
+.fm-mobile-toc nav {
+  position: relative;
+  inset: auto;
+  border-top: 0;
+}
 .fm-desktop-toc h2 {
   color: var(--fm-ink);
   font-size: 1rem;
@@ -79,7 +84,6 @@ body:has(#starlight__sidebar:popover-open) {
 @media (min-width: 90rem) {
   :root[data-has-toc] {
     --sl-mobile-toc-height: 0rem;
-    scroll-padding-top: calc(var(--sl-nav-height) + 1.5rem);
   }
   [data-has-sidebar] .page > .header {
     padding-inline-end: var(--sl-nav-pad-x);
