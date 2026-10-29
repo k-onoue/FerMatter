@@ -14,6 +14,7 @@ import path from "node:path";
 import { zipSync, unzipSync } from "fflate";
 import { guideLink } from "../lib/guide-links.mjs";
 import { checkPublication } from "../check-publication.mjs";
+import { releaseDownloadUrl } from "../verify-release-download.mjs";
 import { DEMOS, prepareDemos } from "../prepare-demo.mjs";
 import { previewServer } from "../preview-site.mjs";
 import { symlinkOrSkip } from "./symlink-helper.mjs";
@@ -26,11 +27,17 @@ function fixture(t) {
     mkdirSync(path.dirname(file), { recursive: true });
     writeFileSync(file, text);
   };
+  const feed = JSON.stringify({ version: "0.0.0", platforms: {} });
+  write("site/public/updates/stable.json", feed);
+  write("site/dist/updates/stable.json", feed);
   const page = "README.md";
   write("user-docs/pages.json", JSON.stringify([page]));
   write("user-docs/README.md", "# Guide\n\n- First instruction.\n");
   write("site/dist/index.html", '<h1 id="download">Home</h1>');
-  write("site/src/data/site.json", JSON.stringify({ base: "/FerMatter" }));
+  write(
+    "site/src/data/site.json",
+    JSON.stringify({ base: "/FerMatter", releaseAvailable: false }),
+  );
   write(".gitignore", "site/dist/\n");
   mkdirSync(path.join(root, "site/public"), { recursive: true });
   for (const [demo, names] of Object.entries(DEMOS))
@@ -50,6 +57,75 @@ function fixture(t) {
     read: (name) => readFileSync(path.join(root, name), "utf8"),
   };
 }
+
+test("macOS download links to separate checksum and signing notes", (t) => {
+  const { root, write } = fixture(t);
+  const config = {
+    base: "/FerMatter",
+    releaseAvailable: true,
+    releaseRepository: "example/releases",
+    releaseTag: "v1.0-preview.1",
+    assetName: "FerMatter.dmg",
+    releaseSha256: "a".repeat(64),
+    releaseNotarized: false,
+  };
+  write("site/src/data/site.json", JSON.stringify(config));
+  const notesUrl = "/FerMatter/download/macos-notes/";
+  const notesPath = "site/dist/download/macos-notes/index.html";
+  const good = `<section id="mac"><a href="${releaseDownloadUrl(config)}">Download DMG</a><a href="${notesUrl}">Download verification and opening notes</a></section>`;
+  const notes = `<p>Preview is not notarized by Apple. SHA-256: <code>${config.releaseSha256}</code></p>`;
+  write("site/dist/download/index.html", good);
+  assert.match(
+    checkPublication(root).errors.join("\n"),
+    /no verification notes/,
+  );
+
+  write(notesPath, notes);
+  assert.deepEqual(checkPublication(root).errors, []);
+
+  write("site/dist/download/index.html", good.replace(notesUrl, "#mac"));
+  assert.match(
+    checkPublication(root).errors.join("\n"),
+    /must link to its verification notes/,
+  );
+
+  write(
+    "site/dist/download/index.html",
+    good.replace(releaseDownloadUrl(config), "https://example.com/other.dmg"),
+  );
+  write(
+    notesPath,
+    notes
+      .replace(config.releaseSha256, "b".repeat(64))
+      .replace("not notarized by Apple", "ready"),
+  );
+  const errors = checkPublication(root).errors.join("\n");
+  assert.match(errors, /download link differs/);
+  assert.match(errors, /reviewed SHA-256/);
+  assert.match(errors, /Unnotarized macOS preview/);
+});
+
+test("malformed macOS release config cannot bypass publication checks", (t) => {
+  const { root, write } = fixture(t);
+  const config = {
+    base: "/FerMatter",
+    releaseAvailable: true,
+    releaseNotarized: false,
+    releaseRepository: "example/releases",
+    releaseTag: "v1.0-preview.1",
+    assetName: "FerMatter.dmg",
+    releaseSha256: "a".repeat(64),
+  };
+  write("site/dist/download/index.html", '<section id="mac"></section>');
+  for (const invalid of [
+    { releaseAvailable: "false" },
+    { releaseNotarized: "false" },
+    { assetName: "notes.txt" },
+  ]) {
+    write("site/src/data/site.json", JSON.stringify({ ...config, ...invalid }));
+    assert.match(checkPublication(root).errors.join("\n"), /Boolean|DMG asset/);
+  }
+});
 
 test("only allowlisted guide links and public assets can be published", (t) => {
   const { root, write } = fixture(t);

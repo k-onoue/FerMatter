@@ -22,6 +22,8 @@ Choose the format in the Library output bar or the Instant controls.
 
 For PowerPoint, use **SVG**. PDF artwork can be rasterized when PowerPoint exports a `.pptx` to PDF. [Reported issue](https://learn.microsoft.com/en-ie/answers/questions/5701486/recurring-issue-save-as-pdf-converts-vector-graphi).
 
+On Windows, SVG copies contain vector artwork and files. Choose **PNG** when the receiving app needs a bitmap.
+
 ## Output size
 
 **Output font size** accepts 1–200 pt. For project artwork, the first available setting wins:

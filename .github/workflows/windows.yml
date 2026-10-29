@@ -47,6 +47,7 @@ jobs:
             ~/.cargo/git
             desktop-app/src-tauri/target
           key: windows-2022-rust-${{ hashFiles('desktop-app/src-tauri/Cargo.lock') }}
+          restore-keys: windows-2022-rust-
       - name: Install real rendering tools
         shell: powershell
         run: |
@@ -120,5 +121,6 @@ jobs:
             desktop-app/build/release-validation/
             desktop-app/build/windows-install-*/verification.json
             desktop-app/build/windows-install-*/installed-compilers/
+            desktop-app/build/windows-install-*/startup-diagnostics/
           if-no-files-found: ignore
           retention-days: 30

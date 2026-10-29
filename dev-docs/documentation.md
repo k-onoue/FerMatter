@@ -21,8 +21,8 @@
 - Stack: [Astro](https://docs.astro.build/) + [Starlight](https://starlight.astro.build/); static HTML on GitHub Pages.
 - Search: [Pagefind](https://pagefind.app/), generated at build time; no search backend.
 - One canonical explanation per topic; short bullets, tables, commands, and primary-source links.
-- Guide ownership: overview/project folders in `README.md`; tools/compiler errors in `requirements.md`; editing modes/PDF refresh in `paper-to-slides.md`; image format/size/color/SVG restoration in `export.md`; keybindings/zoom in `shortcuts.md`; app appearance/theme files in `appearance.md`; agent setup/permissions in `automation.md`; Library exclusions in `extraction.md`. Cross-link to the owner instead of repeating instructions.
-- Download owns app installation and updates; installer notes cover macOS first-launch approval. Guide setup begins with workspace selection after the app opens. Keep existing guide routes and section anchors when reorganizing content.
+- Guide ownership: overview/project folders in `README.md`; tools/compiler errors in `requirements.md`; editing modes/PDF refresh in `paper-to-slides.md`; image format/size/color/SVG restoration in `export.md`; keybindings/zoom in `shortcuts.md`; app appearance/theme files in `appearance.md`; agent setup/permissions in `automation.md`; Library exclusions in `extraction.md`; symptom-to-release mapping in `resolved-issues.md`. Cross-link to the owner instead of repeating instructions.
+- Download owns app installation and updates; `/download/macos-notes/` covers macOS signing, first-launch approval and checksum verification. Guide setup begins with workspace selection after the app opens. Keep existing guide routes and section anchors when reorganizing content.
 - Release assets/counters use `releaseRepository`, separately from the application source `repository`. The download page owns the copyable full/BasicTeX/Typst install commands; requirements link there. Recheck installer and package-metadata sizes when changing the TeX release.
 - Publish only the allowlisted guides and reviewed assets; developer docs remain on GitHub.
 - No generated HTML in Git. `site/dist/`, `.astro/`, generated ZIP copies, and statistics are ignored.
@@ -56,7 +56,9 @@ node scripts/preview-site.mjs
 - **Guides:** edit `user-docs/*.md`; add new pages to `user-docs/pages.json`. The same Markdown renders on GitHub and the website; do not maintain a second HTML copy.
 - **Download:** edit `site/src/content/download/*.md` (macOS, Windows, Windows installer notes and Ubuntu). Markdown owns headings, instructions, tables and shell commands. Fenced `sh` blocks get the same copy controls as guides. Keep Ubuntu last and preserve the explicit legacy anchors.
 - `site/src/pages/download.astro` owns the OS tabs, dynamic release button/name and availability gates from `site.json`. Tabs follow the URL fragment or detected OS, support arrow/Home/End keys, and keep every OS section readable without JavaScript. Retain `#mac`, `#windows`, `#ubuntu` and existing nested anchors. Update release values through the release process; Markdown edits do not publish app binaries.
+- `site/src/content/download/macos-notes.md` owns opening/checksum instructions on `/download/macos-notes/`. Its Astro layout reads the release name, notarization flag, DMG filename and checksum from `site.json`; keep only a short link on Download.
 - Use `site/src/components/DownloadPlatform.astro` for each platform's version, requirements and primary action. Keep Markdown sections in the same order: Install, Rendering tools, Update. Linux's primary action links to its APT instructions.
+- Display each published platform's release name from `site.json`: `releaseName`, `windowsReleaseName`, and `ubuntuReleaseName` (for example, `0.11.0 Preview 4`). Update them independently with the actual published DMG, EXE or APT package; the shared app version alone does not identify a preview.
 - **News:** add a dated `.md` file to `site/src/content/news/`. The homepage automatically lists the five newest dates and titles. Each article appears in `/news/`, linked from every footer, and gets its own `/news/<filename>/` route.
 
 ```yaml
@@ -100,6 +102,7 @@ status: upcoming
 - GitHub Pages environment approvals/rules still apply.
 - Keep `repositoryPublic: false` while source access is restricted; switch it only after verifying anonymous repository access.
 - Download availability is manual: keep `releaseAvailable: false` until anonymous download, checksum and the selected release-channel checks pass. Use plain platform/version labels and concise installation steps on the website; retain technical provenance with the release artifacts. See [releasing](releasing.md) for channel-specific validation.
+- Record the reviewed DMG hash in `releaseSha256` with each macOS release update. `node scripts/verify-release-download.mjs` downloads the public DMG without authentication and checks its hash in Documentation CI and before website publication. It verifies the bytes available at that moment; it does not replace signing or native validation.
 - Windows uses independent `windowsReleaseAvailable`, `windowsReleaseTag`, `windowsReleaseName` and `windowsAssetName` fields. Enable its unsigned preview only after the exact EXE's anonymous download, checksum and installation/startup checks; retain the existing macOS asset fields.
 - Review the Pages artifact and public-repository diff: app sources, Git history and secrets must not enter either. `deployment.json` exposes only the source commit ID for deployment readiness checks.
 

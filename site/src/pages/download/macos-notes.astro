@@ -1,0 +1,40 @@
+---
+import { getEntry, render } from "astro:content";
+import { Code } from "@astrojs/starlight/components";
+import Product from "../../layouts/Product.astro";
+import config from "../../data/site.json";
+import { href } from "../../data/links";
+const notes = (await getEntry("download", "macos-notes"))!;
+const { title, description } = notes.data;
+const { Content } = await render(notes);
+---
+
+<Product markdown title={title} description={description}>
+  <header class="page-intro not-content">
+    <h1>{title}</h1>
+  </header>
+  <p>
+    <a href={href("download/#mac")}>← Back to Download</a>
+  </p>
+  {config.releaseAvailable ? (
+    <div class="product-markdown sl-markdown-content">
+      <h2>Current download</h2>
+      <p>FerMatter {config.releaseName}</p>
+      <p>
+        {config.releaseNotarized
+          ? "Notarized by Apple."
+          : "Ad hoc signed; not notarized by Apple."}
+      </p>
+      <Content />
+      <Code
+        code={`shasum -a 256 ~/Downloads/${config.assetName}`}
+        lang="sh"
+        wrap
+      />
+      <p>Expected SHA-256:</p>
+      <Code code={config.releaseSha256} lang="text" wrap />
+    </div>
+  ) : (
+    <p>No macOS download is currently available.</p>
+  )}
+</Product>

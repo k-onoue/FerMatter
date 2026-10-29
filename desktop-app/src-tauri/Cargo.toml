@@ -21,6 +21,11 @@ roxmltree = "0.20"
 tauri-plugin-dialog = "2"
 tauri-plugin-drag = "2"
 tauri-plugin-log = "2"
+tauri-plugin-updater = "~2.14.1"
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "system-proxy", "stream"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+semver = "1"
+url = "2"
 log = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -40,7 +45,7 @@ lopdf = "0.42"
 typstyle-core = "=0.15.1"
 typst-syntax = "=0.15.1"
 rmcp = { version = "3.5.0", default-features = false, features = ["server", "transport-io"] }
-tokio = { version = "1.53.3", features = ["rt-multi-thread", "io-std", "macros", "sync"] }
+tokio = { version = "1.53.3", features = ["rt-multi-thread", "io-std", "macros", "sync", "time"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
@@ -48,10 +53,12 @@ objc2 = "0.6"
 block2 = "0.6"
 objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSColor", "NSColorSpace", "NSColorSampler", "NSButton", "NSCell", "NSImage", "NSStatusBarButton", "NSStatusItem", "block2"] }
 plist = "1"
-url = "2"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_DataExchange", "Win32_System_LibraryLoader", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging"] }
+
+[dev-dependencies]
+tauri = { version = "~2.12", features = ["test"] }
 
 [profile.release]
 strip = true
