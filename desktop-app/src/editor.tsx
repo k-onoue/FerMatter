@@ -7,7 +7,7 @@ import { ModelOwnership } from "./modelOwnership";
 import { registerWindowFlush, runWhenWindowInteractive } from "./persistence";
 import { formatSource } from "./formatting";
 import type { FormatMode } from "./formattingTypes";
-import { isWindows } from "./platform";
+import { isMacOS, isWindows } from "./platform";
 (self as unknown as { MonacoEnvironment: unknown }).MonacoEnvironment = {
   getWorker: () => new EditorWorker(),
 };
@@ -534,7 +534,7 @@ export function CodeEditor(props: EditorProps) {
           <button
             disabled={props.readOnly || formatBusy}
             aria-label="Format Source"
-            title={`Format ${props.format === "typst" ? "Typst" : "LaTeX"} (⇧⌥F)`}
+            title={`Format ${props.format === "typst" ? "Typst" : "LaTeX"} (${isMacOS() ? "⇧⌥F" : "Shift+Alt+F"})`}
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => void formatCurrent.current()}
           >
