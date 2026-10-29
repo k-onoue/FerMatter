@@ -7,6 +7,7 @@
 // https://github.com/tauri-apps/plugins-workspace/tree/single-instance-v2.5.4/plugins/single-instance
 
 type SingleInstanceCallback<R> = dyn FnMut(&AppHandle<R>, Vec<String>, String) + Send + Sync;
+use std::collections::VecDeque;
 use tauri::{
     plugin::{self, TauriPlugin},
     AppHandle, Manager, RunEvent, Runtime,
@@ -45,6 +46,8 @@ struct UserData<R: Runtime> {
     app: AppHandle<R>,
     callback: Box<SingleInstanceCallback<R>>,
     owned_by_window: bool,
+    ready: bool,
+    pending: VecDeque<(Vec<String>, String)>,
 }
 
 impl<R: Runtime> UserData<R> {
@@ -54,6 +57,28 @@ impl<R: Runtime> UserData<R> {
 
     fn run_callback(&mut self, args: Vec<String>, cwd: String) {
         (self.callback)(&self.app, args, cwd)
+    }
+
+    fn accept(&mut self, args: Vec<String>, cwd: String) -> bool {
+        if self.ready {
+            self.run_callback(args, cwd);
+        } else {
+            // WebView creation pumps Windows messages before application setup
+            // has installed Runtime/Lifecycle. Retain launches until Ready.
+            if self.pending.len() >= 32 {
+                return false;
+            }
+            self.pending.push_back((args, cwd));
+        }
+        true
+    }
+
+    fn mark_ready(&mut self) {
+        self.ready = true;
+        let pending = std::mem::take(&mut self.pending);
+        for (args, cwd) in pending {
+            self.run_callback(args, cwd);
+        }
     }
 }
 
@@ -108,6 +133,7 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                             lpData: bytes.as_ptr() as _,
                         };
 
+                        let mut accepted = 0;
                         let sent = SendMessageTimeoutW(
                             hwnd,
                             WM_COPYDATA,
@@ -115,9 +141,9 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                             &cds as *const _ as _,
                             SMTO_NORMAL,
                             FORWARD_TIMEOUT_MS,
-                            std::ptr::null_mut(),
+                            &mut accepted,
                         );
-                        if sent == 0 {
+                        if sent == 0 || accepted != 1 {
                             return Err(std::io::Error::other("The running FerMatter did not accept the launch. Quit it before retrying.").into());
                         }
 
@@ -131,6 +157,8 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                     app: app.clone(),
                     callback,
                     owned_by_window: false,
+                    ready: false,
+                    pending: VecDeque::new(),
                 };
                 let userdata = Box::into_raw(Box::new(userdata));
                 let hwnd = create_event_target_window::<R>(&class_name, &window_name, userdata);
@@ -149,6 +177,16 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
             Ok(())
         })
         .on_event(|app, event| {
+            if let RunEvent::Ready = event {
+                if let Some(hwnd) = app.try_state::<TargetWindowHandle>() {
+                    // Both this event and the forwarding window run on the main
+                    // thread. Ready follows all application setup and WebViews.
+                    let userdata = unsafe { UserData::<R>::from_hwnd_raw(hwnd.0 as _) };
+                    if !userdata.is_null() {
+                        unsafe { (*userdata).mark_ready() };
+                    }
+                }
+            }
             if let RunEvent::Exit = event {
                 destroy(app);
             }
@@ -218,8 +256,7 @@ unsafe extern "system" fn single_instance_window_proc<R: Runtime>(
             if userdata.is_null() {
                 return 0;
             }
-            unsafe { (*userdata).run_callback(args, cwd) };
-            1
+            unsafe { (*userdata).accept(args, cwd) as LRESULT }
         }
 
         WM_DESTROY => {
@@ -323,4 +360,61 @@ unsafe fn GetWindowLongPtrW(hwnd: HWND, index: WINDOW_LONG_PTR_INDEX) -> isize {
 #[allow(non_snake_case)]
 unsafe fn GetWindowLongPtrW(hwnd: HWND, index: WINDOW_LONG_PTR_INDEX) -> isize {
     unsafe { w32wm::GetWindowLongPtrW(hwnd, index) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{Arc, Mutex};
+
+    #[test]
+    fn forwarded_launches_wait_for_application_setup_and_keep_their_order() {
+        struct Initialized;
+        let app = tauri::test::mock_app();
+        let received = Arc::new(Mutex::new(Vec::new()));
+        let output = received.clone();
+        let mut data = UserData {
+            app: app.handle().clone(),
+            callback: Box::new(move |app, args, cwd| {
+                let _ = app.state::<Initialized>();
+                output.lock().unwrap().push((args, cwd));
+            }),
+            owned_by_window: false,
+            ready: false,
+            pending: VecDeque::new(),
+        };
+        assert!(data.accept(vec!["first.svg".into()], "first".into()));
+        assert!(data.accept(vec!["second.svg".into()], "second".into()));
+        assert!(received.lock().unwrap().is_empty());
+        app.manage(Initialized);
+        data.mark_ready();
+        assert!(data.accept(vec!["third.svg".into()], "third".into()));
+        data.mark_ready();
+        assert_eq!(
+            *received.lock().unwrap(),
+            vec![
+                (vec!["first.svg".to_owned()], "first".to_owned()),
+                (vec!["second.svg".to_owned()], "second".to_owned()),
+                (vec!["third.svg".to_owned()], "third".to_owned()),
+            ]
+        );
+    }
+
+    #[test]
+    fn startup_launch_queue_is_bounded() {
+        let app = tauri::test::mock_app();
+        let mut data = UserData {
+            app: app.handle().clone(),
+            callback: Box::new(|_, _, _| {}),
+            owned_by_window: false,
+            ready: false,
+            pending: VecDeque::new(),
+        };
+        for _ in 0..32 {
+            assert!(data.accept(vec![], String::new()));
+        }
+        assert!(!data.accept(vec![], String::new()));
+        data.mark_ready();
+        assert!(data.accept(vec![], String::new()));
+    }
 }

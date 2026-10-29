@@ -172,7 +172,7 @@ fn bitmap(bytes: &[u8]) -> Result<Vec<u8>> {
     }
     Ok(dib)
 }
-pub fn clipboard(paths: &[PathBuf]) -> Result<()> {
+fn clipboard_data(paths: &[PathBuf]) -> Result<Vec<(u32, Vec<u8>)>> {
     if paths.is_empty() {
         return Err("No images selected.".into());
     }
@@ -181,8 +181,7 @@ pub fn clipboard(paths: &[PathBuf]) -> Result<()> {
             return Err("Image exceeds the 100 MB clipboard limit.".into());
         }
     }
-    // Prepare all allocations before replacing the user's current clipboard.
-    let mut data = vec![(15, Memory::new(&file_drop(paths))?)]; // CF_HDROP
+    let mut data = vec![(15, file_drop(paths))]; // CF_HDROP
     if paths.len() == 1 {
         let bytes = read_bounded(&paths[0], ARTIFACT_LIMIT)?;
         let extension = paths[0]
@@ -192,30 +191,37 @@ pub fn clipboard(paths: &[PathBuf]) -> Result<()> {
             .to_ascii_lowercase();
         let png = match extension.as_str() {
             "svg" => {
-                data.push((format("image/svg+xml")?, Memory::new(&bytes)?));
-                let output = tempfile::Builder::new()
-                    .suffix(".png")
-                    .tempfile()
-                    .map_err(err)?;
-                crate::compiler::raster(&bytes, output.path(), 900)?;
-                Some(read_bounded(output.path(), ARTIFACT_LIMIT)?)
+                // Some receivers (including Impress) prefer a bitmap over SVG
+                // when both are offered. Keep SVG copies vector-only; choosing
+                // PNG explicitly still supplies the bitmap representations.
+                data.push((format("image/svg+xml")?, bytes));
+                None
             }
             "png" => Some(bytes),
             "jpg" | "jpeg" => {
-                data.push((17, Memory::new(&bitmap(&bytes)?)?));
+                data.push((17, bitmap(&bytes)?));
                 None
             }
             "pdf" => {
-                data.push((format("application/pdf")?, Memory::new(&bytes)?));
+                data.push((format("application/pdf")?, bytes));
                 None
             }
             _ => None,
         };
         if let Some(png) = png {
-            data.push((format("PNG")?, Memory::new(&png)?));
-            data.push((17, Memory::new(&bitmap(&png)?)?)); // CF_DIBV5
+            let dib = bitmap(&png)?;
+            data.push((format("PNG")?, png));
+            data.push((17, dib)); // CF_DIBV5
         }
     }
+    Ok(data)
+}
+pub fn clipboard(paths: &[PathBuf]) -> Result<()> {
+    // Prepare all allocations before replacing the user's current clipboard.
+    let data = clipboard_data(paths)?
+        .into_iter()
+        .map(|(format, bytes)| Ok((format, Memory::new(&bytes)?)))
+        .collect::<Result<Vec<_>>>()?;
     let _clipboard = Clipboard::open()?;
     if unsafe { EmptyClipboard() } == 0 {
         return Err("Unable to clear the clipboard.".into());
@@ -277,6 +283,41 @@ pub fn import_svg() -> Result<Vec<String>> {
 mod tests {
     use super::*;
     #[test]
+    fn svg_copy_preserves_vector_bytes_without_a_preferred_bitmap_fallback() {
+        let directory = tempfile::tempdir().unwrap();
+        let svg = br#"<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="blue"/></svg>"#;
+        let path = directory.path().join("synthetic.svg");
+        std::fs::write(&path, svg).unwrap();
+        let paths = [path];
+        let data = clipboard_data(&paths).unwrap();
+        assert!(data
+            .iter()
+            .any(|(id, bytes)| *id == 15 && *bytes == file_drop(&paths)));
+        assert!(data
+            .iter()
+            .any(|(id, bytes)| *id == format("image/svg+xml").unwrap() && bytes == svg));
+        assert!(!data
+            .iter()
+            .any(|(id, _)| *id == 17 || *id == format("PNG").unwrap()));
+    }
+    #[test]
+    fn explicit_png_copy_keeps_bitmap_formats_and_transparency() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("synthetic.png");
+        let image = image::RgbaImage::from_pixel(1, 1, image::Rgba([10, 20, 30, 40]));
+        image.save(&path).unwrap();
+        let png = std::fs::read(&path).unwrap();
+        let data = clipboard_data(&[path]).unwrap();
+        assert!(data
+            .iter()
+            .any(|(id, bytes)| *id == format("PNG").unwrap() && *bytes == png));
+        let dib = &data.iter().find(|(id, _)| *id == 17).unwrap().1;
+        assert_eq!(&dib[124..], &[30, 20, 10, 40]);
+        assert!(!data
+            .iter()
+            .any(|(id, _)| *id == format("image/svg+xml").unwrap()));
+    }
+    #[test]
     fn explorer_file_drop_uses_utf16_and_double_null_termination() {
         let bytes = file_drop(&[
             PathBuf::from(r"C:\図\one.svg"),
@@ -295,7 +336,7 @@ mod tests {
     }
     #[test]
     #[ignore = "uses the current Windows desktop clipboard"]
-    fn windows_desktop_clipboard_round_trip_keeps_svg_and_image_formats() {
+    fn windows_desktop_clipboard_round_trip_keeps_svg_and_explicit_png_formats() {
         let directory = tempfile::tempdir().unwrap();
         let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="blue"/></svg>"#;
         let path = directory.path().join("synthetic.svg");
@@ -304,16 +345,23 @@ mod tests {
         assert_eq!(import_svg().unwrap(), vec![svg]);
         {
             let _clipboard = Clipboard::open().unwrap();
-            for representation in [
-                15,
-                17,
-                format("PNG").unwrap(),
-                format("image/svg+xml").unwrap(),
-            ] {
+            for representation in [15, format("image/svg+xml").unwrap()] {
                 assert!(!unsafe { GetClipboardData(representation) }.is_null());
+            }
+            for representation in [17, format("PNG").unwrap()] {
+                assert!(unsafe { GetClipboardData(representation) }.is_null());
             }
         }
         assert!(clipboard(&[path, directory.path().join("missing.svg")]).is_err());
         assert_eq!(import_svg().unwrap(), vec![svg]);
+        let png = directory.path().join("synthetic.png");
+        image::RgbaImage::from_pixel(1, 1, image::Rgba([10, 20, 30, 40]))
+            .save(&png)
+            .unwrap();
+        clipboard(&[png]).unwrap();
+        let _clipboard = Clipboard::open().unwrap();
+        for representation in [15, 17, format("PNG").unwrap()] {
+            assert!(!unsafe { GetClipboardData(representation) }.is_null());
+        }
     }
 }

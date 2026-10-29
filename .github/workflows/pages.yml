@@ -44,6 +44,7 @@ jobs:
       - run: npm --prefix scripts test
       - run: node scripts/build-guides.mjs --check
       - run: node scripts/check-publication.mjs
+      - run: node scripts/verify-release-download.mjs
       - name: Publish the organization website
         env:
           WEBSITE_DEPLOY_KEY: ${{ secrets.WEBSITE_DEPLOY_KEY }}

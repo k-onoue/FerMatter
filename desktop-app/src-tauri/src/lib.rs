@@ -31,6 +31,7 @@ mod storage;
 #[cfg(any(target_os = "macos", windows, test))]
 mod svg_payload;
 mod toolchain;
+mod updates;
 pub mod verification;
 #[cfg(target_os = "macos")]
 mod wallpaper;
@@ -108,6 +109,27 @@ async fn request(
     operation: String,
     mut payload: Value,
 ) -> Result<Value> {
+    if operation.starts_with("update_") {
+        match operation.as_str() {
+            "update_state" => {}
+            "update_history" => updates::open_history()?,
+            "update_check" => updates::check(&app, true).await?,
+            "update_download" => updates::download(&app).await?,
+            "update_cancel" => updates::cancel(&app),
+            "update_install" => updates::install(&app).await?,
+            "update_automatic" => {
+                updates::automatic(
+                    &app,
+                    payload["enabled"]
+                        .as_bool()
+                        .ok_or("Invalid update preference.")?,
+                )?;
+                updates::check(&app, false).await?;
+            }
+            _ => return Err("Unknown update operation.".into()),
+        }
+        return serde_json::to_value(updates::snapshot(&app)).map_err(err);
+    }
     if operation == "sample_color" {
         return color_sampler::sample(&app).await.map(|color| json!(color));
     }
@@ -951,6 +973,10 @@ pub fn run() {
     {
         return;
     }
+    if let Err(error) = updates::wait_for_previous_process() {
+        eprintln!("{error}");
+        return;
+    }
     let mut context = tauri::generate_context!();
     if std::env::args().any(|a| a == "--automation-background") {
         for window in &mut context.config_mut().app.windows {
@@ -1010,6 +1036,7 @@ pub fn run() {
                 .with_handler(resident::hotkey)
                 .build(),
         )
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_drag::init())
         .setup(|app| {
@@ -1054,6 +1081,10 @@ pub fn run() {
                     eprintln!("Cache maintenance skipped: {error}");
                 }
             });
+            app.manage(updates::Updates::new(
+                &store.home,
+                app.package_info().version.to_string(),
+            ));
             app.manage(Arc::new(Runtime {
                 cache,
                 settings,
@@ -1063,6 +1094,7 @@ pub fn run() {
                 tools_revision: Mutex::new(string(&tools_snapshot, "revision").to_owned()),
             }));
             app.manage(lifecycle::Lifecycle::default());
+            updates::start(app.handle());
             #[cfg(unix)]
             {
                 app.state::<single_instance::Guard>().listen(app.handle())?;
@@ -1161,6 +1193,7 @@ pub fn run() {
                     std::env::args().skip(1),
                     &std::env::current_dir().unwrap_or_default(),
                 );
+                log::info!("FerMatter application setup complete");
             }
             #[cfg(unix)]
             tauri::RunEvent::Ready => {
