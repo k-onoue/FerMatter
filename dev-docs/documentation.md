@@ -58,6 +58,7 @@ node scripts/preview-site.mjs
 - `site/src/pages/download.astro` owns the OS tabs, dynamic release button/name and availability gates from `site.json`. Tabs follow the URL fragment or detected OS, support arrow/Home/End keys, and keep every OS section readable without JavaScript. Retain `#mac`, `#windows`, `#ubuntu` and existing nested anchors. Update release values through the release process; Markdown edits do not publish app binaries.
 - `site/src/content/download/macos-notes.md` owns opening/checksum instructions on `/download/macos-notes/`. Its Astro layout reads the release name, notarization flag, DMG filename and checksum from `site.json`; keep only a short link on Download.
 - Use `site/src/components/DownloadPlatform.astro` for each platform's version, requirements and primary action. Keep Markdown sections in the same order: Install, Rendering tools, Update. Linux's primary action links to its APT instructions.
+- Display each published platform's release name from `site.json`: `releaseName`, `windowsReleaseName`, and `ubuntuReleaseName` (for example, `0.11.0 Preview 4`). Update them independently with the actual published DMG, EXE or APT package; the shared app version alone does not identify a preview.
 - **News:** add a dated `.md` file to `site/src/content/news/`. The homepage automatically lists the five newest dates and titles. Each article appears in `/news/`, linked from every footer, and gets its own `/news/<filename>/` route.
 
 ```yaml

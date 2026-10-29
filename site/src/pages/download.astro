@@ -60,7 +60,11 @@ const { Content: Ubuntu } = await render(ubuntu);
   </DownloadPlatform>
   <DownloadPlatform
     id="windows"
-    version={config.version}
+    version={
+      config.windowsReleaseAvailable
+        ? config.windowsReleaseName
+        : config.version
+    }
     requirements={windows.data.platform!}
     action={
       config.windowsReleaseAvailable
@@ -79,7 +83,7 @@ const { Content: Ubuntu } = await render(ubuntu);
   {config.ubuntuAptAvailable && (
     <DownloadPlatform
       id="ubuntu"
-      version={config.version}
+      version={config.ubuntuReleaseName}
       requirements={ubuntu.data.platform!}
       action={{ href: "#ubuntu-install", label: "Install with APT" }}
     >
