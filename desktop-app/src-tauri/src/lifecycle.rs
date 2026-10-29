@@ -252,7 +252,17 @@ fn complete_on_main(app: &tauri::AppHandle, label: &str, token: u64, error: &str
         let result = if label == "main" {
             window.hide()
         } else {
-            window.destroy()
+            #[cfg(windows)]
+            {
+                // DestroyWindow also destroys its attached HMENU. Tauri shares
+                // the app menu with main/other Instant windows, so detach this
+                // window first to keep their menus and theme state valid.
+                window.remove_menu().and_then(|_| window.destroy())
+            }
+            #[cfg(not(windows))]
+            {
+                window.destroy()
+            }
         };
         resume_windows(app, token);
         result.map_err(err)?;

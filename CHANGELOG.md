@@ -9,6 +9,7 @@
 ## [Unreleased]
 
 - Queue forwarded Windows launches until application setup finishes, preserving requests received while the first window is still starting.
+- Preserve Windows menus and their selected theme when closing Instant windows.
 
 - Keep single SVG copies as vector artwork on Windows, including when pasting into LibreOffice Impress; choose PNG explicitly for bitmap-only receivers.
 
