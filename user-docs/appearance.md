@@ -1,33 +1,35 @@
 ---
 title: "Appearance"
-description: "Set app appearance, window behavior and theme files; compare light and dark themes."
+description: "Themes, window opacity, and color palettes."
 sidebar:
   order: 6
 ---
 
-## Settings
+<span id="settings"></span>
 
-Open **Settings → Appearance**.
+Configure window themes and layout in **Settings → Appearance**.
 
-| Control | Changes |
+| Setting | Options |
 | --- | --- |
-| **Appearance** | **System**, **Light** or **Dark** mode |
-| **Color Theme** | The palette, such as Default, Atom One or Catppuccin |
-| **Background opacity** | Background transparency; text and equations stay opaque |
+| **Appearance** | **System**, **Light**, or **Dark** |
+| **Color Theme** | 16 palettes (Default, Catppuccin, Tokyo Night, etc.) |
+| **Background Opacity** | Adjusts window transparency while text and preview remain fully opaque |
 
-These settings affect the app window. See [Output color](export.md#output-color) to change exported artwork.
+Window themes affect the editor and application shell only. See [Output color](export.md#output-color) to customize exported equation colors.
 
 ![FerMatter Appearance settings: appearance mode, color theme, background opacity and theme file controls](../site/public/assets/appearance/settings.webp)
 
-## Keep equations beside your slides
+<span id="keep-equations-beside-your-slides"></span>
 
-**Always on Top** (`⇧⌘P`) pins the window above other apps. Combine it with **Background opacity** to keep FerMatter beside your presentation.
+## Floating alongside slides
+
+Enable **Always on Top** (`⇧⌘P`) and adjust **Background opacity** to position FerMatter beside PowerPoint or Keynote while drafting presentations.
 
 <span id="manage-shortcuts-and-themes-as-files"></span>
 
 ## Theme files
 
-Under **Settings → Appearance → Theme file**, **Edit JSON / Reload / Import… / Export…** manages `theme.json`. Export custom colors before switching themes; **Default** restores the built-in palette. Keyboard assignments use a separate [shortcut file](shortcuts.md#shortcut-files).
+Manage palette definitions (`theme.json`) via **Edit JSON / Reload / Import… / Export…**. Keybindings use a separate [shortcut file](shortcuts.md#shortcut-files).
 
 ## Color themes
 

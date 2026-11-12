@@ -1,23 +1,25 @@
 ---
-title: "MCP"
-description: "Connect a local agent to FerMatter."
+title: "MCP & CLI"
+description: "Connect AI agents and automated workflows to FerMatter."
 sidebar:
   order: 7
 ---
 
 ![A local MCP client connects over stdio to FerMatter, which renders saved projects with LaTeX or Typst and exports image files.](../site/public/assets/guide/mcp.svg)
 
-MCP and CLI are available on macOS and Linux. On Windows, use the desktop interface.
+FerMatter includes a built-in stdio **MCP (Model Context Protocol)** server and CLI on macOS and Linux.
 
-Open the project in FerMatter and configure its [compiler tools](requirements.md#tool-discovery) before connecting your local agent.
+Before connecting an agent, open the project in FerMatter and verify [compiler tools](requirements.md#tool-discovery).
 
-## Connect through MCP
+<span id="connect-through-mcp"></span>
 
-Use local **stdio**, with a **300-second** tool timeout. Adjust the app path if installed elsewhere.
+## Agent setup
 
-### Codex
+Use local **stdio** transport with a **300-second** timeout.
 
-Add to `~/.codex/config.toml`:
+<span id="codex"></span>
+
+### Codex (`~/.codex/config.toml`)
 
 ```toml
 [mcp_servers.fermatter]
@@ -32,23 +34,36 @@ tool_timeout_sec = 300
 claude mcp add --transport stdio fermatter -- /Applications/FerMatter.app/Contents/MacOS/FerMatter mcp
 ```
 
-## Check the connection
+<span id="check-the-connection"></span>
 
-Ask your connected agent: “List the projects available through FerMatter MCP.” The result should include the projects registered in FerMatter. If a project is missing, open it in the app and try again.
+## Verify connection
 
-## Available operations
+Ask your agent:
 
-| Task | Ask the agent to… |
+> *"List the projects available through FerMatter MCP."*
+
+The response will list registered projects.
+
+<span id="available-operations"></span>
+
+## Capabilities
+
+| Task | What the agent can do |
 | --- | --- |
-| Find source material | List registered projects or templates; search and read Library equations |
-| Produce images | Render supplied source or export saved equations |
-| Keep a slide-specific edit | Add a Library variant |
-| Review exported artwork | Reopen a FerMatter SVG in the app |
+| **Inspect** | List registered projects and templates; search equations and diagrams |
+| **Render** | Compile arbitrary LaTeX/Typst snippets into SVG, PDF, PNG, or JPEG |
+| **Export** | Batch export saved equations and diagrams directly to a folder |
+| **Variants** | Create slide-specific variants without altering original files |
+| **Reopen** | Reopen FerMatter SVGs inside the desktop app |
 
-For example: “Find the least-squares equations in demo-paper and export them as SVG at 30 pt into /tmp.” Check that the returned SVG files exist in the output folder.
+Example prompt:
 
-## Files and permissions
+> *"Find the least-squares equations in demo-paper and export them as SVG at 30 pt into /tmp."*
 
-- MCP reads saved project files and Library content; save Source edits before rendering or exporting through an agent.
-- Export folders must already exist outside project source folders.
-- Adding a variant keeps the original card and manuscript unchanged. MCP cannot edit manuscript files, delete projects or change settings.
+<span id="files-and-permissions"></span>
+
+## Safety & scope
+
+- MCP operates on saved project snapshots and the Library database. Save source edits before triggering agent tasks.
+- Target export directories must exist and be outside project source roots.
+- Agents cannot delete projects, overwrite original manuscript files, or alter app settings.

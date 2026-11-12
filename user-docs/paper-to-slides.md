@@ -1,87 +1,86 @@
 ---
-title: "From your paper to a slide"
-description: "Choose Library, PDF, Source or Instant for your equation workflow."
+title: "From paper to slides"
+description: "Work with equations and diagrams across Library, PDF, Source, and Instant."
 sidebar:
   order: 3
 ---
 
-1. **Open Project** (`⌘O`): select your LaTeX or Typst folder, or try a bundled demo.
-2. Select an equation in **Library**.
-3. Copy (`⇧⌘C`) or drag the card into your slide. See [Choose size and format](export.md) for output settings and file export.
+1. **Open Project** (`⌘O`): Select a LaTeX or Typst folder, or open a demo project.
+2. Select an item in **Library**.
+3. Copy (`⇧⌘C`) or drag the card directly into your presentation slide.
 
 ## Library
 
-Use Library for slide-specific changes while keeping the manuscript unchanged.
+Use Library to create slide-specific variants without modifying your manuscript.
 
-1. Find a card using search, the document outline or the type filters.
-2. Double-click it to edit the equation and preview the result.
-3. **Save Variant** (`⌘S`) creates a **Custom** card; the original source card stays unchanged.
+- **Search & Filter:** Find items by search, outline, or type (Inline, Block, Figures).
+- **Edit Variants:** Double-click any card to customize its code, size, or color.
+- **Save Variant** (`⌘S`): Creates a **Custom** card while leaving the original source intact.
 
 ![Library: document outline, Block filter, equation cards and output controls](../site/public/assets/guide/library.webp)
 
-### Figures
+<span id="figures"></span>
 
-**Figures** filters TikZ/CeTZ drawings. Edit them as Library variants, just like equations. See [output sizing](export.md#output-size) for scaling drawings and their labels.
+### Diagrams and figures
+
+The **Figures** filter isolates TikZ and CeTZ diagrams. Edit them as Library variants just like equations. Diagrams scale as a whole (see [output sizing](export.md#output-size)).
 
 ![CeTZ drawings shown as Library cards](../site/public/assets/guide/figures.webp)
 
-## PDF
+<span id="pdf"></span>
 
-Use PDF to locate equations in the compiled paper.
+## PDF view
 
-- Open **PDF** (`⌥⌘P`). Selecting a Library card highlights its paper location.
-- Click a mapped equation in the PDF to select its Library card or Source range.
-- Hover over a mapped equation and drag its grab handle to use the displayed artwork in a slide.
+Locate and grab equations directly from the compiled paper.
+
+- Open **PDF** (`⌥⌘P`). Selecting a Library card highlights its location in the paper.
+- Click a highlighted equation in the PDF to navigate to its Library card or Source line.
+- Hover over an equation in the PDF and drag its handle to drop the rendered artwork onto a slide.
 
 ![Source code beside the paper PDF, with an equation dragged directly from the highlighted PDF formula](../site/public/assets/demos/drag-from-pdf.webp)
 
-Custom variants navigate to their original equation. Generated or ambiguous locations may have no PDF target; use the Library card or Source preview instead.
+<span id="source"></span>
 
-## Source
+## Source editor
 
 Use **Source** (`⌥⌘E`) to edit actual project files.
 
-- Open a file from the tree. **Settings → Editor → Save files** selects automatic saving or manual `⌘S`.
-- Pause inside an equation or drawing to show a caret preview. It uses open unsaved drafts without saving source files; copy or drag the preview when ready.
-- Unsaved buffers survive tab/project changes and relaunches. Recovered drafts wait for an edit or explicit save. External file changes block saving until you resolve the conflict.
+- File tree, tabs, split panes, and Monaco editor with full undo/redo.
+- **Settings → Editor → Save files** selects automatic saving or manual `⌘S`.
+- **Caret Preview:** Placing the cursor inside an equation or diagram generates an instant preview.
+- Unsaved drafts persist across tab switches and relaunches. External modifications prompt conflict resolution.
 
 ![Source files and outline beside the editor and compiled paper PDF](../site/public/assets/guide/source.webp)
 
 ## Instant
 
-Use Instant for a scratch equation without editing project files.
+Use Instant for quick scratchwork without touching project files.
 
-| Open from | Context |
+| Source | Context |
 | --- | --- |
-| **Instant** on Projects | A standalone LaTeX, Typst, TikZ or CeTZ template |
-| A project's lightning button | That project's saved definitions, imports and compiler settings; save Source edits first |
+| **Instant** on Projects screen | Standalone LaTeX, Typst, TikZ, or CeTZ template |
+| Lightning button in a project | Inherits project definitions, packages, and compiler settings |
 
-Choose **Display** or **Inline** for a math body without outer `$` or `\[...\]` delimiters:
+Modes:
 
-- LaTeX: `\frac{a+b}{c}`
-- Typst: `(a+b)/c`
-
-Choose **Code** for complete environments, TikZ/CeTZ drawings or Typst markup. Use the preview with the [output controls](export.md).
+- **Display / Inline:** Enter math bodies without outer delimiters (`$`, `\[...\]`).
+- **Code:** Full environments, TikZ/CeTZ diagrams, or Typst code blocks.
 
 ![Instant: equation source beside its preview, with size, color, format and Copy controls](../site/public/assets/guide/instant.webp)
 
-Drafts and library entries save automatically. Editing updates the selected entry; **New equation** starts another, and **Duplicate equation** keeps the original. Standalone and project Instant libraries are separate.
+Project Instant uses saved files; save Source edits first. Instant drafts save automatically. **New equation** starts another entry; **Duplicate equation** preserves the original.
 
 ## Refresh after changes
 
-After changing source files, refresh each view you need:
+When source files change on disk, update the workspace:
 
-| Action | Updates |
+| Action | Result |
 | --- | --- |
-| **Rescan** (`⌘R`) | Library equations, drawings and outline |
-| **Rebuild PDF** (`⇧⌘R`) | The document PDF and its navigation snapshot |
-
-A failed PDF build keeps the previous document. PDF navigation and dragging use the displayed document's compiled snapshot.
+| **Rescan** (`⌘R`) | Refreshes equations, diagrams, and the document outline |
+| **Rebuild PDF** (`⇧⌘R`) | Recompiles document PDF and updates SyncTeX mappings |
 
 <span id="project-folders"></span>
-
-For opening, creating, importing or deleting projects, see [Project folders](README.md#project-folders).
+For workspace folders, see [Project management](README.md#project-management).
 
 <span id="if-it-does-not-render"></span>
-
-For compiler failures and extraction limitations, see [Requirements](requirements.md#if-rendering-fails).
+For compilation troubleshooting, see [Requirements](requirements.md#if-rendering-fails).

@@ -1,72 +1,42 @@
 # Architecture
 
-- Maintained app: [desktop-app](../desktop-app/README.md), Tauri 2 + Rust + React/TypeScript.
-- Monaco supplies the shared editor; PDF.js displays document PDFs.
-- Rust invokes external LaTeX/Typst compilers in temporary project snapshots; no Python worker runtime.
-- The retired Swift/Python implementation is available in Git history before its removal PR.
+- **Stack:** Tauri 2 (Rust) + React 19 / TypeScript + Monaco Editor + PDF.js.
+- **External Compilers:** Rust invokes system LaTeX and Typst tools inside isolated temporary snapshots.
+- **Automation:** Stdio MCP server and CLI are built directly into the macOS/Linux binary.
 
-## Responsibilities
+## Module responsibilities
 
-| Area | Location under `desktop-app/` |
+| Area | Implementation (`desktop-app/`) |
 | --- | --- |
-| Project selection, imports, duplication and undo | `src/ProjectsPage.tsx`, `src/projectSelection.ts`, `src-tauri/src/project_commands.rs`, `src-tauri/src/project_location.rs`, `src-tauri/src/project_history.rs` |
-| First-launch folder choice and demo migration | `src/ProjectSetup.tsx`, `src-tauri/src/project_setup.rs` |
-| Workflows, selection, Library variants | `src/App.tsx`, `src/variants.ts` |
-| Project workspace tabs and retained view state | `src/workspaces.ts`, `src/WorkspaceTabs.tsx` |
-| Library outline/labels and variant editor | `src/LibraryNavigation.tsx`, `src/VariantEditor.tsx` |
-| Shared Monaco models, coloring, completion | `src/editor.tsx` |
-| Manual formatting and isolated parsers | `src/formatting.ts`, `src/formatting.worker.ts`, `src/latexFormatting.ts`, `src-tauri/src/formatting.rs` |
-| Source buffers, file tree, tabs and split panes | `src/SourceWorkspace.tsx`, `src/panes.ts` |
-| Source-file mutation commands | `src-tauri/src/source_commands.rs` |
-| PDF viewer, source ranges and hit matching | `src/PdfPane.tsx`, `src/navigation.ts` |
-| Settings and project templates | `src/settings.tsx`, `src/templates.ts`, `src/NewProjectDialog.tsx` |
-| Shared theme palette and window/editor appearance | `src/appearance.ts`, `src/useAppearance.ts` |
-| Output color picker, HEX validation, recent colors and macOS screen sampler | `src/ColorPicker.tsx`, `src/outputColor.ts`, `src/colorHistory.ts`, `src-tauri/src/color_sampler.rs` |
-| Project-free Instant window, drafts and history | `src/InstantWindow.tsx`, `src/instant.ts`, `src-tauri/src/instant.rs` |
-| Instant preview gestures and native drag artifact lifetime | `src/InstantPreview.tsx`, `src/artifactLease.ts` |
-| Shortcut matching and defaults | `src/shortcuts.ts`; matching Rust validation in `src-tauri/src/settings.rs` |
-| IPC and request ownership | `src-tauri/src/lib.rs` |
-| Fixed macOS Dock artwork and menu-bar presentation | `src-tauri/src/native.rs`; bundled assets from `scripts/build-icons.mjs` |
-| LaTeX/Typst extraction, includes and outline | `src-tauri/src/scan.rs` |
-| Global Library exclusion settings | `src-tauri/src/extraction.rs`, `src/ExtractionSettings.tsx` |
-| Compiler snapshots, cancellation and SyncTeX | `src-tauri/src/compiler.rs` |
-| Safe paths, atomic writes and conflict checks | `src-tauri/src/files.rs` |
-| Project metadata and legacy draft import | `src-tauri/src/storage.rs` |
-| Settings validation, recovery and migration | `src-tauri/src/settings.rs` |
-| Image export and macOS clipboard | `src-tauri/src/export.rs`, `src-tauri/src/native.rs` |
-| Full-screen wallpaper fallback | `src-tauri/src/wallpaper.rs`, `src/useDesktopBackground.ts` |
-| Themes, artwork and attribution | `resources/`, `src-tauri/icons/` |
+| Project selection, import, undo | `src/ProjectsPage.tsx`, `src/projectSelection.ts`, `src-tauri/src/project_commands.rs`, `project_location.rs`, `project_history.rs` |
+| Workspace tabs, active state | `src/workspaces.ts`, `src/WorkspaceTabs.tsx`, `src/App.tsx` |
+| Library navigation, variant editor | `src/LibraryNavigation.tsx`, `src/VariantEditor.tsx`, `src/variants.ts` |
+| Monaco editor & formatters | `src/editor.tsx`, `src/formatting.ts`, `src/latexFormatting.ts`, `src-tauri/src/formatting.rs` |
+| Source file tree, editor panes | `src/SourceWorkspace.tsx`, `src/panes.ts`, `src-tauri/src/source_commands.rs` |
+| PDF viewer & SyncTeX matching | `src/PdfPane.tsx`, `src/navigation.ts`, `src-tauri/src/compiler.rs` |
+| Settings & preferences | `src/settings.tsx`, `src/appearance.ts`, `src-tauri/src/settings.rs` |
+| Color picker & screen sampler | `src/ColorPicker.tsx`, `src/outputColor.ts`, `src-tauri/src/color_sampler.rs` |
+| Instant window & preview | `src/InstantWindow.tsx`, `src/instant.ts`, `src-tauri/src/instant.rs` |
+| Scanner & extraction | `src-tauri/src/scan.rs`, `src-tauri/src/extraction.rs` |
+| Compilers & process cancellation | `src-tauri/src/compiler.rs` |
+| Files, storage & migration | `src-tauri/src/files.rs`, `src-tauri/src/storage.rs` |
+| Image export & native clipboard | `src-tauri/src/export.rs`, `src-tauri/src/native.rs` |
+| Local MCP server & CLI | `src-tauri/src/automation/` |
+| Tauri IPC & window lifecycle | `src-tauri/src/lib.rs` |
 
-## Request lifecycle
+## Core principles & invariants
 
-- Reserve compiler request ownership before queuing blocking work.
-- Replacing/cancelling a request terminates its process group; ignore late callbacks using request/project identity.
-- Keep separate render, caret-preview, document and forward/reverse-navigation jobs.
-- Namespace request ownership by the calling window; closing Instant must not cancel the project window's jobs.
-- `instant` is global; `instant-<project-id>` owns local scratch state. Resolve its scope from the native window label, not the request's project field.
-- Project Instant compiles saved project snapshots with existing preamble/import context; it does not alter manuscripts or consume unsaved Source buffers.
-- Compile snapshots; do not write manuscripts to render a card or PDF.
-- PDF navigation targets refer to the compiled snapshot; rebuild after source changes.
-
-## Editor and persistence
-
-- Share Monaco models between panes; retain independent tab/selection state.
-- Source saves compare original bytes and write atomically; retain encoding/newlines.
-- Recover drafts before opening tabs. Recovered drafts require an edit or explicit save.
-- Library variants only change metadata; Source mode changes real files.
-- Remap open buffers/tabs after file rename or move.
-- Use UTF-16 offsets consistently for scans, caret previews and PDF navigation.
-- Format through a normal Monaco edit bracketed by undo stops; retain save behavior and line endings. Abort on edits, model/language changes, unmount, and window flush; check model/version again before applying results.
-- LaTeX uses bundled Prettier/unified-latex in a disposable Web Worker. Typst uses bundled Typstyle in a text-only helper process that runs before Tauri setup. Both accept at most 1 MiB and time out after 10 seconds; formatting never runs a project compiler or reads imports.
-- See [storage](reference/storage.md) for legacy import and conflict handling.
-
-## Limits and validation
-
-- Hashing and snapshots stream 64 KiB chunks, enforce a 1 GiB project budget and check cancellation between chunks; special files are rejected. Editor reads are limited to 10 MB, artifact reads to 100 MiB and scans to 100 MiB of included text.
-- At most two render/document compiler jobs run at once; superseded waiting requests observe cancellation. Compiler output is limited to 8 MiB. Export rasterization is serialized and capped at 16 megapixels / 16,000 pixels per side. These bounds do not sandbox external compiler processes.
-- Extraction is literal/static, not full TeX/Typst execution: [user limits](../user-docs/limits.md).
-- TeX, `latexmkrc`, and project code are executable input; temporary copies are not an OS sandbox.
-- The webview is not trusted for artifact paths. Rust resolves every card, PDF document, artifact-read, lease, copy and export path through `Storage::artifact_file` / `artifact_dir`, which accept only canonical files in managed `Cache`, `Exports` and PDF `Output` folders (or PDF source snapshots). Project roots inside application storage are refused, except Swift project folders under legacy `Sources/` and `Imports/`. Project content, including `latexmkrc`, and tool overrides remain executable input by design, so a compromised webview can still run code through them: these path checks are defense in depth, not a sandbox. User-chosen locations (dialogs, opened project roots) are still passed by the webview.
-- [Testing](testing.md), [reviewing](reviewing.md), [historical validation](history/validation-2026-09.md).
-
-- Finder drops keep WebKit HTML drag handling enabled for Source tabs and artwork. `project_drop` captures file URLs from the actual `NSDraggingInfo` pasteboard before WebKit handles the drop. The DOM drop consumes this one-use, short-lived capture after matching filenames. Do not globally enable Tauri native drop interception on macOS.
+1. **Library vs. Source:**
+   - Library edits create and modify presentation variants (metadata only). The original manuscript files remain untouched.
+   - Source mode directly edits real project files on disk with atomic writes.
+2. **Compiler isolation & cancellation:**
+   - Compilations run against temporary project snapshots, never modifying the source directory to render.
+   - Superseded render or navigation requests terminate the entire compiler process group immediately. Late callbacks are ignored.
+3. **Synchronization & offsets:**
+   - UTF-16 code units are used consistently across scans, Monaco caret previews, and SyncTeX PDF navigation hits.
+   - PDF navigation targets are tied to the compiled snapshot; source edits require rebuilding the PDF to re-map.
+4. **Limits & defense in depth:**
+   - Snapshot creation streams 64 KiB chunks with a 1 GiB project cap. Editor reads cap at 10 MB, scans at 100 MB.
+   - Rust validates all artifact and export paths against canonical managed directories (`Cache`, `Exports`, `Output`).
+   - Literal extraction does not execute arbitrary TeX macros or dynamic Typst scripts: see [extraction scope](../user-docs/requirements.md#extraction-limitations).
+   - Rendering does execute project code and compiler configuration. Temporary snapshots and path checks are not an OS sandbox.
