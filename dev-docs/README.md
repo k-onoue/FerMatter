@@ -1,52 +1,40 @@
 # Development docs
 
-- Shared by people and agents; Markdown in this repository is the source of truth.
-- Start with the task below; reading every page is not required.
-- User instructions live in [user-docs](../user-docs/README.md); public output lives in `site/dist/`.
-- Agent entry point: [AGENTS.md](../AGENTS.md).
+Developer guidelines and architectural references for humans and agents. Markdown files in this repository serve as the source of truth.
 
-| Task | Document |
+- User-facing guides: [`user-docs/`](../user-docs/README.md)
+- Agent instructions & invariants: [`AGENTS.md`](../AGENTS.md)
+
+## Guides
+
+| Topic | Document |
 | --- | --- |
-| Build and maintain | [Development](development.md) |
-| Work on the desktop app | [Desktop implementation](../desktop-app/README.md) |
-| Find the responsible module | [Architecture](architecture.md) |
-| Choose validation | [Testing](testing.md) |
-| Review a PR or LLM finding | [Reviewing](reviewing.md) |
-| Version, tag, package, release | [Releasing](releasing.md) |
-| Edit guides, website, media | [Documentation](documentation.md) |
-| Preview the website | [Build and preview](documentation.md#build-and-preview) |
+| **Setup & Workflow** | [Development](development.md) |
+| **Desktop App** | [Desktop App Overview](../desktop-app/README.md) |
+| **Architecture** | [Architecture & Responsibilities](architecture.md) |
+| **Testing** | [Testing & Verification](testing.md) |
+| **Code Review** | [Reviewing Standards](reviewing.md) |
+| **Releasing** | [Versioning & Release Checklist](releasing.md) |
+| **Site & Documentation** | [Documentation & Website Guide](documentation.md) |
 
 ## Repository layout
 
-| Path (from the repository root) | Purpose |
+| Path | Contents |
 | --- | --- |
-| `desktop-app/` | [Desktop app](../desktop-app/README.md): Rust/Tauri, React/TypeScript, tests, resources and packaging |
-| `dev-docs/` | Shared development instructions and references |
-| `user-docs/` | Markdown sources for the public guide |
-| `site/` | Astro/Starlight website and approved demo media |
-| `docs/downloads/` | Sample ZIPs shared by the app and website |
-| `examples/` | Synthetic sample projects |
-| `scripts/` | Site checks, download statistics, sample packaging |
+| `desktop-app/` | Rust (Tauri 2) and React/TypeScript desktop application |
+| `dev-docs/` | Development, architecture, and release documentation |
+| `user-docs/` | Markdown sources for public guides |
+| `site/` | Astro / Starlight website and public media assets |
+| `examples/` | Synthetic demo projects (LaTeX, Typst, TikZ, CeTZ) |
+| `scripts/` | Build validation, site checks, and packaging scripts |
 
 ## Reference
 
-- [Local automation: CLI and MCP](reference/automation.md).
-- [Storage and compatibility](reference/storage.md).
-- [Platform validation record](reference/platform-validation.md), [unsigned stable preparation](reference/stable-readiness.md).
-- [SVG restoration and resident Instant](reference/svg-recipes.md).
-- [Settings-file schemas](reference/settings-files.md).
-- [Update contract](reference/updates.md).
-- [Prototype packaging](reference/packaging.md).
-- [Local signing and macOS folder access](reference/signing.md).
-- [Documentation structure decision](decisions/0001-documentation.md).
-- [Open PR snapshot, 2026-09-28](history/pr-snapshot-2026-09-28.md): scope, overlap, and integration follow-up.
-- [Earlier validation](history/validation-2026-09.md): historical evidence, not a current release pass.
-
-## Original references
-
-- [Semantic Versioning](https://semver.org/lang/ja/).
-- [Keep a Changelog](https://keepachangelog.com/ja/1.0.0/).
-- [Git tags](https://git-scm.com/book/ja/v2/Git-%E3%81%AE%E5%9F%BA%E6%9C%AC-%E3%82%BF%E3%82%B0).
-- [GitHub flow](https://docs.github.com/ja/get-started/using-github/github-flow).
-- [GitHub Releases](https://docs.github.com/ja/repositories/releasing-projects-on-github/about-releases).
-- [Google Engineering Practices](https://google.github.io/eng-practices/).
+- [Automation: CLI and MCP](reference/automation.md)
+- [Storage, metadata & compatibility](reference/storage.md)
+- [Platform validation record](reference/platform-validation.md) · [Unsigned stable preparation](reference/stable-readiness.md)
+- [SVG restoration recipes](reference/svg-recipes.md)
+- [Settings file schemas](reference/settings-files.md)
+- [Update mechanisms](reference/updates.md)
+- [Packaging and installer verification](reference/packaging.md)
+- [Local signing & permissions](reference/signing.md)

@@ -1,64 +1,67 @@
 ---
-title: "Choose size and format"
-description: "Choose image format, size and color; copy, drag, export or reopen SVG."
+title: "Size and format"
+description: "Image formats, output sizing, colors, and SVG round-trip editing."
 sidebar:
   order: 4
 ---
 
-These settings control the image you send to another app. For finding or editing its source, see [From your paper to a slide](paper-to-slides.md).
+Configure output image settings in the Library bottom bar or Instant header.
 
-## Choose a format
+<span id="choose-a-format"></span>
 
-| Format | Use |
+## Image formats
+
+| Format | Best for |
 | --- | --- |
-| **SVG** | Vector artwork for PowerPoint; includes editable FerMatter source metadata |
-| **PDF** | Vector artwork for apps and workflows that accept PDF images |
-| **PNG** | Raster artwork with a transparent background |
-| **JPEG** | Raster artwork on a white background |
-
-Choose the format in the Library output bar or the Instant controls.
+| **SVG** | Vector artwork for PowerPoint, Keynote, and web. Preserves editable FerMatter source metadata. |
+| **PDF** | Vector artwork for vector design applications. |
+| **PNG** | High-resolution raster image with transparent background. |
+| **JPEG** | Raster image with opaque white background. |
 
 ![Library output bar: SVG format, Default size, output font size, Copy image and Export image](../site/public/assets/guide/output-controls.webp)
 
-For PowerPoint, use **SVG**. PDF artwork can be rasterized when PowerPoint exports a `.pptx` to PDF. [Reported issue](https://learn.microsoft.com/en-ie/answers/questions/5701486/recurring-issue-save-as-pdf-converts-vector-graphi).
+For PowerPoint, prefer **SVG**. PowerPoint may rasterize imported PDF vector graphics during PDF presentation exports. [Reported issue](https://learn.microsoft.com/en-ie/answers/questions/5701486/recurring-issue-save-as-pdf-converts-vector-graphi).
 
 On Windows, SVG copies contain vector artwork and files. Choose **PNG** when the receiving app needs a bitmap.
 
 ## Output size
 
-**Output font size** accepts 1–200 pt. For project artwork, the first available setting wins:
+Font size can be set continuously from 1 to 200 pt. Priority order:
 
-| Priority | Setting | Where to change it |
-| --- | --- | --- |
-| 1 | Item override | Library variant editor or the selected card's inspector (`⌥⌘I`) |
-| 2 | Project | Library output bar |
-| 3 | App default | **Settings → Projects → Default output font size** |
+1. **Card override:** In the Library variant editor or inspector (`⌥⌘I`).
+2. **Project default:** In the Library output bar.
+3. **Global default:** In **Settings → Projects → Default output font size**.
 
-Click **Default** on an item or project to inherit the next setting. Instant has its own controls; standalone **Save defaults** remembers its output settings.
+Diagrams (TikZ / CeTZ) scale proportionally as a whole, including labels.
 
-Size applies to copy, drag and export. Figures scale as a whole, including labels.
+Click **Default** to inherit the next setting. Instant has separate controls; standalone **Save defaults** remembers its output settings.
 
 ## Output color
 
-Use the color picker in a Library variant or Instant to override output color. **Reset color** in a Library variant restores the source color. App themes and display zoom do not change exported artwork.
+Set custom colors via the color picker in the variant editor or Instant. **Reset color** restores original document colors. Application themes and display zoom do not affect exported assets.
 
-## Copy, drag or export
+<span id="copy-drag-or-export"></span>
 
-| Action | Result |
+## Copy, drag, and export
+
+| Action | Usage |
 | --- | --- |
-| **Copy image** (`⇧⌘C`) | Puts the selected artwork on the clipboard for pasting |
-| Drag a card, preview or mapped PDF equation | Sends artwork directly to the receiving app |
-| **Export image** (`⇧⌘S`) | Saves one image to a chosen file |
+| **Copy image** (`⇧⌘C`) | Copies selected artwork to the system clipboard |
+| **Drag and drop** | Drag a card, preview, or mapped PDF equation straight into another app |
+| **Export image** (`⇧⌘S`) | Saves the rendered asset as an image file |
 
-### Several equations
+<span id="several-equations"></span>
 
-Use Command-click to toggle cards or Shift-click for a range, then copy to paste separate images. Select a single card for file export. Multiple-image dragging depends on the receiving app.
+Batch selection is supported via `⌘`-click and `⇧`-click for copying multiple items. Select one card for file export; multiple-image dragging depends on the receiving app.
 
-## Re-edit SVG
+<span id="re-edit-svg"></span>
 
-1. Keep the original FerMatter **SVG** export; other apps may strip its source metadata.
-2. Choose **Open SVG** in Instant, or drop the SVG into FerMatter.
-3. Edit the restored source in the matching project's variant editor or Instant. Missing or ambiguous projects open in standalone Instant.
-4. Review the source and press **Render** to compile it. Imported source remains pending across reopening and history restoration until this explicit action.
+## Re-editing SVGs
 
-SVG includes equation/template source, not the whole manuscript. Project imports, packages and fonts may still be needed. PDF, PNG and JPEG do not restore editable source.
+FerMatter embeds source code inside exported SVGs:
+
+1. Drop any FerMatter-exported SVG back into the application, or select **Open SVG** in Instant.
+2. The original LaTeX/Typst code restores into the corresponding project or Instant scratchpad.
+3. Review the restored source and press **Render**. It remains pending across reopening and history restoration until you do so.
+
+Keep the original SVG; other apps may strip its metadata. Project imports, packages and fonts may still be needed. PDF, PNG, and JPEG files do not contain embedded source metadata.
