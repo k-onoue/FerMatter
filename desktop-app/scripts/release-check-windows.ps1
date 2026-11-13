@@ -30,9 +30,9 @@ try {
     }
     try {
         # check-windows also includes Clippy; retain separate evidence for the gate.
+        Step 'audit' { & "$PSScriptRoot\audit-windows.ps1" }
         Step 'check' { & "$PSScriptRoot\check-windows.ps1" }
         [IO.File]::AppendAllText($steps, "clippy`tpassed`n", $utf8)
-        Step 'audit' { & "$PSScriptRoot\audit-windows.ps1" }
         Step 'build' { & "$PSScriptRoot\build-windows.ps1" -SkipPackage }
         Step 'publication' {
             foreach ($project in @('scripts', 'site')) {

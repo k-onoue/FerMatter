@@ -12,6 +12,34 @@
 
 ## Desktop app test suites
 
+### CI and local responsibilities
+
+| Change or event | Automatic checks | Full validation |
+| --- | --- | --- |
+| Documentation only, including `desktop-app/README.md` | Documentation and formatting on the PR; website publication on main | No application build |
+| App code, dependencies, examples or Desktop workflow | Dependency audit, then macOS/Windows frontend tests, Rust tests and Clippy on the PR | Run compilers and the macOS app build locally |
+| Daily schedule | App npm/Cargo dependency audit of main, including npm development tools, without building the app | No installer creation |
+| Distribution candidate | Manually run Release validation (macOS), Windows experimental or Ubuntu experimental on the exact candidate | Real compilers, package/install/upgrade checks and audits remain required |
+
+- Desktop, Documentation and Formatting do not repeat automatically after merge. They also support manual dispatch for integration checks; website publication still validates its generated output on main.
+- Desktop excludes Markdown from its app path filter. Windows and Ubuntu packaging are manual only; a normal PR never installs TeX or builds their installers.
+- Documentation retains the fast APT metadata/signature fixture tests without building a Linux app.
+- Desktop caches Rust dependencies/build output by OS, architecture, compiler and lockfile, including after test failures. Manual Desktop runs on main can seed a shared baseline cache; PR caches remain scoped by GitHub. CI disables incremental compilation/debug symbols to limit cache size.
+- Audit runs before the expensive checks. The [auditor installer](../desktop-app/scripts/install-auditor.sh) verifies official prebuilt binaries; failed audit JSON is retained. New advisories still fail the daily audit even without a code change.
+- Local results do not automatically set a GitHub check to successful. Use the same scripts and record the tested commit; full distribution gates cannot use `-SkipCompilers` or skipped native checks as release evidence.
+- No self-hosted runner is registered on a personal machine. Windows-specific checks stay on Windows; Ubuntu remains available for manual validation.
+
+Quick local audit (Apple Silicon macOS or Linux x86_64):
+
+```sh
+bash desktop-app/scripts/install-auditor.sh
+bash desktop-app/scripts/audit.sh
+```
+
+The audit reads lockfiles without installing npm dependencies. Real compiler verification still requires the [rendering tools](../user-docs/requirements.md).
+
+### Standard local checks
+
 `check.sh` executes the standard verification pipeline:
 
 1. **Frontend build & tests:** Typecheck/Vite build, Vitest suites, and script checks in `desktop-app/`.

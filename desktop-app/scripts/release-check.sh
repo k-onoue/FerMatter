@@ -41,10 +41,10 @@ check_publication() {
   node "$root/scripts/build-guides.mjs" || return 1
   node "$root/scripts/check-publication.mjs"
 }
+step audit "$DESKTOP_ROOT/scripts/audit.sh" "$output/audit"
 step check env MATHLIDELUX_COMPILER_TESTS=1 "$DESKTOP_ROOT/scripts/check.sh"
 step clippy cargo clippy --manifest-path "$DESKTOP_ROOT/src-tauri/Cargo.toml" --lib -- -D warnings
 step build "$DESKTOP_ROOT/scripts/build.sh"
-step audit "$DESKTOP_ROOT/scripts/audit.sh" "$output/audit"
 step publication check_publication
 cp "$DESKTOP_ROOT/build/qa-data/verification.json" "$output/compiler-verification.json"
 [[ "$(git -C "$root" rev-parse HEAD)" == "$commit" ]] || { echo 'Commit changed during validation.' >&2; exit 1; }

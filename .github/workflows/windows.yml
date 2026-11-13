@@ -1,21 +1,6 @@
 name: Windows experimental
 
 on:
-  pull_request:
-    paths:
-      - "desktop-app/**"
-      - ".github/workflows/windows.yml"
-      - ".node-version"
-      - "LICENSE"
-      - "NOTICE"
-  push:
-    branches: [main]
-    paths:
-      - "desktop-app/**"
-      - ".github/workflows/windows.yml"
-      - ".node-version"
-      - "LICENSE"
-      - "NOTICE"
   workflow_dispatch:
     inputs:
       channel:
@@ -32,7 +17,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  audit:
+    uses: ./.github/workflows/dependency-audit.yml
   package:
+    needs: audit
     runs-on: windows-2022
     timeout-minutes: 90
     env:
