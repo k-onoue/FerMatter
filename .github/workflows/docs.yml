@@ -2,11 +2,14 @@ name: Documentation
 
 on:
   pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   docs:
@@ -25,7 +28,8 @@ jobs:
       - run: npm --prefix scripts ci && npm --prefix site ci
       - run: npm --prefix scripts audit && npm --prefix site audit
       - run: npm --prefix scripts test
+      - name: Test APT metadata without building the app
+        run: python3 -m unittest discover -s scripts/tests -p 'test_apt_repository.py' -v
       - run: node scripts/build-guides.mjs --check
       - run: node scripts/check-publication.mjs
-      - run: node scripts/verify-release-download.mjs
       - run: git diff --check HEAD^ HEAD

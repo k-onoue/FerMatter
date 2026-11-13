@@ -1,0 +1,34 @@
+name: Dependency audit
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: "43 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+      - name: Install verified auditor without compiling it
+        run: bash desktop-app/scripts/install-auditor.sh
+      - name: Audit production lockfiles before any build
+        run: bash desktop-app/scripts/audit.sh desktop-app/build/audit
+      - name: Include development-tool advisories
+        run: npm --prefix desktop-app audit
+      - name: Retain audit reports, including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dependency-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: desktop-app/build/audit/
+          if-no-files-found: error
+          retention-days: 7

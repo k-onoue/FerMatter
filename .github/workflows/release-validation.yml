@@ -11,7 +11,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  audit:
+    uses: ./.github/workflows/dependency-audit.yml
   macos:
+    needs: audit
     runs-on: macos-latest
     timeout-minutes: 90
     steps:
@@ -54,7 +57,7 @@ jobs:
       - name: Install locked JavaScript dependencies
         run: npm --prefix desktop-app ci && npm --prefix scripts ci && npm --prefix site ci
       - name: Install the advisory auditor
-        run: cargo install --locked cargo-audit --version 0.22.2 --root desktop-app/build/audit-tools
+        run: bash desktop-app/scripts/install-auditor.sh
       - name: Require real compilers, tests, build and audits
         run: ./desktop-app/scripts/release-check.sh
         env:

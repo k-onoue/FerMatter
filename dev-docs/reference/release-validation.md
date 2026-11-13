@@ -3,11 +3,12 @@
 ## Automated gate
 
 ```sh
-cargo install --locked cargo-audit --version 0.22.2 --root desktop-app/build/audit-tools
+bash desktop-app/scripts/install-auditor.sh
 ./desktop-app/scripts/release-check.sh
 ```
 
 - Run on the exact committed candidate with all compiler tools installed.
+- Audits run before compilers/builds. The installer uses SHA-256-pinned official cargo-audit 0.22.2 binaries on Apple Silicon macOS and Linux x86_64; other platforms can install that version with Cargo (Windows uses its PowerShell installer).
 - `MATHLIDELUX_COMPILER_TESTS=0` is rejected. Missing tools, failed tests/builds/audits and publication failures fail the gate.
 - `--allow-dirty` permits a local rehearsal; its report cannot authorize public packaging.
 - The publication step rebuilds `site/dist` from the checkout before checking it (installing `scripts/` and `site/` dependencies with `npm ci` when missing), so a stale site build cannot pass.
@@ -48,7 +49,7 @@ cargo install --locked cargo-audit --version 0.22.2 --root desktop-app/build/aud
 ## Windows and Ubuntu
 
 - Windows automated gate: `./desktop-app/scripts/release-check-windows.ps1`; no skipped compilers or dirty candidates. Its report binds the NSIS bytes to the commit before packaging.
-- The Windows workflow also installs the hash-pinned published preview, upgrades to the candidate, checks old/new resident compatibility, runs installed compilers and uninstalls with synthetic data preserved. This is Windows Server CI, not Windows 11 native UI validation.
+- Manually dispatch **Windows experimental** for the full gate. It also installs the hash-pinned published preview, upgrades to the candidate, checks old/new resident compatibility, runs installed compilers and uninstalls with synthetic data preserved. This is Windows Server CI, not Windows 11 native UI validation. Normal Desktop PR checks skip compilers and packaging.
 - On a clean Windows 11 x64 account, repeat install/update, real Library/Source/Instant edits and recovery, PDF, IME/AltGr, clipboard/drag into a presentation app, and removal. Record OS build, candidate hash and SmartScreen/Smart App Control results.
-- Ubuntu stays experimental: CI covers real compilers, Clippy, audits, signed-APT installation and headless startup. Record native desktop/session and receiving-app behavior separately; do not infer Wayland coverage.
+- Ubuntu stays experimental: manually dispatch **Ubuntu experimental** for real compilers, Clippy, audits, signed-APT installation and headless startup. Record native desktop/session and receiving-app behavior separately; do not infer Wayland coverage.
 - Anonymous download and public package-manager update checks belong to step 6. Before publication, validate local artifacts and preserve hashes; mark public delivery checks pending.

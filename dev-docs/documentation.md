@@ -102,11 +102,11 @@ status: upcoming
 - Bootstrap the public repository with `scripts/website-pages.yml` at `.github/workflows/pages.yml`, `scripts/website-gitattributes` at `.gitattributes`, `README.md`, `LICENSE` and the reviewed static build. Enable **Settings → Pages → GitHub Actions**. Its deployment environment admits `main`.
 - Root-hosted links use an empty `base` in `site/src/data/site.json`; the Astro configuration normalizes this to `/`. Local preview is at `http://127.0.0.1:4174/`.
 
-- `Documentation` validates PRs without publishing; `Publish website` runs on main, published releases, daily schedule, and manual dispatch.
+- `Documentation` validates PRs without publishing and supports manual dispatch. It does not repeat on main; `Publish website` builds and checks the output on main, published releases, daily schedule, and manual dispatch.
 - GitHub Pages environment approvals/rules still apply.
 - Keep `repositoryPublic: false` while source access is restricted; switch it only after verifying anonymous repository access.
 - Download availability is manual: keep `releaseAvailable: false` until anonymous download, checksum and the selected release-channel checks pass. Use plain platform/version labels and concise installation steps on the website; retain technical provenance with the release artifacts. See [releasing](releasing.md) for channel-specific validation.
-- Record the reviewed DMG hash in `releaseSha256` with each macOS release update. `node scripts/verify-release-download.mjs` downloads the public DMG without authentication and checks its hash in Documentation CI and before website publication. It verifies the bytes available at that moment; it does not replace signing or native validation.
+- Record the reviewed DMG hash in `releaseSha256` with each macOS release update. `node scripts/verify-release-download.mjs` downloads the public DMG without authentication and checks its hash before website publication. Ordinary PR documentation checks use fixtures instead of downloading the installer. The live check verifies the bytes available at that moment; it does not replace signing or native validation.
 - Windows uses independent `windowsReleaseAvailable`, `windowsReleaseTag`, `windowsReleaseName` and `windowsAssetName` fields. Enable its unsigned preview only after the exact EXE's anonymous download, checksum and installation/startup checks; retain the existing macOS asset fields.
 - Review the Pages artifact and public-repository diff: app sources, Git history and secrets must not enter either. `deployment.json` exposes only the source commit ID for deployment readiness checks.
 
