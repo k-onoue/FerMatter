@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Keep Linux native menu labels readable in light appearance when the system GTK theme is itself dark, such as `Yaru-dark` ([#154](https://github.com/k-onoue/FerMatter/issues/154)).
+
 - Update the MCP SDK to rmcp 3.10.0, addressing [RUSTSEC-2026-0457](https://rustsec.org/advisories/RUSTSEC-2026-0457.html), [RUSTSEC-2026-0461](https://rustsec.org/advisories/RUSTSEC-2026-0461.html) and [RUSTSEC-2026-0462](https://rustsec.org/advisories/RUSTSEC-2026-0462.html). Keep the existing local stdio-only server configuration.
 
 - Show one Resolved issues status at a time using tabs, with direct links and keyboard navigation matching Download.

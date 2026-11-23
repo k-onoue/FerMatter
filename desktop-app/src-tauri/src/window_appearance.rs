@@ -18,6 +18,42 @@ fn colors(value: &Value) -> Result<(bool, tauri::window::Color)> {
     ))
 }
 
+// Tao's `set_theme` only toggles GTK's dark-variant preference. A system theme
+// that is itself dark, such as `Yaru-dark`, ignores that preference and keeps
+// light menu labels over the light window background. Select the theme's
+// light counterpart for light appearance and restore the system theme for dark.
+#[cfg(any(target_os = "linux", test))]
+fn gtk_theme_name(system: &str, dark: bool) -> &str {
+    const SUFFIX: &str = "-dark";
+    if dark {
+        return system;
+    }
+    let end = system.len().saturating_sub(SUFFIX.len());
+    match (system.get(..end), system.get(end..)) {
+        (Some(light), Some(suffix)) if !light.is_empty() && suffix.eq_ignore_ascii_case(SUFFIX) => {
+            light
+        }
+        _ => system,
+    }
+}
+
+// Must run on the GTK main thread.
+#[cfg(target_os = "linux")]
+fn apply_gtk_theme(dark: bool) {
+    use gtk::prelude::GtkSettingsExt;
+    use std::sync::OnceLock;
+
+    // Read once, before this process overrides the setting.
+    static SYSTEM: OnceLock<Option<String>> = OnceLock::new();
+    let Some(settings) = gtk::Settings::default() else {
+        return;
+    };
+    let system = SYSTEM.get_or_init(|| settings.gtk_theme_name().map(Into::into));
+    if let Some(system) = system {
+        settings.set_gtk_theme_name(Some(gtk_theme_name(system, dark)));
+    }
+}
+
 pub fn apply(app: &tauri::AppHandle, label: &str, value: &Value) -> Result<()> {
     #[cfg(target_os = "macos")]
     {
@@ -44,18 +80,40 @@ pub fn apply(app: &tauri::AppHandle, label: &str, value: &Value) -> Result<()> {
                 } else {
                     tauri::Theme::Light
                 }))
-                .map_err(err)
+                .map_err(err)?;
+            #[cfg(target_os = "linux")]
+            apply_gtk_theme(dark);
+            Ok(())
         })
     }
 }
 
-#[cfg(all(test, not(target_os = "macos")))]
+#[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
 
     #[test]
+    fn light_appearance_selects_the_light_gtk_theme() {
+        for (system, light) in [
+            ("Yaru-dark", "Yaru"),
+            ("Yaru-blue-dark", "Yaru-blue"),
+            ("Adwaita-Dark", "Adwaita"),
+            ("Yaru", "Yaru"),
+            ("Darkness", "Darkness"),
+            ("-dark", "-dark"),
+            ("テーマ", "テーマ"),
+            ("", ""),
+        ] {
+            assert_eq!(gtk_theme_name(system, false), light);
+            assert_eq!(gtk_theme_name(system, true), system);
+        }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    #[test]
     fn native_background_is_opaque_and_uses_the_palette_color() {
+        use serde_json::json;
+
         let (dark, color) = colors(&json!({"dark":true,"background":"#1d232C"})).unwrap();
         assert!(dark);
         assert_eq!((color.0, color.1, color.2, color.3), (29, 35, 44, 255));
