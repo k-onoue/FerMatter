@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Update `url` to 2.5.9, addressing [RUSTSEC-2026-0592](https://rustsec.org/advisories/RUSTSEC-2026-0592.html), and the website's Astro to 7.4.13, addressing [GHSA-mh32-jxcr-mh9f](https://github.com/advisories/GHSA-mh32-jxcr-mh9f) and [GHSA-r3h5-4585-7x3w](https://github.com/advisories/GHSA-r3h5-4585-7x3w).
+
 - Update the MCP SDK to rmcp 3.10.0, addressing [RUSTSEC-2026-0457](https://rustsec.org/advisories/RUSTSEC-2026-0457.html), [RUSTSEC-2026-0461](https://rustsec.org/advisories/RUSTSEC-2026-0461.html) and [RUSTSEC-2026-0462](https://rustsec.org/advisories/RUSTSEC-2026-0462.html). Keep the existing local stdio-only server configuration.
 
 - Show one Resolved issues status at a time using tabs, with direct links and keyboard navigation matching Download.
