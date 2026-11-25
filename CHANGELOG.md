@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+- Update the desktop app's indirect `cookie` dependency to 0.18.3, addressing [RUSTSEC-2026-0594](https://rustsec.org/advisories/RUSTSEC-2026-0594.html).
+
 - Keep Linux native menu labels readable in light appearance when the system GTK theme is itself dark, such as `Yaru-dark` ([#154](https://github.com/k-onoue/FerMatter/issues/154)).
 
 - Update `url` to 2.5.9, addressing [RUSTSEC-2026-0592](https://rustsec.org/advisories/RUSTSEC-2026-0592.html), and the website's Astro to 7.4.13, addressing [GHSA-mh32-jxcr-mh9f](https://github.com/advisories/GHSA-mh32-jxcr-mh9f) and [GHSA-r3h5-4585-7x3w](https://github.com/advisories/GHSA-r3h5-4585-7x3w).
